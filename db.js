@@ -1,0 +1,216 @@
+const { Pool } = require('pg');
+
+// Neon.tech exige SSL sempre — mesmo em desenvolvimento local
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+// ─── SCHEMA ──────────────────────────────────────────────────────────────────
+
+const SCHEMA = `
+  CREATE TABLE IF NOT EXISTS accounts (
+    id SERIAL PRIMARY KEY,
+    fb_account_id VARCHAR(64) NOT NULL,
+    fb_user_id VARCHAR(64) NOT NULL,
+    name TEXT,
+    currency VARCHAR(8),
+    timezone VARCHAR(64),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(fb_account_id, fb_user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS analysis_runs (
+    id SERIAL PRIMARY KEY,
+    fb_account_id VARCHAR(64) NOT NULL,
+    fb_user_id VARCHAR(64) NOT NULL,
+    account_name TEXT,
+    date_range VARCHAR(32),
+    total_spend NUMERIC(14,2),
+    total_impressions BIGINT,
+    total_clicks BIGINT,
+    total_reach BIGINT,
+    avg_ctr NUMERIC(8,4),
+    avg_cpc NUMERIC(10,4),
+    avg_cpm NUMERIC(10,4),
+    avg_frequency NUMERIC(8,4),
+    active_campaigns INT,
+    total_campaigns INT,
+    health_score INT,
+    health_level VARCHAR(32),
+    ai_analysis JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_runs_account ON analysis_runs(fb_account_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_runs_user ON analysis_runs(fb_user_id, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS campaign_snapshots (
+    id SERIAL PRIMARY KEY,
+    run_id INT REFERENCES analysis_runs(id) ON DELETE CASCADE,
+    fb_account_id VARCHAR(64) NOT NULL,
+    fb_campaign_id VARCHAR(64),
+    campaign_name TEXT,
+    status VARCHAR(32),
+    objective VARCHAR(64),
+    spend NUMERIC(14,2),
+    impressions BIGINT,
+    clicks BIGINT,
+    reach BIGINT,
+    ctr NUMERIC(8,4),
+    cpc NUMERIC(10,4),
+    cpm NUMERIC(10,4),
+    frequency NUMERIC(8,4),
+    actions JSONB,
+    ai_performance_status VARCHAR(32),
+    ai_problem TEXT,
+    ai_action TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_snap_account ON campaign_snapshots(fb_account_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_snap_campaign ON campaign_snapshots(fb_campaign_id, created_at DESC);
+`;
+
+async function initDB() {
+  try {
+    await pool.query(SCHEMA);
+    console.log('✅ Database schema ready (Neon)');
+  } catch (err) {
+    console.error('❌ DB init error:', err.message);
+  }
+}
+
+// ─── QUERIES ─────────────────────────────────────────────────────────────────
+
+async function saveRun({ fbAccountId, fbUserId, accountName, dateRange, metrics, campaigns, aiAnalysis }) {
+  const { rows } = await pool.query(`
+    INSERT INTO analysis_runs (
+      fb_account_id, fb_user_id, account_name, date_range,
+      total_spend, total_impressions, total_clicks, total_reach,
+      avg_ctr, avg_cpc, avg_cpm, avg_frequency,
+      active_campaigns, total_campaigns,
+      health_score, health_level, ai_analysis
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+    RETURNING id
+  `, [
+    fbAccountId, fbUserId, accountName, dateRange,
+    metrics.totalSpend, metrics.totalImpressions, metrics.totalClicks, metrics.totalReach,
+    metrics.avgCtr, metrics.avgCpc, metrics.avgCpm, metrics.avgFrequency,
+    metrics.activeCampaigns, metrics.totalCampaigns,
+    aiAnalysis?.resumo_geral?.score_saude || null,
+    aiAnalysis?.resumo_geral?.nivel_saude || null,
+    JSON.stringify(aiAnalysis)
+  ]);
+
+  const runId = rows[0].id;
+
+  if (campaigns && campaigns.length > 0) {
+    for (const c of campaigns) {
+      const aiCamp = (aiAnalysis?.campanhas_analise || []).find(a =>
+        a.nome && c.name && a.nome.toLowerCase().includes(c.name.toLowerCase().slice(0, 20))
+      );
+      await pool.query(`
+        INSERT INTO campaign_snapshots (
+          run_id, fb_account_id, fb_campaign_id, campaign_name, status, objective,
+          spend, impressions, clicks, reach, ctr, cpc, cpm, frequency, actions,
+          ai_performance_status, ai_problem, ai_action
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+      `, [
+        runId, fbAccountId, c.id, c.name, c.status, c.objective,
+        c.spend || 0, c.impressions || 0, c.clicks || 0, c.reach || 0,
+        c.ctr || 0, c.cpc || 0, c.cpm || 0, c.frequency || 0,
+        JSON.stringify(c.actions || []),
+        aiCamp?.status_performance || null,
+        aiCamp?.problema_principal || null,
+        aiCamp?.acao_imediata || null
+      ]);
+    }
+  }
+
+  return runId;
+}
+
+async function getRunHistory(fbAccountId, limit = 60) {
+  const { rows } = await pool.query(`
+    SELECT id, created_at, date_range, account_name,
+           total_spend, total_impressions, total_clicks,
+           avg_ctr, avg_cpc, avg_cpm, avg_frequency,
+           active_campaigns, total_campaigns,
+           health_score, health_level
+    FROM analysis_runs
+    WHERE fb_account_id = $1
+    ORDER BY created_at DESC
+    LIMIT $2
+  `, [fbAccountId, limit]);
+  return rows;
+}
+
+async function getRunDetail(runId, fbUserId) {
+  const { rows } = await pool.query(`
+    SELECT * FROM analysis_runs
+    WHERE id = $1 AND fb_user_id = $2
+  `, [runId, fbUserId]);
+  return rows[0] || null;
+}
+
+async function getCampaignHistory(fbCampaignId, limit = 20) {
+  const { rows } = await pool.query(`
+    SELECT cs.*, ar.created_at as run_date, ar.date_range
+    FROM campaign_snapshots cs
+    JOIN analysis_runs ar ON ar.id = cs.run_id
+    WHERE cs.fb_campaign_id = $1
+    ORDER BY ar.created_at DESC
+    LIMIT $2
+  `, [fbCampaignId, limit]);
+  return rows;
+}
+
+async function getAccountTrend(fbAccountId, days = 90) {
+  const { rows } = await pool.query(`
+    SELECT
+      DATE(created_at) as date,
+      AVG(avg_ctr)::NUMERIC(8,4) as avg_ctr,
+      AVG(avg_cpc)::NUMERIC(10,4) as avg_cpc,
+      AVG(avg_cpm)::NUMERIC(10,4) as avg_cpm,
+      SUM(total_spend)::NUMERIC(14,2) as total_spend,
+      AVG(health_score)::INT as avg_health,
+      AVG(avg_frequency)::NUMERIC(8,4) as avg_frequency,
+      COUNT(*) as run_count
+    FROM analysis_runs
+    WHERE fb_account_id = $1
+      AND created_at > NOW() - INTERVAL '${days} days'
+    GROUP BY DATE(created_at)
+    ORDER BY date ASC
+  `, [fbAccountId]);
+  return rows;
+}
+
+async function compareRuns(runId1, runId2, fbUserId) {
+  const { rows } = await pool.query(`
+    SELECT id, created_at, date_range, total_spend, total_impressions,
+           total_clicks, avg_ctr, avg_cpc, avg_cpm, avg_frequency,
+           health_score, health_level, active_campaigns
+    FROM analysis_runs
+    WHERE id = ANY($1) AND fb_user_id = $2
+    ORDER BY created_at ASC
+  `, [[runId1, runId2], fbUserId]);
+  return rows;
+}
+
+async function getLastRun(fbAccountId) {
+  const { rows } = await pool.query(`
+    SELECT * FROM analysis_runs
+    WHERE fb_account_id = $1
+    ORDER BY created_at DESC
+    LIMIT 1
+  `, [fbAccountId]);
+  return rows[0] || null;
+}
+
+module.exports = {
+  pool, initDB,
+  saveRun, getRunHistory, getRunDetail,
+  getCampaignHistory, getAccountTrend,
+  compareRuns, getLastRun
+};

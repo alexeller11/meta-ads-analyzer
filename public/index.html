@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meta Ads Analyzer — IA para suas campanhas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #08090d;
+      --surface: #0f1118;
+      --surface2: #161923;
+      --border: #1e2433;
+      --blue: #0668E1;
+      --blue-bright: #1877F2;
+      --cyan: #00d4ff;
+      --green: #00ff87;
+      --orange: #ff6b35;
+      --red: #ff3860;
+      --text: #e8eaf0;
+      --text-dim: #6b7280;
+      --text-muted: #3d4456;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* GRID BACKGROUND */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* NOISE */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    nav {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 48px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8, 9, 13, 0.8);
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--blue-bright);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-text span {
+      color: var(--cyan);
+    }
+
+    .nav-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      background: rgba(0, 212, 255, 0.1);
+      color: var(--cyan);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+    }
+
+    /* HERO */
+    .hero {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      min-height: 90vh;
+    }
+
+    .hero-glow {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(6, 104, 225, 0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      color: var(--cyan);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hero-eyebrow::before,
+    .hero-eyebrow::after {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 1px;
+      background: var(--cyan);
+      opacity: 0.5;
+    }
+
+    h1 {
+      font-size: clamp(48px, 7vw, 96px);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      margin-bottom: 32px;
+      max-width: 900px;
+    }
+
+    h1 .highlight {
+      background: linear-gradient(135deg, var(--blue-bright), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-subtitle {
+      font-size: 18px;
+      color: var(--text-dim);
+      max-width: 520px;
+      line-height: 1.7;
+      margin-bottom: 56px;
+      font-weight: 400;
+    }
+
+    .cta-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-facebook {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--blue-bright);
+      color: white;
+      text-decoration: none;
+      padding: 18px 40px;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      transition: all 0.2s ease;
+      box-shadow: 0 0 40px rgba(24, 119, 242, 0.3);
+    }
+
+    .btn-facebook:hover {
+      background: #0b5fcc;
+      transform: translateY(-2px);
+      box-shadow: 0 0 60px rgba(24, 119, 242, 0.5);
+    }
+
+    .btn-facebook svg {
+      width: 22px;
+      height: 22px;
+      fill: white;
+    }
+
+    .cta-note {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cta-note::before {
+      content: '🔒';
+      font-size: 11px;
+    }
+
+    /* FEATURES */
+    .features {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 80px 24px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      padding: 40px 32px;
+      transition: background 0.2s;
+    }
+
+    .feature-card:hover {
+      background: var(--surface2);
+    }
+
+    .feature-icon {
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+
+    .feature-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+
+    /* STATS BAR */
+    .stats-bar {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+    }
+
+    .stats-inner {
+      display: flex;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .stat-item {
+      flex: 1;
+      padding: 40px 32px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+
+    .stat-item:last-child { border-right: none; }
+
+    .stat-number {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--cyan);
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-top: 4px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ERROR */
+    .error-banner {
+      display: none;
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 56, 96, 0.15);
+      border: 1px solid rgba(255, 56, 96, 0.3);
+      color: #ff7098;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 100;
+    }
+
+    .error-banner.show { display: block; }
+
+    @media (max-width: 768px) {
+      nav { padding: 16px 20px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .stats-inner { flex-direction: column; }
+      .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-eyebrow { animation: fadeUp 0.6s ease 0.1s both; }
+    h1 { animation: fadeUp 0.6s ease 0.2s both; }
+    .hero-subtitle { animation: fadeUp 0.6s ease 0.3s both; }
+    .cta-group { animation: fadeUp 0.6s ease 0.4s both; }
+  </style>
+</head>
+<body>
+
+  <div class="error-banner" id="errorBanner">
+    Autenticação cancelada ou falhou. Tente novamente.
+  </div>
+
+  <nav>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">Meta Ads <span>Analyzer</span></div>
+    </div>
+    <div class="nav-badge">POWERED BY CLAUDE AI</div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-glow"></div>
+
+    <div class="hero-eyebrow">Análise Inteligente de Campanhas</div>
+
+    <h1>
+      Otimize seus<br>
+      <span class="highlight">Meta Ads</span><br>
+      com IA
+    </h1>
+
+    <p class="hero-subtitle">
+      Conecte sua conta Facebook, analise todas as campanhas automaticamente e receba insights acionáveis gerados por inteligência artificial.
+    </p>
+
+    <div class="cta-group">
+      <a href="/auth/facebook" class="btn-facebook">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+        </svg>
+        Conectar com Facebook
+      </a>
+      <div class="cta-note">Acesso somente leitura · Seus dados são seguros</div>
+    </div>
+  </section>
+
+  <div class="stats-bar">
+    <div class="stats-inner">
+      <div class="stat-item">
+        <span class="stat-number">50+</span>
+        <span class="stat-label">métricas analisadas</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number">IA</span>
+        <span class="stat-label">Claude Opus 4</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number">30s</span>
+        <span class="stat-label">para análise completa</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="features">
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🔗</div>
+        <div class="feature-title">Login Social Automático</div>
+        <div class="feature-desc">Conecte com Facebook e todas as suas contas de anúncios são carregadas automaticamente. Sem configuração manual.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Análise de Campanhas</div>
+        <div class="feature-desc">CTR, CPC, CPM, ROAS, frequência e mais de 50 métricas analisadas por IA para cada campanha.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🧠</div>
+        <div class="feature-title">Insights por IA</div>
+        <div class="feature-desc">Claude AI identifica problemas, oportunidades e gera um plano de ação personalizado com prioridades claras.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <div class="feature-title">Otimizações Prioritárias</div>
+        <div class="feature-desc">Receba uma lista ranqueada de otimizações com impacto esperado, passo a passo de implementação e prazo.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🚨</div>
+        <div class="feature-title">Alertas Críticos</div>
+        <div class="feature-desc">Detecção automática de problemas como orçamento esgotado, campanhas pausadas por erro, anúncios reprovados.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📅</div>
+        <div class="feature-title">Plano de Ação 30 Dias</div>
+        <div class="feature-desc">Cronograma semanal detalhado com todas as ações necessárias para melhorar a performance da conta.</div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('error')) {
+      document.getElementById('errorBanner').classList.add('show');
+      setTimeout(() => document.getElementById('errorBanner').classList.remove('show'), 5000);
+    }
+
+    // Check if already logged in
+    fetch('/api/me').then(r => r.json()).then(data => {
+      if (data.authenticated) window.location.href = '/dashboard';
+    });
+  </script>
+</body>
+</html>

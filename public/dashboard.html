@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meta Ads Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#08090d;--s1:#0f1118;--s2:#161923;--s3:#1c2130;
+      --b1:#1e2433;--b2:#252d3f;
+      --blue:#1877F2;--cyan:#00d4ff;--green:#00e676;
+      --orange:#ff9800;--red:#ff3860;--yellow:#ffeb3b;--purple:#b388ff;
+      --text:#e8eaf0;--dim:#8892a4;--muted:#3d4456;
+    }
+    body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+    /* TOPBAR */
+    .topbar{height:56px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;position:sticky;top:0;z-index:100}
+    .logo{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;letter-spacing:-.02em;white-space:nowrap}
+    .logo-icon{width:28px;height:28px;background:var(--blue);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px}
+    .logo span{color:var(--cyan)}
+    .sep{width:1px;height:22px;background:var(--b1);flex-shrink:0}
+    select.sel{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:5px 10px;border-radius:6px;font-family:'Syne',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
+    select.sel:focus{outline:1px solid var(--blue)}
+    .btn{display:inline-flex;align-items:center;gap:6px;border:none;padding:7px 16px;border-radius:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
+    .btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#0b5fcc}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .btn-ghost{background:var(--s2);border:1px solid var(--b1);color:var(--dim)}.btn-ghost:hover{color:var(--text);border-color:var(--b2)}
+    .btn-danger{background:rgba(255,56,96,.12);border:1px solid rgba(255,56,96,.2);color:var(--red)}.btn-danger:hover{background:rgba(255,56,96,.2)}
+    .topbar-mid{display:flex;align-items:center;gap:8px;flex:1;overflow:hidden}
+    .topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0}
+    .user-chip{display:flex;align-items:center;gap:7px;padding:3px 10px 3px 3px;background:var(--s2);border:1px solid var(--b1);border-radius:20px}
+    .user-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;background:var(--b2)}
+    .user-name{font-size:12px;font-weight:600}
+    .last-run-badge{font-family:'DM Mono',monospace;font-size:10px;padding:3px 8px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15);color:var(--cyan);border-radius:4px;white-space:nowrap}
+    /* LAYOUT */
+    .app-body{display:flex;flex:1;min-height:0}
+    /* SIDEBAR */
+    .sidebar{width:220px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);overflow-y:auto;display:flex;flex-direction:column}
+    .sidebar-section{padding:14px 12px 0}
+    .slabel{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 6px;margin-bottom:6px}
+    .nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;font-size:12px;font-weight:600;color:var(--dim);cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .15s}
+    .nav-item:hover{background:var(--s2);color:var(--text)}
+    .nav-item.active{background:rgba(24,119,242,.12);color:var(--blue)}
+    .nav-icon{font-size:14px;width:18px;text-align:center}
+    .camp-list{padding:0 12px 16px;flex:1;overflow-y:auto}
+    .camp-item{padding:8px 10px;border-radius:7px;cursor:pointer;margin-bottom:3px;border:1px solid transparent;transition:all .15s}
+    .camp-item:hover{background:var(--s2)}
+    .camp-item.active{background:rgba(0,212,255,.05);border-color:rgba(0,212,255,.12)}
+    .camp-name{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+    .camp-meta{display:flex;align-items:center;gap:5px}
+    .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+    .dot-ACTIVE{background:var(--green)}.dot-PAUSED{background:var(--orange)}.dot-DELETED,.dot-ARCHIVED{background:var(--muted)}
+    .camp-status{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+    /* MAIN */
+    .main{flex:1;overflow-y:auto;padding:20px;background:var(--bg)}
+    /* STATES */
+    .state-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:12px;color:var(--dim);text-align:center}
+    .state-empty .ei{font-size:56px;opacity:.4}
+    .state-empty h2{font-size:20px;font-weight:700}
+    .state-empty p{font-size:13px;color:var(--muted);max-width:340px;line-height:1.6}
+    /* LOADING */
+    .loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,9,13,.88);backdrop-filter:blur(8px);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+    .loading-overlay.show{display:flex}
+    .spinner{width:44px;height:44px;border:3px solid var(--b2);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .load-text{font-size:15px;font-weight:600;color:var(--dim)}
+    .load-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+    /* SECTION TITLE */
+    .stitle{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+    /* METRICS GRID */
+    .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:20px}
+    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:16px;transition:border-color .2s}
+    .mcard:hover{border-color:var(--b2)}
+    .mlabel{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:.05em}
+    .mval{font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1}
+    .msub{font-size:11px;color:var(--muted);margin-top:5px;font-family:'DM Mono',monospace;display:flex;align-items:center;gap:6px}
+    .delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:3px}
+    .delta-up{background:rgba(0,230,118,.1);color:var(--green)}
+    .delta-dn{background:rgba(255,56,96,.1);color:var(--red)}
+    .delta-eq{background:var(--s3);color:var(--muted)}
+    .c-cyan{color:var(--cyan)}.c-blue{color:var(--blue)}.c-green{color:var(--green)}.c-orange{color:var(--orange)}.c-red{color:var(--red)}.c-purple{color:var(--purple)}
+    /* SUMMARY HEADER */
+    .summary-hdr{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--s1);border:1px solid var(--b1);border-radius:10px;margin-bottom:16px}
+    .score-ring{width:64px;height:64px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:3px solid}
+    .score-num{font-size:22px;font-weight:800;line-height:1}
+    .score-lbl{font-size:8px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em;opacity:.7}
+    .score-critico{border-color:var(--red);color:var(--red)}.score-atencao{border-color:var(--orange);color:var(--orange)}.score-bom{border-color:var(--cyan);color:var(--cyan)}.score-excelente{border-color:var(--green);color:var(--green)}
+    .summary-info{flex:1}
+    .summary-title{font-size:17px;font-weight:700;margin-bottom:6px}
+    .summary-tags{display:flex;flex-wrap:wrap;gap:6px}
+    .stag{font-size:11px;padding:3px 10px;background:var(--s2);border-radius:14px;color:var(--dim)}
+    .trend-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:14px;font-size:12px;font-weight:700}
+    .trend-melhora{background:rgba(0,230,118,.1);color:var(--green)}
+    .trend-piora{background:rgba(255,56,96,.1);color:var(--red)}
+    .trend-estavel{background:var(--s3);color:var(--dim)}
+    .trend-sem{background:var(--s3);color:var(--muted)}
+    /* 2-col layout */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+    /* PANEL */
+    .panel{background:var(--s1);border:1px solid var(--b1);border-radius:10px;overflow:hidden}
+    .panel-hdr{padding:12px 16px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between}
+    .panel-title{font-size:13px;font-weight:700}
+    .pbadge{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:3px}
+    .pb-red{background:rgba(255,56,96,.12);color:var(--red)}.pb-orange{background:rgba(255,152,0,.12);color:var(--orange)}.pb-green{background:rgba(0,230,118,.1);color:var(--green)}.pb-cyan{background:rgba(0,212,255,.08);color:var(--cyan)}.pb-purple{background:rgba(179,136,255,.1);color:var(--purple)}
+    .panel-body{padding:14px 16px}
+    /* OPTIM */
+    .optim-list{display:flex;flex-direction:column;gap:10px}
+    .optim-card{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:12px;transition:border-color .15s}
+    .optim-card:hover{border-color:var(--b2)}
+    .optim-hdr{display:flex;align-items:flex-start;gap:10px;margin-bottom:7px}
+    .pri-badge{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'DM Mono',monospace;flex-shrink:0}
+    .pri-1{background:rgba(255,56,96,.12);color:var(--red)}.pri-2{background:rgba(255,152,0,.12);color:var(--orange)}.pri-3{background:rgba(255,235,59,.1);color:var(--yellow)}.pri-n{background:var(--s3);color:var(--muted)}
+    .optim-title{font-size:13px;font-weight:700;margin-bottom:3px}
+    .tag-row{display:flex;gap:5px;flex-wrap:wrap}
+    .tag{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:3px;background:var(--s3);color:var(--dim)}
+    .tag-alto{background:rgba(0,230,118,.08);color:var(--green)}.tag-medio{background:rgba(255,152,0,.08);color:var(--orange)}.tag-baixo{background:var(--s3);color:var(--dim)}
+    .optim-desc{font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:8px}
+    .optim-action{font-size:11px;color:var(--cyan);line-height:1.5;padding:8px 10px;background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.1);border-radius:5px;font-family:'DM Mono',monospace}
+    /* ALERT */
+    .alert-list{display:flex;flex-direction:column;gap:7px}
+    .alert-item{display:flex;gap:10px;padding:10px 12px;border-radius:7px;align-items:flex-start}
+    .a-alta{background:rgba(255,56,96,.07);border:1px solid rgba(255,56,96,.18)}
+    .a-media{background:rgba(255,152,0,.07);border:1px solid rgba(255,152,0,.18)}
+    .alert-icon{font-size:15px;flex-shrink:0}
+    .alert-msg{font-size:12px;font-weight:600;margin-bottom:3px}
+    .alert-act{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+    /* OPP */
+    .opp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:20px}
+    .opp-card{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:14px;border-left:3px solid var(--cyan)}
+    .opp-title{font-size:13px;font-weight:700;margin-bottom:5px}
+    .opp-desc{font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:8px}
+    .opp-impact{font-family:'DM Mono',monospace;font-size:11px;color:var(--green)}
+    /* HISTORY INSIGHT */
+    .hist-list{display:flex;flex-direction:column;gap:8px}
+    .hist-item{padding:10px 12px;background:var(--s2);border:1px solid var(--b1);border-radius:7px;border-left:3px solid var(--purple)}
+    .hist-title{font-size:12px;font-weight:700;margin-bottom:3px}
+    .hist-obs{font-size:12px;color:var(--dim);line-height:1.55;margin-bottom:4px}
+    .hist-impl{font-size:11px;color:var(--purple);font-family:'DM Mono',monospace}
+    /* TABLE */
+    .table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--b1);margin-bottom:20px}
+    table{width:100%;border-collapse:collapse;font-size:12px;background:var(--s1)}
+    thead th{padding:10px 14px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;font-weight:400;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--b1);white-space:nowrap}
+    tbody td{padding:10px 14px;border-bottom:1px solid var(--b1);vertical-align:middle}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:var(--s2)}
+    .perf-badge{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:3px;display:inline-block}
+    .perf-excelente{background:rgba(0,230,118,.1);color:var(--green)}.perf-bom{background:rgba(0,212,255,.08);color:var(--cyan)}.perf-atencao{background:rgba(255,152,0,.1);color:var(--orange)}.perf-critico{background:rgba(255,56,96,.1);color:var(--red)}
+    /* PLAN */
+    .plan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+    .week-card{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:14px}
+    .week-hdr{font-family:'DM Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+    .week-foco{font-size:12px;font-weight:700;margin-bottom:10px;color:var(--dim)}
+    .week-act{font-size:11px;color:var(--dim);line-height:1.55;padding:4px 0 4px 14px;position:relative;border-bottom:1px solid var(--b1)}
+    .week-act:last-child{border-bottom:none}
+    .week-act::before{content:'→';position:absolute;left:0;color:var(--muted);font-family:'DM Mono',monospace}
+    /* HISTORY VIEW */
+    .history-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+    .run-row{display:grid;grid-template-columns:140px 100px 90px 90px 90px 90px 80px auto;align-items:center;gap:8px;padding:11px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;margin-bottom:6px;transition:border-color .15s;cursor:pointer}
+    .run-row:hover{border-color:var(--b2)}
+    .run-row.selected{border-color:var(--blue);background:rgba(24,119,242,.05)}
+    .run-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim)}
+    .run-range{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+    .run-val{font-size:12px;font-weight:700}
+    /* TREND CHART */
+    .chart-wrap{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:16px;margin-bottom:20px}
+    .chart-title{font-size:13px;font-weight:700;margin-bottom:14px}
+    canvas{display:block}
+    /* COMPARE */
+    .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+    .compare-metric{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:14px;text-align:center}
+    .cm-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px}
+    .cm-vals{display:flex;align-items:center;justify-content:center;gap:14px}
+    .cm-before{font-size:16px;font-weight:700;color:var(--muted)}
+    .cm-arrow{font-size:18px}
+    .cm-after{font-size:20px;font-weight:800}
+    .cm-delta{margin-top:6px}
+    /* SCROLL */
+    ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
+    @media(max-width:900px){.sidebar{display:none}.two-col{grid-template-columns:1fr}.plan-grid{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo"><div class="logo-icon">⚡</div>Meta Ads <span>Analyzer</span></div>
+  <div class="sep"></div>
+  <div class="topbar-mid">
+    <select class="sel" id="accountSel" style="max-width:260px"><option value="">Carregando contas...</option></select>
+    <select class="sel" id="dateSel">
+      <option value="last_7d">7 dias</option>
+      <option value="last_14d">14 dias</option>
+      <option value="last_30d" selected>30 dias</option>
+      <option value="last_90d">90 dias</option>
+      <option value="this_month">Este mês</option>
+      <option value="last_month">Mês passado</option>
+    </select>
+    <button class="btn btn-primary" id="btnAnalyze" onclick="runAnalysis()">
+      <span id="aIcon">🧠</span><span id="aText">Analisar com IA</span>
+    </button>
+    <span class="last-run-badge" id="lastRunBadge" style="display:none"></span>
+  </div>
+  <div class="topbar-right">
+    <div class="user-chip"><img class="user-avatar" id="uAvatar" src=""><span class="user-name" id="uName">...</span></div>
+    <a href="/auth/logout" class="btn btn-ghost" style="font-size:11px">Sair</a>
+  </div>
+</header>
+
+<!-- APP -->
+<div class="app-body">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="slabel">Navegação</div>
+      <button class="nav-item active" onclick="showView('overview')"><span class="nav-icon">📊</span>Visão Geral</button>
+      <button class="nav-item" onclick="showView('analysis')"><span class="nav-icon">🧠</span>Análise IA</button>
+      <button class="nav-item" onclick="showView('campaigns')"><span class="nav-icon">📋</span>Campanhas</button>
+      <button class="nav-item" onclick="showView('history')"><span class="nav-icon">📅</span>Histórico</button>
+      <button class="nav-item" onclick="showView('trend')"><span class="nav-icon">📈</span>Tendências</button>
+      <button class="nav-item" onclick="showView('plan')"><span class="nav-icon">🗓️</span>Plano 30 dias</button>
+    </div>
+    <div class="sidebar-section" style="margin-top:8px">
+      <div class="slabel">Campanhas</div>
+    </div>
+    <div class="camp-list" id="campSidebar">
+      <div style="padding:6px 8px;font-size:11px;color:var(--muted)">Selecione uma conta</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="mainContent">
+    <!-- EMPTY STATE -->
+    <div class="state-empty" id="stateEmpty">
+      <div class="ei">📡</div>
+      <h2>Selecione uma conta</h2>
+      <p>Escolha uma conta de anúncios e clique em <strong>Analisar com IA</strong> para gerar o diagnóstico completo.</p>
+    </div>
+
+    <!-- CONTENT -->
+    <div id="contentWrap" style="display:none">
+
+      <!-- OVERVIEW -->
+      <div id="view-overview">
+        <div class="stitle">MÉTRICAS DO PERÍODO</div>
+        <div class="mgrid" id="metricsGrid"></div>
+      </div>
+
+      <!-- ANALYSIS -->
+      <div id="view-analysis" style="display:none">
+        <div id="analysisSummary"></div>
+        <div class="two-col">
+          <div>
+            <div class="stitle" style="margin-bottom:10px">OTIMIZAÇÕES PRIORITÁRIAS</div>
+            <div class="optim-list" id="optimList"></div>
+          </div>
+          <div>
+            <div class="stitle" style="margin-bottom:10px">ALERTAS CRÍTICOS</div>
+            <div class="alert-list" id="alertList" style="margin-bottom:18px"></div>
+            <div class="stitle" style="margin-bottom:10px">INSIGHTS HISTÓRICOS</div>
+            <div class="hist-list" id="histList" style="margin-bottom:18px"></div>
+            <div class="stitle" style="margin-bottom:10px">OPORTUNIDADES</div>
+            <div id="oppList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CAMPAIGNS -->
+      <div id="view-campaigns" style="display:none">
+        <div class="stitle" style="margin-bottom:10px">ANÁLISE POR CAMPANHA</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Campanha</th><th>Status</th><th>Performance IA</th>
+              <th>Gasto</th><th>CTR</th><th>CPC</th><th>Freq.</th>
+              <th>Problema</th><th>Ação Imediata</th>
+            </tr></thead>
+            <tbody id="campTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- HISTORY -->
+      <div id="view-history" style="display:none">
+        <div class="history-toolbar">
+          <div class="stitle" style="margin:0;flex:1">HISTÓRICO DE ANÁLISES</div>
+          <button class="btn btn-ghost" id="btnCompare" onclick="compareSelected()" disabled>Comparar selecionados</button>
+        </div>
+        <div id="runList"></div>
+        <div id="compareResult" style="display:none">
+          <div class="stitle" style="margin-bottom:10px">COMPARATIVO</div>
+          <div class="compare-grid" id="compareGrid"></div>
+        </div>
+      </div>
+
+      <!-- TREND -->
+      <div id="view-trend" style="display:none">
+        <div class="stitle" style="margin-bottom:14px">EVOLUÇÃO DE MÉTRICAS (90 DIAS)</div>
+        <div class="chart-wrap">
+          <div class="chart-title">Score de Saúde da Conta</div>
+          <canvas id="chartHealth" height="90"></canvas>
+        </div>
+        <div class="two-col">
+          <div class="chart-wrap">
+            <div class="chart-title">CTR Médio (%)</div>
+            <canvas id="chartCtr" height="120"></canvas>
+          </div>
+          <div class="chart-wrap">
+            <div class="chart-title">CPC Médio</div>
+            <canvas id="chartCpc" height="120"></canvas>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="chart-wrap">
+            <div class="chart-title">Investimento por Período</div>
+            <canvas id="chartSpend" height="120"></canvas>
+          </div>
+          <div class="chart-wrap">
+            <div class="chart-title">Frequência Média</div>
+            <canvas id="chartFreq" height="120"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLAN -->
+      <div id="view-plan" style="display:none">
+        <div class="stitle" style="margin-bottom:10px">PLANO DE AÇÃO — 30 DIAS</div>
+        <div class="plan-grid" id="planGrid"></div>
+        <div class="stitle" style="margin-bottom:10px">PRÓXIMOS PASSOS IMEDIATOS</div>
+        <div id="nextSteps"></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="load-text" id="loadText">Carregando...</div>
+  <div class="load-sub" id="loadSub">Aguarde alguns segundos</div>
+</div>
+
+<script>
+// ── STATE ───────────────────────────────────────────────────────────────────
+let accounts = [], campaigns = [], insights = null, analysis = null;
+let metrics = null, previousRun = null;
+let selectedAccountId = null;
+let trendData = [];
+let selectedRuns = [];
+
+// ── INIT ────────────────────────────────────────────────────────────────────
+async function init() {
+  const me = await fetch('/api/me').then(r=>r.json());
+  if (!me.authenticated) { location.href='/'; return; }
+  const u = me.user;
+  document.getElementById('uName').textContent = u.name?.split(' ')[0]||'Usuário';
+  if (u.picture?.data?.url||u.picture) document.getElementById('uAvatar').src = u.picture?.data?.url||u.picture;
+  await loadAccounts();
+}
+
+async function loadAccounts() {
+  const sel = document.getElementById('accountSel');
+  try {
+    const d = await fetch('/api/adaccounts').then(r=>r.json());
+    if (d.error) { sel.innerHTML=`<option value="">Erro: ${d.error}</option>`; return; }
+    accounts = d.data||[];
+    if (!accounts.length) { sel.innerHTML='<option value="">Sem contas encontradas</option>'; return; }
+    sel.innerHTML = '<option value="">Selecione uma conta...</option>' +
+      accounts.map(a => {
+        const s = a.account_status===1?'✅':a.account_status===2?'⚠️':'❌';
+        return `<option value="${a.account_id}">${s} ${a.name} (${a.currency})</option>`;
+      }).join('');
+    sel.addEventListener('change', onAccountChange);
+  } catch(e) { sel.innerHTML='<option value="">Erro ao carregar</option>'; }
+}
+
+async function onAccountChange() {
+  selectedAccountId = document.getElementById('accountSel').value;
+  if (!selectedAccountId) return;
+  analysis = null; selectedRuns = [];
+  showLoading('Carregando campanhas...');
+  try {
+    const d = await fetch(`/api/adaccounts/${selectedAccountId}/campaigns`).then(r=>r.json());
+    campaigns = d.data||[];
+    renderCampSidebar();
+    // Check last run
+    const lr = await fetch(`/api/lastrun/${selectedAccountId}`).then(r=>r.json());
+    if (lr.run) {
+      previousRun = lr.run;
+      const badge = document.getElementById('lastRunBadge');
+      badge.textContent = `Última análise: ${fmtDate(lr.run.created_at)}`;
+      badge.style.display = 'block';
+    } else {
+      document.getElementById('lastRunBadge').style.display = 'none';
+    }
+  } finally { hideLoading(); }
+}
+
+function renderCampSidebar() {
+  const el = document.getElementById('campSidebar');
+  if (!campaigns.length) { el.innerHTML='<div style="padding:6px 8px;font-size:11px;color:var(--muted)">Sem campanhas</div>'; return; }
+  el.innerHTML = campaigns.slice(0,25).map(c=>`
+    <div class="camp-item">
+      <div class="camp-name" title="${c.name}">${c.name}</div>
+      <div class="camp-meta"><div class="dot dot-${c.status}"></div><span class="camp-status">${c.status==='ACTIVE'?'Ativa':c.status==='PAUSED'?'Pausada':'Arquivada'}</span></div>
+    </div>`).join('');
+}
+
+// ── ANALYZE ─────────────────────────────────────────────────────────────────
+async function runAnalysis() {
+  if (!selectedAccountId) { alert('Selecione uma conta primeiro.'); return; }
+  const dateRange = document.getElementById('dateSel').value;
+  const btn = document.getElementById('btnAnalyze');
+  btn.disabled = true;
+  document.getElementById('aText').textContent = 'Analisando...';
+  document.getElementById('aIcon').textContent = '⏳';
+  showLoading('Buscando dados das campanhas...');
+
+  try {
+    // Fetch insights
+    const insRes = await fetch(`/api/adaccounts/${selectedAccountId}/insights?date_preset=${dateRange}`).then(r=>r.json());
+    insights = insRes;
+    updateLoad('Claude AI analisando suas campanhas...', 'Gerando diagnóstico completo — pode levar 20-30s');
+
+    const accountInfo = accounts.find(a=>a.account_id===selectedAccountId);
+    const res = await fetch('/api/analyze', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ accountData: accountInfo, campaigns, insights, dateRange })
+    }).then(r=>r.json());
+
+    if (!res.success) throw new Error(res.error);
+
+    analysis = res.analysis;
+    metrics = res.metrics;
+    previousRun = res.previousRun;
+
+    // Update last run badge
+    const badge = document.getElementById('lastRunBadge');
+    badge.textContent = `Última análise: agora`;
+    badge.style.display = 'block';
+
+    renderAll();
+    showView('analysis');
+  } catch(e) {
+    alert('Erro: '+e.message);
+  } finally {
+    hideLoading();
+    btn.disabled=false;
+    document.getElementById('aText').textContent='Analisar com IA';
+    document.getElementById('aIcon').textContent='🧠';
+  }
+}
+
+// ── RENDER ALL ───────────────────────────────────────────────────────────────
+function renderAll() {
+  document.getElementById('stateEmpty').style.display='none';
+  document.getElementById('contentWrap').style.display='block';
+  if (!analysis) return;
+  renderMetrics();
+  renderSummary();
+  renderOptims();
+  renderAlerts();
+  renderHistInsights();
+  renderOpps();
+  renderCampTable();
+  renderPlan();
+}
+
+function renderMetrics() {
+  if (!metrics) return;
+  const m = metrics;
+  const curr = analysis?.metricas_comparativas || [];
+  const prev = previousRun;
+
+  const mkDelta = (curr, prev, higherBetter=true) => {
+    if (!prev) return '';
+    const delta = ((curr-prev)/Math.abs(prev)*100);
+    const up = delta > 0;
+    const good = higherBetter ? up : !up;
+    const cls = Math.abs(delta)<0.5?'delta-eq':good?'delta-up':'delta-dn';
+    const arrow = up?'↑':'↓';
+    return `<span class="delta ${cls}">${arrow}${Math.abs(delta).toFixed(1)}%</span>`;
+  };
+
+  const acct = accounts.find(a=>a.account_id===selectedAccountId);
+  const sym = acct?.currency==='BRL'?'R$':acct?.currency==='USD'?'$':(acct?.currency||'');
+
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="mcard"><div class="mlabel">GASTO TOTAL</div><div class="mval c-blue">${sym} ${m.totalSpend.toFixed(2)}</div><div class="msub">${document.getElementById('dateSel').selectedOptions[0].text} ${mkDelta(m.totalSpend, prev?.total_spend,true)}</div></div>
+    <div class="mcard"><div class="mlabel">IMPRESSÕES</div><div class="mval c-cyan">${fmtNum(m.totalImpressions)}</div><div class="msub">${fmtNum(m.totalReach)} alcance ${mkDelta(m.totalImpressions,prev?.total_impressions,true)}</div></div>
+    <div class="mcard"><div class="mlabel">CLIQUES</div><div class="mval">${fmtNum(m.totalClicks)}</div><div class="msub">total de cliques ${mkDelta(m.totalClicks,prev?.total_clicks,true)}</div></div>
+    <div class="mcard"><div class="mlabel">CTR MÉDIO</div><div class="mval ${m.avgCtr>=1?'c-green':m.avgCtr>=0.5?'c-orange':'c-red'}">${m.avgCtr.toFixed(2)}%</div><div class="msub">benchmark 1–3% ${mkDelta(m.avgCtr,prev?.avg_ctr,true)}</div></div>
+    <div class="mcard"><div class="mlabel">CPC MÉDIO</div><div class="mval">${sym} ${m.avgCpc.toFixed(2)}</div><div class="msub">custo por clique ${mkDelta(m.avgCpc,prev?.avg_cpc,false)}</div></div>
+    <div class="mcard"><div class="mlabel">CPM MÉDIO</div><div class="mval c-orange">${sym} ${m.avgCpm.toFixed(2)}</div><div class="msub">por mil impressões ${mkDelta(m.avgCpm,prev?.avg_cpm,false)}</div></div>
+    <div class="mcard"><div class="mlabel">FREQUÊNCIA</div><div class="mval ${m.avgFrequency>3.5?'c-red':m.avgFrequency>2?'c-orange':'c-green'}">${m.avgFrequency.toFixed(2)}</div><div class="msub">vezes visto ${mkDelta(m.avgFrequency,prev?.avg_frequency,false)}</div></div>
+    <div class="mcard"><div class="mlabel">SCORE SAÚDE</div><div class="mval" style="color:${scoreColor(analysis?.resumo_geral?.score_saude)}">${analysis?.resumo_geral?.score_saude||'—'}</div><div class="msub">${analysis?.resumo_geral?.nivel_saude||''} ${mkDelta(analysis?.resumo_geral?.score_saude,prev?.health_score,true)}</div></div>
+    <div class="mcard"><div class="mlabel">CAMPANHAS ATIVAS</div><div class="mval c-green">${m.activeCampaigns}</div><div class="msub">de ${m.totalCampaigns} campanhas</div></div>
+  `;
+}
+
+function renderSummary() {
+  const r = analysis?.resumo_geral||{};
+  const sc = scoreClass(r.nivel_saude);
+  const td = r.tendencia||'sem_historico';
+  const trendMap = { melhora:{cls:'trend-melhora',icon:'↑',label:'Em melhora'}, estavel:{cls:'trend-estavel',icon:'→',label:'Estável'}, piora:{cls:'trend-piora',icon:'↓',label:'Em queda'}, sem_historico:{cls:'trend-sem',icon:'·',label:'Sem histórico'} };
+  const t = trendMap[td]||trendMap.sem_historico;
+  document.getElementById('analysisSummary').innerHTML = `
+    <div class="summary-hdr">
+      <div class="score-ring score-${sc}"><span class="score-num">${r.score_saude||'?'}</span><span class="score-lbl">score</span></div>
+      <div class="summary-info">
+        <div class="summary-title">${r.nivel_saude||'Analisando'} — <span class="trend-badge ${t.cls}">${t.icon} ${t.label}</span></div>
+        <div style="font-size:12px;color:var(--dim);margin-bottom:8px">${r.resumo_historico||''}</div>
+        <div class="summary-tags">${(r.pontos_principais||[]).map(p=>`<span class="stag">${p}</span>`).join('')}</div>
+      </div>
+    </div>`;
+}
+
+function renderOptims() {
+  const opts = analysis?.otimizacoes_prioritarias||[];
+  document.getElementById('optimList').innerHTML = opts.map(o=>{
+    const pc = o.prioridade===1?'pri-1':o.prioridade===2?'pri-2':o.prioridade===3?'pri-3':'pri-n';
+    const ic = `tag-${(o.impacto_esperado||'').toLowerCase()}`;
+    return `<div class="optim-card">
+      <div class="optim-hdr">
+        <div class="pri-badge ${pc}">#${o.prioridade}</div>
+        <div><div class="optim-title">${o.titulo}</div>
+        <div class="tag-row"><span class="tag">${o.categoria}</span><span class="tag ${ic}">${o.impacto_esperado}</span><span class="tag">${o.prazo}</span></div></div>
+      </div>
+      <div class="optim-desc">${o.descricao}</div>
+      <div class="optim-action">▶ ${o.acao}</div>
+    </div>`;
+  }).join('')||'<div style="font-size:12px;color:var(--muted)">Execute a análise para ver otimizações.</div>';
+}
+
+function renderAlerts() {
+  const alerts = analysis?.alertas_criticos||[];
+  const iconMap = {'Orçamento':'💸','Performance':'📉','Aprovação':'🚫','Faturas':'💳','Frequência':'🔁','Saturação':'😴'};
+  document.getElementById('alertList').innerHTML = alerts.length
+    ? alerts.map(a=>`<div class="alert-item a-${(a.severidade||'media').toLowerCase()}">
+        <div class="alert-icon">${iconMap[a.tipo]||'⚠️'}</div>
+        <div><div class="alert-msg">${a.mensagem}</div><div class="alert-act">→ ${a.acao_requerida}</div></div>
+      </div>`).join('')
+    : '<div style="color:var(--green);font-size:12px;padding:6px 0">✅ Nenhum alerta crítico</div>';
+}
+
+function renderHistInsights() {
+  const items = analysis?.insights_historicos||[];
+  document.getElementById('histList').innerHTML = items.length
+    ? items.map(i=>`<div class="hist-item"><div class="hist-title">${i.titulo}</div><div class="hist-obs">${i.observacao}</div><div class="hist-impl">→ ${i.implicacao}</div></div>`).join('')
+    : '<div style="font-size:11px;color:var(--muted)">Execute mais análises para ver comparativos históricos.</div>';
+}
+
+function renderOpps() {
+  const opps = analysis?.oportunidades||[];
+  document.getElementById('oppList').innerHTML = `<div class="opp-grid">
+    ${opps.map(o=>`<div class="opp-card"><div class="opp-title">💡 ${o.titulo}</div><div class="opp-desc">${o.descricao}</div><div class="opp-impact">📈 ${o.potencial_impacto}</div></div>`).join('')}
+  </div>`;
+}
+
+function renderCampTable() {
+  const ca = analysis?.campanhas_analise||[];
+  document.getElementById('campTableBody').innerHTML = ca.map(c=>{
+    const pc = 'perf-'+(c.status_performance||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c');
+    return `<tr>
+      <td style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c.nome}">${c.nome}</td>
+      <td><div style="display:flex;align-items:center;gap:5px"><div class="dot dot-ACTIVE"></div><span style="font-size:11px;color:var(--dim)">Ativa</span></div></td>
+      <td><span class="perf-badge ${pc}">${c.status_performance}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px">${c.gasto||'—'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px">${c.ctr||'—'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px">${c.cpc||'—'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px">${c.frequencia||'—'}</td>
+      <td style="font-size:11px;color:var(--dim);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c.problema_principal}">${c.problema_principal||'—'}</td>
+      <td style="font-size:11px;color:var(--cyan);max-width:180px">${c.acao_imediata||'—'}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px">Sem dados</td></tr>';
+}
+
+function renderPlan() {
+  const weeks = analysis?.plano_acao_30dias||[];
+  document.getElementById('planGrid').innerHTML = weeks.map(w=>`
+    <div class="week-card">
+      <div class="week-hdr">Semana ${w.semana}</div>
+      <div class="week-foco">${w.foco||''}</div>
+      ${(w.acoes||[]).map(a=>`<div class="week-act">${a}</div>`).join('')}
+    </div>`).join('');
+  const steps = analysis?.proximos_passos||[];
+  document.getElementById('nextSteps').innerHTML = steps.map((s,i)=>`
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:7px;margin-bottom:6px">
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--cyan);flex-shrink:0">${String(i+1).padStart(2,'0')}</span>
+      <span style="font-size:12px;color:var(--dim)">${s}</span>
+    </div>`).join('');
+}
+
+// ── HISTORY VIEW ─────────────────────────────────────────────────────────────
+async function loadHistory() {
+  if (!selectedAccountId) { document.getElementById('runList').innerHTML='<div style="font-size:12px;color:var(--muted)">Selecione uma conta primeiro.</div>'; return; }
+  showLoading('Carregando histórico...');
+  try {
+    const d = await fetch(`/api/history/${selectedAccountId}`).then(r=>r.json());
+    renderRunList(d.runs||[]);
+  } finally { hideLoading(); }
+}
+
+function renderRunList(runs) {
+  if (!runs.length) {
+    document.getElementById('runList').innerHTML='<div style="font-size:12px;color:var(--muted);padding:16px 0">Nenhuma análise salva ainda. Execute a primeira análise.</div>';
+    return;
+  }
+  document.getElementById('runList').innerHTML = runs.map(r=>`
+    <div class="run-row" id="run-${r.id}" onclick="selectRun(${r.id})">
+      <div><div class="run-date">${fmtDate(r.created_at)}</div><div class="run-range">${r.date_range||''}</div></div>
+      <div class="run-val" style="color:${scoreColor(r.health_score)}">${r.health_score!=null?r.health_score+'pts':'—'}</div>
+      <div class="run-val c-blue">R$ ${Number(r.total_spend||0).toFixed(0)}</div>
+      <div class="run-val" style="color:${Number(r.avg_ctr)>=1?'var(--green)':Number(r.avg_ctr)>=0.5?'var(--orange)':'var(--red)'}">${Number(r.avg_ctr||0).toFixed(2)}%</div>
+      <div class="run-val">R$ ${Number(r.avg_cpc||0).toFixed(2)}</div>
+      <div class="run-val c-orange">R$ ${Number(r.avg_cpm||0).toFixed(2)}</div>
+      <div class="run-val">${r.active_campaigns||0}/${r.total_campaigns||0}</div>
+      <button class="btn btn-ghost" style="font-size:10px" onclick="event.stopPropagation();loadRunDetail(${r.id})">Ver análise</button>
+    </div>`).join('');
+}
+
+function selectRun(id) {
+  const el = document.getElementById(`run-${id}`);
+  if (el.classList.contains('selected')) {
+    el.classList.remove('selected');
+    selectedRuns = selectedRuns.filter(r=>r!==id);
+  } else if (selectedRuns.length < 2) {
+    el.classList.add('selected');
+    selectedRuns.push(id);
+  } else {
+    alert('Selecione no máximo 2 análises para comparar.');
+    return;
+  }
+  document.getElementById('btnCompare').disabled = selectedRuns.length !== 2;
+}
+
+async function loadRunDetail(runId) {
+  showLoading('Carregando análise...');
+  try {
+    const d = await fetch(`/api/history/run/${runId}`).then(r=>r.json());
+    if (!d.run) return;
+    analysis = d.run.ai_analysis;
+    metrics = {
+      totalSpend: Number(d.run.total_spend), totalImpressions: Number(d.run.total_impressions),
+      totalClicks: Number(d.run.total_clicks), totalReach: Number(d.run.total_reach||0),
+      avgCtr: Number(d.run.avg_ctr), avgCpc: Number(d.run.avg_cpc), avgCpm: Number(d.run.avg_cpm),
+      avgFrequency: Number(d.run.avg_frequency||0),
+      activeCampaigns: Number(d.run.active_campaigns), totalCampaigns: Number(d.run.total_campaigns)
+    };
+    renderAll();
+    showView('analysis');
+  } finally { hideLoading(); }
+}
+
+async function compareSelected() {
+  if (selectedRuns.length !== 2) return;
+  showLoading('Gerando comparativo...');
+  try {
+    const d = await fetch(`/api/compare/${selectedRuns[0]}/${selectedRuns[1]}`).then(r=>r.json());
+    if (d.error) { alert(d.error); return; }
+    renderCompare(d);
+    document.getElementById('compareResult').style.display = 'block';
+    document.getElementById('compareResult').scrollIntoView({behavior:'smooth'});
+  } finally { hideLoading(); }
+}
+
+function renderCompare(data) {
+  const { before, after, deltas } = data;
+  const sym = 'R$';
+  const mkRow = (label, bval, aval, delta, higherBetter=true, unit='') => {
+    const d = parseFloat(delta);
+    const good = higherBetter ? d>0 : d<0;
+    const cls = Math.abs(d)<0.5?'delta-eq':good?'delta-up':'delta-dn';
+    const arrow = d>0?'↑':'↓';
+    return `<div class="compare-metric">
+      <div class="cm-label">${label}</div>
+      <div class="cm-vals">
+        <div class="cm-before">${bval}</div>
+        <div class="cm-arrow">→</div>
+        <div class="cm-after">${aval}</div>
+      </div>
+      <div class="cm-delta">${delta!=null?`<span class="delta ${cls}">${arrow} ${Math.abs(d).toFixed(1)}%</span>`:'—'}</div>
+    </div>`;
+  };
+  document.getElementById('compareGrid').innerHTML =
+    mkRow('Score de Saúde', (before.health_score||'?')+'pts', (after.health_score||'?')+'pts', deltas.health_score, true) +
+    mkRow('Gasto Total', sym+Number(before.total_spend).toFixed(0), sym+Number(after.total_spend).toFixed(0), deltas.spend, false) +
+    mkRow('CTR Médio', Number(before.avg_ctr).toFixed(2)+'%', Number(after.avg_ctr).toFixed(2)+'%', deltas.ctr, true) +
+    mkRow('CPC Médio', sym+Number(before.avg_cpc).toFixed(2), sym+Number(after.avg_cpc).toFixed(2), deltas.cpc, false) +
+    mkRow('CPM Médio', sym+Number(before.avg_cpm).toFixed(2), sym+Number(after.avg_cpm).toFixed(2), deltas.cpm, false) +
+    mkRow('Impressões', fmtNum(before.total_impressions), fmtNum(after.total_impressions), deltas.impressions, true) +
+    mkRow('Cliques', fmtNum(before.total_clicks), fmtNum(after.total_clicks), deltas.clicks, true);
+}
+
+// ── TREND CHARTS ─────────────────────────────────────────────────────────────
+async function loadTrend() {
+  if (!selectedAccountId) return;
+  showLoading('Carregando tendências...');
+  try {
+    const d = await fetch(`/api/trend/${selectedAccountId}`).then(r=>r.json());
+    trendData = d.trend||[];
+    renderCharts();
+  } finally { hideLoading(); }
+}
+
+function renderCharts() {
+  if (!trendData.length) {
+    document.getElementById('view-trend').innerHTML='<div style="font-size:12px;color:var(--muted);padding:24px 0">Sem dados históricos suficientes. Execute mais análises ao longo do tempo.</div>';
+    return;
+  }
+  const labels = trendData.map(r=>fmtDateShort(r.date));
+  drawChart('chartHealth', labels, trendData.map(r=>r.avg_health), '#00e676', 'Score');
+  drawChart('chartCtr', labels, trendData.map(r=>Number(r.avg_ctr).toFixed(3)), '#00d4ff', 'CTR %');
+  drawChart('chartCpc', labels, trendData.map(r=>Number(r.avg_cpc).toFixed(2)), '#ff9800', 'CPC');
+  drawChart('chartSpend', labels, trendData.map(r=>Number(r.total_spend).toFixed(0)), '#1877F2', 'Spend');
+  drawChart('chartFreq', labels, trendData.map(r=>Number(r.avg_frequency).toFixed(2)), '#b388ff', 'Freq');
+}
+
+function drawChart(id, labels, data, color, label) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 32;
+  canvas.width = W;
+  const H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  if (!data.length) return;
+  const vals = data.map(Number);
+  const min = Math.min(...vals)*0.9;
+  const max = Math.max(...vals)*1.1||1;
+  const pad = { l:40, r:10, t:10, b:28 };
+  const cW = W-pad.l-pad.r, cH = H-pad.t-pad.b;
+
+  // Grid
+  ctx.strokeStyle = '#1e2433'; ctx.lineWidth = 1;
+  for (let i=0;i<=4;i++) {
+    const y = pad.t + (cH/4)*i;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+    ctx.fillStyle='#3d4456'; ctx.font='10px DM Mono,monospace'; ctx.textAlign='right';
+    const v = max - (max-min)*(i/4);
+    ctx.fillText(Number(v).toFixed(1), pad.l-4, y+4);
+  }
+
+  const xStep = vals.length > 1 ? cW/(vals.length-1) : 0;
+
+  // Area fill
+  const grad = ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  grad.addColorStop(0, color+'33'); grad.addColorStop(1, color+'00');
+  ctx.beginPath();
+  vals.forEach((v,i)=>{
+    const x = pad.l + i*xStep;
+    const y = pad.t + cH - ((v-min)/(max-min||1))*cH;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.lineTo(pad.l+(vals.length-1)*xStep, H-pad.b);
+  ctx.lineTo(pad.l, H-pad.b);
+  ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+
+  // Line
+  ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=2;
+  vals.forEach((v,i)=>{
+    const x = pad.l + i*xStep;
+    const y = pad.t + cH - ((v-min)/(max-min||1))*cH;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Dots
+  vals.forEach((v,i)=>{
+    const x = pad.l + i*xStep;
+    const y = pad.t + cH - ((v-min)/(max-min||1))*cH;
+    ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2);
+    ctx.fillStyle=color; ctx.fill();
+  });
+
+  // X labels (show every N)
+  ctx.fillStyle='#3d4456'; ctx.font='10px DM Mono,monospace'; ctx.textAlign='center';
+  const step = Math.max(1, Math.floor(vals.length/6));
+  labels.forEach((l,i)=>{ if (i%step===0) ctx.fillText(l, pad.l+i*xStep, H-6); });
+}
+
+// ── VIEWS ────────────────────────────────────────────────────────────────────
+function showView(view) {
+  ['overview','analysis','campaigns','history','trend','plan'].forEach(v=>{
+    document.getElementById(`view-${v}`).style.display = v===view?'block':'none';
+  });
+  document.querySelectorAll('.nav-item').forEach((btn,i)=>{
+    const vs=['overview','analysis','campaigns','history','trend','plan'];
+    btn.classList.toggle('active', vs[i]===view);
+  });
+  if (view==='history') loadHistory();
+  if (view==='trend') loadTrend();
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function showLoading(t='Carregando...') { document.getElementById('loadingOverlay').classList.add('show'); document.getElementById('loadText').textContent=t; }
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+function updateLoad(t,s) { document.getElementById('loadText').textContent=t; document.getElementById('loadSub').textContent=s; }
+function fmtNum(n) { n=parseInt(n||0); if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1000) return (n/1000).toFixed(1)+'K'; return n.toString(); }
+function fmtDate(d) { return new Date(d).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function fmtDateShort(d) { const dt=new Date(d); return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`; }
+function scoreColor(s) { if(!s) return 'var(--dim)'; if(s>=80) return 'var(--green)'; if(s>=60) return 'var(--cyan)'; if(s>=40) return 'var(--orange)'; return 'var(--red)'; }
+function scoreClass(nivel) { if(!nivel) return 'bom'; const n=nivel.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); if(n.includes('excelente')) return 'excelente'; if(n.includes('bom')) return 'bom'; if(n.includes('aten')) return 'atencao'; return 'critico'; }
+
+init();
+</script>
+</body>
+</html>
