@@ -25,7 +25,7 @@ const REDIRECT_URI = `${BASE_URL}/auth/facebook/callback`;
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 
 app.get('/auth/facebook', (req, res) => {
-  const scopes = ['ads_read', 'ads_management', 'business_management', 'read_insights', 'public_profile', 'email'].join(',');
+  const scopes = ['ads_read', 'ads_management', 'business_management', 'public_profile'].join(',');
   res.redirect(`https://www.facebook.com/v19.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${scopes}&response_type=code`);
 });
 
