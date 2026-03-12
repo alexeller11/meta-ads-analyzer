@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const axios = require('axios');
+const nodemailer = require('nodemailer');
 const path = require('path');
 const db = require('./db');
 
@@ -24,7 +25,7 @@ const REDIRECT_URI = `${BASE_URL}/auth/facebook/callback`;
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 
 app.get('/auth/facebook', (req, res) => {
-  const scopes = ['ads_read', 'ads_management', 'business_management', 'public_profile'].join(',');
+  const scopes = ['ads_read', 'ads_management', 'business_management', 'read_insights', 'public_profile', 'email'].join(',');
   res.redirect(`https://www.facebook.com/v19.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${scopes}&response_type=code`);
 });
 
@@ -623,6 +624,189 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun, dateRan
     proximos_passos
   };
 }
+
+// ─── EMAIL SERVICE ────────────────────────────────────────────────────────────
+
+function createMailTransporter() {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.ALERT_EMAIL_USER,
+      pass: process.env.ALERT_EMAIL_PASS
+    }
+  });
+}
+
+async function sendBudgetAlertEmail({ toEmail, accountName, remainingBudget, threshold, currency }) {
+  const transporter = createMailTransporter();
+  const currSymbol = currency === 'BRL' ? 'R$' : currency === 'USD' ? '$' : currency;
+
+  const html = `
+  <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#08090d;color:#e8eaf0;border-radius:12px;overflow:hidden">
+    <div style="background:#1877F2;padding:24px 32px">
+      <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px">⚡ Meta Ads Analyzer</div>
+      <div style="font-size:13px;opacity:0.8;margin-top:4px">Alerta de Orçamento</div>
+    </div>
+    <div style="padding:32px">
+      <div style="background:#161923;border:1px solid #1e2433;border-radius:10px;padding:20px;margin-bottom:24px">
+        <div style="font-size:13px;color:#8892a4;margin-bottom:6px">CONTA DE ANÚNCIOS</div>
+        <div style="font-size:18px;font-weight:700">${accountName}</div>
+      </div>
+      <div style="background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.3);border-radius:10px;padding:20px;margin-bottom:24px">
+        <div style="font-size:13px;color:#ff9800;font-weight:700;margin-bottom:10px">⚠️ ORÇAMENTO BAIXO</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;color:#8892a4">Saldo restante</div>
+            <div style="font-size:32px;font-weight:800;color:#ff9800">${currSymbol} ${parseFloat(remainingBudget).toFixed(2)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;color:#8892a4">Limite de alerta</div>
+            <div style="font-size:20px;font-weight:700;color:#8892a4">${currSymbol} ${parseFloat(threshold).toFixed(2)}</div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#161923;border-radius:10px;padding:20px;margin-bottom:24px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">O que fazer agora:</div>
+        <div style="font-size:13px;color:#8892a4;line-height:1.8">
+          1. Acesse o <strong style="color:#e8eaf0">Gerenciador de Anúncios</strong> do Facebook<br>
+          2. Vá em <strong style="color:#e8eaf0">Configurações da conta</strong> → <strong style="color:#e8eaf0">Faturamento</strong><br>
+          3. Adicione crédito ou verifique o método de pagamento<br>
+          4. Sem ação, seus anúncios podem ser pausados automaticamente pelo Meta
+        </div>
+      </div>
+      <a href="https://www.facebook.com/adsmanager" style="display:block;text-align:center;background:#1877F2;color:#fff;padding:14px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">
+        Acessar Gerenciador de Anúncios →
+      </a>
+    </div>
+    <div style="padding:16px 32px;border-top:1px solid #1e2433;font-size:11px;color:#3d4456;text-align:center">
+      Alerta enviado por Meta Ads Analyzer • Para desativar acesse o dashboard
+    </div>
+  </div>`;
+
+  await transporter.sendMail({
+    from: `"Meta Ads Analyzer" <${process.env.ALERT_EMAIL_USER}>`,
+    to: toEmail,
+    subject: `⚠️ Orçamento baixo: ${accountName} — ${currSymbol} ${parseFloat(remainingBudget).toFixed(2)} restantes`,
+    html
+  });
+}
+
+// ─── ALERT ROUTES ─────────────────────────────────────────────────────────────
+
+app.get('/api/alert/:accountId', auth, async (req, res) => {
+  try {
+    const alert = await db.getBudgetAlert(req.session.user.id, req.params.accountId);
+    res.json({ alert: alert || null });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/alert', auth, async (req, res) => {
+  const { accountId, accountName, email, threshold, currency } = req.body;
+  if (!accountId || !email) return res.status(400).json({ error: 'accountId e email obrigatórios' });
+  try {
+    const alert = await db.upsertBudgetAlert({
+      fbUserId: req.session.user.id,
+      fbAccountId: accountId,
+      accountName,
+      email,
+      threshold: parseFloat(threshold) || 100,
+      currency: currency || 'BRL'
+    });
+
+    // Envia email de confirmação
+    try {
+      const currSymbol = currency === 'BRL' ? 'R$' : '$';
+      const transporter = createMailTransporter();
+      await transporter.sendMail({
+        from: `"Meta Ads Analyzer" <${process.env.ALERT_EMAIL_USER}>`,
+        to: email,
+        subject: '✅ Alerta de orçamento ativado — Meta Ads Analyzer',
+        html: `<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:32px;background:#08090d;color:#e8eaf0;border-radius:12px">
+          <h2 style="color:#00e676;margin-top:0">✅ Alerta ativado com sucesso!</h2>
+          <p style="color:#8892a4">Você receberá um email neste endereço quando o saldo da conta <strong style="color:#e8eaf0">${accountName}</strong> estiver abaixo de <strong style="color:#ff9800">${currSymbol} ${parseFloat(threshold||100).toFixed(2)}</strong>.</p>
+          <p style="color:#3d4456;font-size:12px;margin-top:24px">Para desativar, acesse o Meta Ads Analyzer e clique em "Remover alerta".</p>
+        </div>`
+      });
+    } catch(emailErr) {
+      console.warn('Confirmation email failed:', emailErr.message);
+    }
+
+    res.json({ success: true, alert });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/alert/:accountId', auth, async (req, res) => {
+  try {
+    await db.deleteBudgetAlert(req.session.user.id, req.params.accountId);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── BACKGROUND JOB: checar saldo a cada 1h ──────────────────────────────────
+
+async function checkBudgetAlerts() {
+  try {
+    const alerts = await db.getAllActiveAlerts();
+    if (!alerts.length) return;
+
+    for (const alert of alerts) {
+      try {
+        // Buscar saldo da conta via Meta API — precisamos do token do usuário
+        // Como não guardamos o token, usamos o amount_spent do último run como proxy
+        const lastRun = await db.getLastRun(alert.fb_account_id);
+        if (!lastRun) continue;
+
+        // Buscar saldo diretamente da Meta API usando token de sistema (se disponível)
+        // Por ora, verifica se o last run tem dados recentes (menos de 2h)
+        const runAge = (Date.now() - new Date(lastRun.created_at).getTime()) / 1000 / 60; // minutos
+        if (runAge > 120) continue; // só alerta se análise foi feita recentemente
+
+        // O trigger real de alerta vem do endpoint /api/check-budget chamado pelo dashboard
+      } catch(err) {
+        console.error('Alert check error for', alert.fb_account_id, err.message);
+      }
+    }
+  } catch(err) {
+    console.error('checkBudgetAlerts error:', err.message);
+  }
+}
+
+// Rota chamada pelo dashboard após carregar dados da conta (tem acesso ao token)
+app.post('/api/check-budget', auth, async (req, res) => {
+  const { accountId, accountName, remainingBudget, currency } = req.body;
+  if (!accountId || remainingBudget === undefined) return res.json({ checked: false });
+
+  try {
+    const alert = await db.getBudgetAlert(req.session.user.id, accountId);
+    if (!alert || !alert.active) return res.json({ checked: true, alerted: false });
+
+    const remaining = parseFloat(remainingBudget);
+    const threshold = parseFloat(alert.threshold_amount);
+
+    if (remaining <= threshold) {
+      // Checar se já enviou nas últimas 6h
+      const lastSent = alert.last_alert_sent;
+      const hoursSince = lastSent ? (Date.now() - new Date(lastSent).getTime()) / 1000 / 3600 : 999;
+
+      if (hoursSince >= 6) {
+        await sendBudgetAlertEmail({
+          toEmail: alert.alert_email,
+          accountName: accountName || alert.account_name,
+          remainingBudget: remaining,
+          threshold,
+          currency: currency || alert.currency
+        });
+        await db.markAlertSent(alert.id);
+        console.log(`📧 Budget alert sent for ${accountName} → ${alert.alert_email}`);
+        return res.json({ checked: true, alerted: true, sentTo: alert.alert_email });
+      }
+    }
+    res.json({ checked: true, alerted: false, remaining, threshold });
+  } catch(e) {
+    console.error('check-budget error:', e.message);
+    res.json({ checked: false, error: e.message });
+  }
+});
 
 // ─── PAGES ───────────────────────────────────────────────────────────────────
 

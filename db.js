@@ -70,6 +70,23 @@ const SCHEMA = `
 
   CREATE INDEX IF NOT EXISTS idx_snap_account ON campaign_snapshots(fb_account_id, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_snap_campaign ON campaign_snapshots(fb_campaign_id, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS budget_alerts (
+    id SERIAL PRIMARY KEY,
+    fb_user_id VARCHAR(64) NOT NULL,
+    fb_account_id VARCHAR(64) NOT NULL,
+    account_name TEXT,
+    alert_email TEXT NOT NULL,
+    threshold_amount NUMERIC(10,2) DEFAULT 100.00,
+    currency VARCHAR(8) DEFAULT 'BRL',
+    active BOOLEAN DEFAULT TRUE,
+    last_alert_sent TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(fb_user_id, fb_account_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_alerts_user ON budget_alerts(fb_user_id);
+  CREATE INDEX IF NOT EXISTS idx_alerts_active ON budget_alerts(active, last_alert_sent);
 `;
 
 async function initDB() {
@@ -208,9 +225,59 @@ async function getLastRun(fbAccountId) {
   return rows[0] || null;
 }
 
+// ─── ALERT QUERIES ───────────────────────────────────────────────────────────
+
+async function upsertBudgetAlert({ fbUserId, fbAccountId, accountName, email, threshold, currency }) {
+  const { rows } = await pool.query(`
+    INSERT INTO budget_alerts (fb_user_id, fb_account_id, account_name, alert_email, threshold_amount, currency, active)
+    VALUES ($1,$2,$3,$4,$5,$6,true)
+    ON CONFLICT (fb_user_id, fb_account_id) DO UPDATE SET
+      alert_email = EXCLUDED.alert_email,
+      threshold_amount = EXCLUDED.threshold_amount,
+      account_name = EXCLUDED.account_name,
+      currency = EXCLUDED.currency,
+      active = true
+    RETURNING *
+  `, [fbUserId, fbAccountId, accountName, email, threshold || 100, currency || 'BRL']);
+  return rows[0];
+}
+
+async function getBudgetAlert(fbUserId, fbAccountId) {
+  const { rows } = await pool.query(
+    `SELECT * FROM budget_alerts WHERE fb_user_id=$1 AND fb_account_id=$2`,
+    [fbUserId, fbAccountId]
+  );
+  return rows[0] || null;
+}
+
+async function deleteBudgetAlert(fbUserId, fbAccountId) {
+  await pool.query(
+    `DELETE FROM budget_alerts WHERE fb_user_id=$1 AND fb_account_id=$2`,
+    [fbUserId, fbAccountId]
+  );
+}
+
+async function getAllActiveAlerts() {
+  const { rows } = await pool.query(`
+    SELECT * FROM budget_alerts
+    WHERE active = true
+    AND (last_alert_sent IS NULL OR last_alert_sent < NOW() - INTERVAL '6 hours')
+  `);
+  return rows;
+}
+
+async function markAlertSent(id) {
+  await pool.query(
+    `UPDATE budget_alerts SET last_alert_sent = NOW() WHERE id=$1`,
+    [id]
+  );
+}
+
 module.exports = {
   pool, initDB,
   saveRun, getRunHistory, getRunDetail,
   getCampaignHistory, getAccountTrend,
-  compareRuns, getLastRun
+  compareRuns, getLastRun,
+  upsertBudgetAlert, getBudgetAlert, deleteBudgetAlert,
+  getAllActiveAlerts, markAlertSent
 };

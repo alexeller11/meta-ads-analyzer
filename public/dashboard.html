@@ -44,6 +44,10 @@
     .nav-item:hover{background:var(--s2);color:var(--text)}
     .nav-item.active{background:rgba(24,119,242,.12);color:var(--blue)}
     .nav-icon{font-size:14px;width:18px;text-align:center}
+    .camp-filter-btn{flex:1;padding:4px 0;border-radius:5px;font-family:"Syne",sans-serif;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--b1);background:var(--s2);color:var(--muted);transition:all .15s}
+    .camp-filter-btn:hover{color:var(--text);border-color:var(--b2)}
+    .camp-filter-btn.active{background:rgba(24,119,242,.15);border-color:rgba(24,119,242,.3);color:var(--blue)}
+    .camp-count{font-family:"DM Mono",monospace;font-size:9px;padding:1px 5px;border-radius:3px;background:var(--s3);color:var(--muted);margin-left:3px}
     .camp-list{padding:0 12px 16px;flex:1;overflow-y:auto}
     .camp-item{padding:8px 10px;border-radius:7px;cursor:pointer;margin-bottom:3px;border:1px solid transparent;transition:all .15s}
     .camp-item:hover{background:var(--s2)}
@@ -203,6 +207,7 @@
     <span class="last-run-badge" id="lastRunBadge" style="display:none"></span>
   </div>
   <div class="topbar-right">
+    <button class="btn btn-ghost" id="btnAlert" onclick="openAlertModal()" style="font-size:11px;display:none" title="Configurar alerta de orçamento">🔔 Alerta</button>
     <div class="user-chip"><img class="user-avatar" id="uAvatar" src=""><span class="user-name" id="uName">...</span></div>
     <a href="/auth/logout" class="btn btn-ghost" style="font-size:11px">Sair</a>
   </div>
@@ -223,6 +228,11 @@
     </div>
     <div class="sidebar-section" style="margin-top:8px">
       <div class="slabel">Campanhas</div>
+      <div style="display:flex;gap:4px;margin-bottom:8px;padding:0 2px">
+        <button class="camp-filter-btn active" id="filterAll" onclick="setCampFilter('all')">Todas</button>
+        <button class="camp-filter-btn" id="filterActive" onclick="setCampFilter('active')">Ativas</button>
+        <button class="camp-filter-btn" id="filterPaused" onclick="setCampFilter('paused')">Pausadas</button>
+      </div>
     </div>
     <div class="camp-list" id="campSidebar">
       <div style="padding:6px 8px;font-size:11px;color:var(--muted)">Selecione uma conta</div>
@@ -395,13 +405,55 @@ async function onAccountChange() {
     } else {
       document.getElementById('lastRunBadge').style.display = 'none';
     }
+    // Check budget alert + show alert button
+    const acct = accounts.find(a=>a.account_id===selectedAccountId);
+    if (acct) {
+      checkBudgetAfterLoad(selectedAccountId, acct.name, acct.amount_spent, acct.currency);
+      if (acct.amount_spent !== undefined) {
+        fetch('/api/check-budget', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ accountId: selectedAccountId, accountName: acct.name, remainingBudget: acct.amount_spent, currency: acct.currency })
+        }).catch(()=>{});
+      }
+    }
   } finally { hideLoading(); }
+}
+
+let campFilter = 'all';
+
+function setCampFilter(f) {
+  campFilter = f;
+  ['all','active','paused'].forEach(id => {
+    const btn = document.getElementById('filter'+id.charAt(0).toUpperCase()+id.slice(1));
+    if(btn) btn.classList.toggle('active', id===f);
+  });
+  renderCampSidebar();
 }
 
 function renderCampSidebar() {
   const el = document.getElementById('campSidebar');
   if (!campaigns.length) { el.innerHTML='<div style="padding:6px 8px;font-size:11px;color:var(--muted)">Sem campanhas</div>'; return; }
-  el.innerHTML = campaigns.slice(0,25).map(c=>`
+  
+  let filtered = campaigns;
+  if (campFilter === 'active') filtered = campaigns.filter(c => c.status === 'ACTIVE');
+  if (campFilter === 'paused') filtered = campaigns.filter(c => c.status === 'PAUSED');
+
+  // Update counts on filter buttons
+  const allBtn = document.getElementById('filterAll');
+  const actBtn = document.getElementById('filterActive');
+  const pauBtn = document.getElementById('filterPaused');
+  const activeCount = campaigns.filter(c=>c.status==='ACTIVE').length;
+  const pausedCount = campaigns.filter(c=>c.status==='PAUSED').length;
+  if(allBtn) allBtn.innerHTML = 'Todas <span class="camp-count">'+campaigns.length+'</span>';
+  if(actBtn) actBtn.innerHTML = 'Ativas <span class="camp-count" style="color:var(--green)">'+activeCount+'</span>';
+  if(pauBtn) pauBtn.innerHTML = 'Pausadas <span class="camp-count" style="color:var(--orange)">'+pausedCount+'</span>';
+
+  if (!filtered.length) {
+    el.innerHTML = '<div style="padding:6px 8px;font-size:11px;color:var(--muted)">Nenhuma campanha ' + (campFilter==='active'?'ativa':'pausada') + '</div>';
+    return;
+  }
+
+  el.innerHTML = filtered.map(c=>`
     <div class="camp-item">
       <div class="camp-name" title="${c.name}">${c.name}</div>
       <div class="camp-meta"><div class="dot dot-${c.status}"></div><span class="camp-status">${c.status==='ACTIVE'?'Ativa':c.status==='PAUSED'?'Pausada':'Arquivada'}</span></div>
@@ -807,6 +859,146 @@ function scoreColor(s) { if(!s) return 'var(--dim)'; if(s>=80) return 'var(--gre
 function scoreClass(nivel) { if(!nivel) return 'bom'; const n=nivel.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); if(n.includes('excelente')) return 'excelente'; if(n.includes('bom')) return 'bom'; if(n.includes('aten')) return 'atencao'; return 'critico'; }
 
 init();
+
+// ─── ALERT MODAL ──────────────────────────────────────────────────────────────
+
+async function openAlertModal() {
+  const modal = document.getElementById('alertModal');
+  modal.style.display = 'flex';
+  // Load existing alert for this account
+  try {
+    const r = await fetch(`/api/alert/${selectedAccountId}`);
+    const data = await r.json();
+    if (data.alert) {
+      document.getElementById('alertEmail').value = data.alert.alert_email || '';
+      document.getElementById('alertThreshold').value = data.alert.threshold_amount || 100;
+      document.getElementById('alertStatus').innerHTML = `<span style="color:var(--green)">✅ Alerta ativo — email: ${data.alert.alert_email}</span>`;
+      document.getElementById('btnRemoveAlert').style.display = 'inline-flex';
+    } else {
+      document.getElementById('alertEmail').value = '';
+      document.getElementById('alertThreshold').value = 100;
+      document.getElementById('alertStatus').innerHTML = '<span style="color:var(--muted)">Nenhum alerta configurado para esta conta</span>';
+      document.getElementById('btnRemoveAlert').style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+function closeAlertModal() {
+  document.getElementById('alertModal').style.display = 'none';
+}
+
+async function saveAlert() {
+  const email = document.getElementById('alertEmail').value.trim();
+  const threshold = parseFloat(document.getElementById('alertThreshold').value) || 100;
+  if (!email) { alert('Digite um email válido.'); return; }
+  if (!selectedAccountId) { alert('Selecione uma conta primeiro.'); return; }
+
+  // Get account info
+  const accEl = document.querySelector(`#accSel option[value="${selectedAccountId}"]`);
+  const accountName = accEl ? accEl.textContent : selectedAccountId;
+
+  const btn = document.getElementById('btnSaveAlert');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  try {
+    const r = await fetch('/api/alert', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ accountId: selectedAccountId, accountName, email, threshold, currency: currentAccountCurrency || 'BRL' })
+    });
+    const data = await r.json();
+    if (data.success) {
+      document.getElementById('alertStatus').innerHTML = `<span style="color:var(--green)">✅ Alerta ativado! Email de confirmação enviado para ${email}</span>`;
+      document.getElementById('btnRemoveAlert').style.display = 'inline-flex';
+      document.getElementById('btnAlert').innerHTML = '🔔 Alerta ✅';
+      document.getElementById('btnAlert').style.borderColor = 'rgba(0,230,118,0.3)';
+      document.getElementById('btnAlert').style.color = 'var(--green)';
+    } else {
+      document.getElementById('alertStatus').innerHTML = `<span style="color:var(--red)">❌ Erro: ${data.error}</span>`;
+    }
+  } catch(e) {
+    document.getElementById('alertStatus').innerHTML = `<span style="color:var(--red)">❌ Erro ao salvar</span>`;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Salvar Alerta';
+}
+
+async function removeAlert() {
+  if (!confirm('Remover alerta de orçamento para esta conta?')) return;
+  try {
+    await fetch(`/api/alert/${selectedAccountId}`, { method: 'DELETE' });
+    document.getElementById('alertStatus').innerHTML = '<span style="color:var(--muted)">Alerta removido.</span>';
+    document.getElementById('btnRemoveAlert').style.display = 'none';
+    document.getElementById('btnAlert').innerHTML = '🔔 Alerta';
+    document.getElementById('btnAlert').style.borderColor = '';
+    document.getElementById('btnAlert').style.color = '';
+  } catch(e) {}
+}
+
+// Check budget after account loads
+let currentAccountCurrency = 'BRL';
+async function checkBudgetAfterLoad(accountId, accountName, amountSpent, currency) {
+  currentAccountCurrency = currency || 'BRL';
+  // Show alert button
+  const btn = document.getElementById('btnAlert');
+  if (btn) btn.style.display = 'inline-flex';
+
+  // Load alert status
+  try {
+    const r = await fetch(`/api/alert/${accountId}`);
+    const data = await r.json();
+    if (data.alert) {
+      btn.innerHTML = '🔔 Alerta ✅';
+      btn.style.borderColor = 'rgba(0,230,118,0.3)';
+      btn.style.color = 'var(--green)';
+    }
+  } catch(e) {}
+}
+
 </script>
+
+<!-- ALERT MODAL -->
+<div id="alertModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#0f1118;border:1px solid #1e2433;border-radius:14px;padding:28px;width:100%;max-width:460px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:800">🔔 Alerta de Orçamento</div>
+      <button onclick="closeAlertModal()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">×</button>
+    </div>
+
+    <div style="background:#161923;border:1px solid #1e2433;border-radius:8px;padding:14px;margin-bottom:16px;font-size:12px;color:#8892a4;line-height:1.6">
+      Você receberá um email automático quando o saldo da conta de anúncios estiver <strong style="color:#ff9800">abaixo do valor configurado</strong>. O alerta é enviado no máximo 1x a cada 6 horas.
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:700;color:var(--dim);display:block;margin-bottom:6px">EMAIL PARA RECEBER O ALERTA</label>
+      <input id="alertEmail" type="email" placeholder="seu@email.com" style="width:100%;background:#161923;border:1px solid #1e2433;color:var(--text);padding:10px 12px;border-radius:7px;font-family:'Syne',sans-serif;font-size:13px">
+    </div>
+
+    <div style="margin-bottom:20px">
+      <label style="font-size:11px;font-weight:700;color:var(--dim);display:block;margin-bottom:6px">ALERTAR QUANDO SALDO ESTIVER ABAIXO DE</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px;font-weight:700;color:var(--orange)">R$</span>
+        <input id="alertThreshold" type="number" value="100" min="10" step="10" style="width:120px;background:#161923;border:1px solid #1e2433;color:var(--text);padding:10px 12px;border-radius:7px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700">
+        <span style="font-size:12px;color:var(--muted)">reais restantes</span>
+      </div>
+    </div>
+
+    <div id="alertStatus" style="font-size:12px;margin-bottom:16px;min-height:18px"></div>
+
+    <div style="display:flex;gap:8px">
+      <button id="btnSaveAlert" class="btn btn-primary" onclick="saveAlert()" style="flex:1">Salvar Alerta</button>
+      <button id="btnRemoveAlert" class="btn btn-danger" onclick="removeAlert()" style="display:none">Remover</button>
+      <button class="btn btn-ghost" onclick="closeAlertModal()">Fechar</button>
+    </div>
+
+    <div style="margin-top:16px;padding:12px;background:#161923;border-radius:8px;font-size:11px;color:var(--muted)">
+      <strong style="color:var(--dim)">⚙️ Para funcionar precisa configurar no Render:</strong><br>
+      <code style="color:var(--cyan)">ALERT_EMAIL_USER</code> = seu Gmail (ex: seuemail@gmail.com)<br>
+      <code style="color:var(--cyan)">ALERT_EMAIL_PASS</code> = senha de app do Gmail (não a senha normal)
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
