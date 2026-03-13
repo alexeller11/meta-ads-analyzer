@@ -82,13 +82,58 @@ app.get('/api/adaccounts/:id/campaigns', auth, async (req, res) => {
 
 app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
   try {
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, {
+    const params = {
+      fields: 'campaign_id,campaign_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values,cost_per_action_type,unique_clicks,outbound_clicks',
+      level: 'campaign',
+      access_token: req.session.accessToken,
+      limit: 200
+    };
+    if (req.query.since && req.query.until) {
+      params.time_range = JSON.stringify({ since: req.query.since, until: req.query.until });
+    } else {
+      params.date_preset = req.query.date_preset || 'last_30d';
+    }
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+});
+
+// Comparativo período anterior
+app.get('/api/adaccounts/:id/insights-compare', auth, async (req, res) => {
+  try {
+    const { since, until, date_preset } = req.query;
+    let sinceDate, untilDate;
+    if (since && until) {
+      sinceDate = new Date(since); untilDate = new Date(until);
+    } else {
+      untilDate = new Date(); untilDate.setDate(untilDate.getDate() - 1);
+      const days = { last_7d:7, last_14d:14, last_30d:30, last_60d:60, last_90d:90 }[date_preset] || 30;
+      sinceDate = new Date(untilDate); sinceDate.setDate(sinceDate.getDate() - days + 1);
+    }
+    const diffMs = untilDate - sinceDate;
+    const prevUntil = new Date(sinceDate - 86400000);
+    const prevSince = new Date(prevUntil - diffMs);
+    const fmt = d => d.toISOString().split('T')[0];
+    const params = {
+      fields: 'campaign_id,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values',
+      level: 'campaign',
+      time_range: JSON.stringify({ since: fmt(prevSince), until: fmt(prevUntil) }),
+      access_token: req.session.accessToken, limit: 200
+    };
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+    res.json({ ...r.data, prevPeriod: { since: fmt(prevSince), until: fmt(prevUntil) } });
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+});
+
+// Criativos com métricas
+app.get('/api/adaccounts/:id/creatives', auth, async (req, res) => {
+  try {
+    const datePreset = req.query.date_preset || 'last_30d';
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, {
       params: {
-        fields: 'campaign_id,campaign_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,cost_per_action_type,unique_clicks',
-        date_preset: req.query.date_preset || 'last_30d',
-        level: 'campaign',
+        fields: `id,name,status,campaign_id,campaign{name},adset_id,adset{name},creative{id,name,thumbnail_url,image_url,body,title,call_to_action_type},insights.date_preset(${datePreset}){impressions,clicks,spend,ctr,cpc,actions,action_values,reach,frequency}`,
         access_token: req.session.accessToken,
-        limit: 100
+        limit: 50
       }
     });
     res.json(r.data);
