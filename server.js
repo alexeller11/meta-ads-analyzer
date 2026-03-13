@@ -260,7 +260,7 @@ app.post('/api/analyze', auth, async (req, res) => {
 // ─── MOTOR DE ANÁLISE POR REGRAS ─────────────────────────────────────────────
 
 function runAnalysisEngine(accountData, campaigns, metrics, previousRun, dateRange) {
-  const { avgCtr, avgCpc, avgCpm, avgFrequency, totalSpend, activeCampaigns, totalCampaigns } = metrics;
+  const { avgCtr, avgCpc, avgCpm, avgFrequency, totalSpend, totalImpressions, totalClicks, totalReach, activeCampaigns, totalCampaigns } = metrics;
   const currency = accountData.currency === 'BRL' ? 'R$' : accountData.currency === 'USD' ? '$' : (accountData.currency || 'R$');
 
   // ── Score de saúde ────────────────────────────────────────────────────────
