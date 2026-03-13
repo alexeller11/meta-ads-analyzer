@@ -204,17 +204,28 @@
   <div class="sep"></div>
   <div class="topbar-mid">
     <select class="sel" id="accountSel" style="max-width:230px"><option value="">Carregando contas...</option></select>
-    <select class="sel" id="dateSel">
+    <select class="sel" id="dateSel" onchange="onDateSelChange()">
       <option value="last_7d">7 dias</option>
       <option value="last_14d">14 dias</option>
       <option value="last_30d" selected>30 dias</option>
       <option value="last_90d">90 dias</option>
       <option value="this_month">Este mes</option>
       <option value="last_month">Mes passado</option>
+      <option value="custom">Personalizado...</option>
     </select>
+    <div id="customDateWrap" style="display:none;display:none;align-items:center;gap:4px">
+      <input type="date" id="customSince" class="sel" style="padding:4px 8px;font-size:11px;width:130px">
+      <span style="color:var(--muted);font-size:11px">ate</span>
+      <input type="date" id="customUntil" class="sel" style="padding:4px 8px;font-size:11px;width:130px">
+    </div>
     <button class="btn btn-primary" id="btnAnalyze" onclick="runAnalysis()"><span id="aIcon">&#129504;</span><span id="aText">Analisar</span></button>
     <button class="btn btn-compare" id="btnCompPeriod" onclick="togglePeriodCompare()" style="display:none">&#128202; Comparar periodo</button>
     <span class="last-run-badge" id="lastRunBadge" style="display:none"></span>
+    <div id="balanceChip" style="display:none;align-items:center;gap:5px;padding:3px 10px;background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.18);border-radius:5px;font-size:11px;font-weight:700;white-space:nowrap">
+      <span style="color:var(--green)">&#128178;</span>
+      <span style="color:var(--muted)">Verba:</span>
+      <span style="color:var(--green)" id="balanceVal">—</span>
+    </div>
   </div>
   <div class="topbar-right">
     <button class="btn btn-ghost" id="btnAlert" onclick="openAlertModal()" style="font-size:11px;display:none">&#128276; Alerta</button>
@@ -309,7 +320,8 @@
               <th onclick="srt('ctr')">CTR</th>
               <th onclick="srt('cpc')">CPC</th>
               <th onclick="srt('freq')">Freq.</th>
-              <th onclick="srt('conversoes')">Conversoes</th>
+              <th onclick="srt('purchases')">Compras</th>
+              <th onclick="srt('leads')">Leads</th>
               <th onclick="srt('mensagens')">Mensagens</th>
               <th onclick="srt('connect_rate')">Connect Rate</th>
               <th onclick="srt('roas')">ROAS</th>
@@ -322,21 +334,28 @@
       </div>
 
       <div id="view-creatives" style="display:none">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
           <div class="stitle" style="margin:0">CRIATIVOS</div>
           <button class="btn btn-ghost" style="font-size:11px" onclick="loadCreatives()">&#128260; Recarregar</button>
+          <div style="display:flex;gap:3px;margin-left:4px">
+            <button class="tfilter active" id="crf_all" onclick="setCrFilter('all')">Todos</button>
+            <button class="tfilter" id="crf_running" onclick="setCrFilter('running')" style="border-color:rgba(0,212,255,.3);color:var(--cyan)">&#9654; Rodando</button>
+            <button class="tfilter" id="crf_champion" onclick="setCrFilter('champion')" style="border-color:rgba(0,230,118,.3);color:var(--green)">&#127942; Campeoes</button>
+          </div>
           <select class="sel" id="crCampF" onchange="filterCr()" style="font-size:11px">
             <option value="">Todas as campanhas</option>
           </select>
-          <select class="sel" id="crStatusF" onchange="filterCr()" style="font-size:11px">
-            <option value="">Todos os status</option>
-            <option value="ACTIVE">Apenas ativos</option>
-            <option value="PAUSED">Apenas pausados</option>
+          <select class="sel" id="crSortF" onchange="filterCr()" style="font-size:11px">
+            <option value="spend">Ordenar: Gasto</option>
+            <option value="ctr">Ordenar: CTR</option>
+            <option value="impressions">Ordenar: Impressoes</option>
+            <option value="conversions">Ordenar: Conversoes</option>
+            <option value="roas">Ordenar: ROAS</option>
           </select>
-          <span id="crCount" style="font-size:11px;color:var(--muted)"></span>
+          <span id="crCount" style="font-size:11px;color:var(--muted);margin-left:auto"></span>
         </div>
         <div class="creative-grid" id="crGrid">
-          <div style="color:var(--muted);font-size:12px;padding:20px 0">Carregando criativos...</div>
+          <div style="color:var(--muted);font-size:12px;padding:20px 0">Clique em Recarregar para buscar os criativos.</div>
         </div>
       </div>
 
@@ -446,6 +465,7 @@ async function onAccChange(){
     else document.getElementById('lastRunBadge').style.display='none';
     const acct=accounts.find(a=>a.account_id===selAccountId);
     if(acct){selCurrency=acct.currency||'BRL';checkAlertBtn(selAccountId);}
+    fetchBalance(selAccountId);
   }finally{hideLoad();}
 }
 
@@ -484,23 +504,28 @@ function renderSidebar(){
 // ANALYZE
 async function runAnalysis(){
   if(!selAccountId){alert('Selecione uma conta primeiro.');return;}
-  const dr=document.getElementById('dateSel').value;
+  const dp=getDateParams();
   const btn=document.getElementById('btnAnalyze');
   btn.disabled=true;
   document.getElementById('aText').textContent='Analisando...';
-  document.getElementById('aIcon').textContent='...';
+  document.getElementById('aIcon').textContent='⏳';
   showLoad('Buscando dados...');
   try{
-    const insRes=await fetch(`/api/adaccounts/${selAccountId}/insights?date_preset=${dr}`).then(r=>r.json());
+    let insUrl=`/api/adaccounts/${selAccountId}/insights?`;
+    if(dp.preset) insUrl+=`date_preset=${dp.preset}`;
+    else insUrl+=`since=${dp.since}&until=${dp.until}`;
+    const insRes=await fetch(insUrl).then(r=>r.json());
     insData=insRes;
     campInsMap={};
     (insRes.data||[]).forEach(m=>{if(m.campaign_id)campInsMap[m.campaign_id]=m;});
     updateLoad('Analisando com IA...','Aguarde 20-30s');
     const acct=accounts.find(a=>a.account_id===selAccountId);
+    const dr=dp.preset||`${dp.since}_${dp.until}`;
     const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accountData:acct,campaigns,insights:insRes,dateRange:dr})}).then(r=>r.json());
     if(!res.success)throw new Error(res.error);
     analysis=res.analysis;metrics=res.metrics;prevRun=res.previousRun;
-    fetchPrevPeriod(dr);
+    if(dp.preset)fetchPrevPeriod(dp.preset);
+    else fetchPrevPeriodCustom(dp.since,dp.until);
     document.getElementById('lastRunBadge').textContent='Ultima analise: agora';
     document.getElementById('lastRunBadge').style.display='block';
     document.getElementById('btnCompPeriod').style.display='inline-flex';
@@ -508,7 +533,7 @@ async function runAnalysis(){
     renderAll();
     showView('overview');
   }catch(e){alert('Erro: '+e.message);}
-  finally{hideLoad();btn.disabled=false;document.getElementById('aText').textContent='Analisar';document.getElementById('aIcon').textContent='';}
+  finally{hideLoad();btn.disabled=false;document.getElementById('aText').textContent='Analisar';document.getElementById('aIcon').textContent='🧠';}
 }
 
 function getPrevDates(dp){
@@ -530,6 +555,20 @@ async function fetchPrevPeriod(dp){
   }catch(e){}
 }
 
+async function fetchPrevPeriodCustom(since,until){
+  try{
+    const sinceD=new Date(since);const untilD=new Date(until);
+    const diffMs=untilD-sinceD;
+    const prevUntil=new Date(sinceD-86400000);
+    const prevSince=new Date(prevUntil-diffMs);
+    const fmt=d=>d.toISOString().split('T')[0];
+    const ps=fmt(prevSince),pu=fmt(prevUntil);
+    const r=await fetch(`/api/adaccounts/${selAccountId}/insights?since=${ps}&until=${pu}`).then(r=>r.json());
+    prevPeriodData={data:r.data||[],dates:{since:ps,until:pu,label:ps+' a '+pu}};
+    document.getElementById('periodBarInfo').textContent='Periodo anterior: '+ps+' a '+pu;
+  }catch(e){}
+}
+
 function togglePeriodCompare(){
   showPrev=!showPrev;
   document.getElementById('btnCompPeriod').classList.toggle('on',showPrev);
@@ -537,18 +576,75 @@ function togglePeriodCompare(){
   if(metrics)renderMetrics();
 }
 
+// DATE PICKER
+function onDateSelChange(){
+  const v=document.getElementById('dateSel').value;
+  const wrap=document.getElementById('customDateWrap');
+  wrap.style.display=v==='custom'?'flex':'none';
+}
+function getDateParams(){
+  const v=document.getElementById('dateSel').value;
+  if(v==='custom'){
+    const s=document.getElementById('customSince').value;
+    const u=document.getElementById('customUntil').value;
+    if(s&&u)return{since:s,until:u,preset:null};
+  }
+  return{preset:v,since:null,until:null};
+}
+
+// BALANCE
+async function fetchBalance(accountId){
+  try{
+    const d=await fetch(`/api/adaccounts/${accountId}/balance`).then(r=>r.json());
+    if(d.error)return;
+    const cur=d.currency==='BRL'?'R$':'$';
+    // balance is in cents for some currencies
+    let bal=parseFloat(d.balance||0);
+    // Meta returns balance in cents divided by 100
+    if(Math.abs(bal)>10000)bal=bal/100;
+    const chip=document.getElementById('balanceChip');
+    const valEl=document.getElementById('balanceVal');
+    if(bal!==null&&bal!==undefined){
+      valEl.textContent=`${cur} ${bal.toFixed(2)}`;
+      chip.style.display='flex';
+      // Color: red if zero or negative
+      valEl.style.color=bal>0?'var(--green)':bal===0?'var(--orange)':'var(--red)';
+    }
+  }catch(e){}
+}
+
+// CREATIVES FILTER MODE
+let crFilterMode='all';
+function setCrFilter(mode){
+  crFilterMode=mode;
+  ['all','running','champion'].forEach(f=>{
+    const b=document.getElementById('crf_'+f);
+    if(b)b.classList.toggle('active',f===mode);
+  });
+  filterCr();
+}
+
 // ACTION VALUE HELPERS
 function getAct(arr,type){if(!arr)return 0;const f=arr.find(a=>a.action_type===type);return f?parseFloat(f.value||0):0;}
+// Correct pixel actions — fb_pixel_purchase is the definitive pixel purchase event
+// 'purchase' from actions can be same as fb_pixel_purchase causing double count
+// We use fb_pixel_purchase as source of truth; lead/registration are separate
 function convMetrics(rows){
-  let cv=0,msg=0,rev=0,sp=0,cl=0;
+  let purchases=0,leads=0,msg=0,rev=0,sp=0,cl=0;
   (rows||[]).forEach(m=>{
     const a=m.actions||[];const v=m.action_values||[];
-    cv+=getAct(a,'purchase')+getAct(a,'lead')+getAct(a,'offsite_conversion.fb_pixel_purchase')+getAct(a,'complete_registration');
-    msg+=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection')+getAct(a,'onsite_conversion.messaging_first_reply');
-    rev+=getAct(v,'purchase')+getAct(v,'offsite_conversion.fb_pixel_purchase');
+    // Purchases: use only fb_pixel_purchase (avoids double count with 'purchase')
+    purchases+=getAct(a,'offsite_conversion.fb_pixel_purchase');
+    // Leads: registrations and lead gen forms
+    leads+=getAct(a,'lead')+getAct(a,'complete_registration')+getAct(a,'offsite_conversion.fb_pixel_lead');
+    // Messages
+    msg+=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection');
+    // Revenue: only fb_pixel_purchase value (source of truth for ROAS)
+    rev+=getAct(v,'offsite_conversion.fb_pixel_purchase');
     sp+=parseFloat(m.spend||0);cl+=parseInt(m.clicks||0);
   });
-  return{cv,msg,rev,roas:sp>0?rev/sp:0,roi:sp>0?((rev-sp)/sp)*100:0,connectRate:cl>0?(msg/cl)*100:0};
+  const cv=purchases+leads;
+  return{purchases,leads,cv,msg,rev,sp,roas:sp>0?rev/sp:0,roi:sp>0?((rev-sp)/sp)*100:0,connectRate:cl>0?(msg/cl)*100:0};
 }
 
 // RENDER ALL
@@ -596,12 +692,13 @@ function renderMetrics(){
   `;
 
   document.getElementById('convGrid').innerHTML=`
-    <div class="mcard"><div class="mlabel">CONVERSOES</div><div class="mval c-purple">${fmtN(conv.cv)}</div><div class="msub">compras + leads ${mkD(conv.cv,pconv?.cv,true)}</div></div>
+    <div class="mcard"><div class="mlabel">COMPRAS (PIXEL)</div><div class="mval c-purple">${fmtN(conv.purchases)}</div><div class="msub">fb_pixel_purchase ${mkD(conv.purchases,pconv?.purchases,true)}</div></div>
+    <div class="mcard"><div class="mlabel">LEADS</div><div class="mval" style="color:var(--yellow)">${fmtN(conv.leads)}</div><div class="msub">cadastros + formularios ${mkD(conv.leads,pconv?.leads,true)}</div></div>
     <div class="mcard"><div class="mlabel">MENSAGENS</div><div class="mval c-cyan">${fmtN(conv.msg)}</div><div class="msub">conversas iniciadas ${mkD(conv.msg,pconv?.msg,true)}</div></div>
     <div class="mcard"><div class="mlabel">CONNECT RATE</div><div class="mval ${conv.connectRate>=5?'c-green':conv.connectRate>=2?'c-orange':'c-red'}">${conv.connectRate.toFixed(2)}%</div><div class="msub">mensagens/cliques ${mkD(conv.connectRate,pconv?.connectRate,true)}</div></div>
-    <div class="mcard"><div class="mlabel">RECEITA</div><div class="mval c-green">${S} ${fmtN(conv.rev)}</div><div class="msub">via pixel ${mkD(conv.rev,pconv?.rev,true)}</div></div>
-    <div class="mcard"><div class="mlabel">ROAS</div><div class="mval ${conv.roas>=3?'c-green':conv.roas>=1?'c-orange':'c-red'}">${conv.roas.toFixed(2)}x</div><div class="msub">retorno sobre verba ${mkD(conv.roas,pconv?.roas,true)}</div></div>
-    <div class="mcard"><div class="mlabel">ROI</div><div class="mval ${conv.roi>=100?'c-green':conv.roi>=0?'c-orange':'c-red'}">${conv.roi.toFixed(0)}%</div><div class="msub">retorno liquido ${mkD(conv.roi,pconv?.roi,true)}</div></div>
+    <div class="mcard"><div class="mlabel">RECEITA (PIXEL)</div><div class="mval c-green">${S} ${conv.rev>=1000?fmtN(conv.rev):conv.rev.toFixed(2)}</div><div class="msub">valor fb_pixel_purchase ${mkD(conv.rev,pconv?.rev,true)}</div></div>
+    <div class="mcard"><div class="mlabel">ROAS</div><div class="mval ${conv.roas>=3?'c-green':conv.roas>=1?'c-orange':'c-red'}">${conv.roas.toFixed(2)}x</div><div class="msub">receita/gasto ${mkD(conv.roas,pconv?.roas,true)}</div></div>
+    <div class="mcard"><div class="mlabel">ROI</div><div class="mval ${conv.roi>=100?'c-green':conv.roi>=0?'c-orange':'c-red'}">${conv.roi.toFixed(0)}%</div><div class="msub">(receita-gasto)/gasto ${mkD(conv.roi,pconv?.roi,true)}</div></div>
   `;
 }
 
@@ -665,22 +762,22 @@ function renderCampTable(){
     const camp=campaigns.find(x=>x.name===c.nome);
     const ins=camp?campInsMap[camp.id]:null;
     const a=ins?.actions||[];const v=ins?.action_values||[];
-    const cv=getAct(a,'purchase')+getAct(a,'lead')+getAct(a,'offsite_conversion.fb_pixel_purchase')+getAct(a,'complete_registration');
-    const msg=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection')+getAct(a,'onsite_conversion.messaging_first_reply');
-    const rev=getAct(v,'purchase')+getAct(v,'offsite_conversion.fb_pixel_purchase');
+    const purchases=getAct(a,'offsite_conversion.fb_pixel_purchase');const leads=getAct(a,'lead')+getAct(a,'complete_registration')+getAct(a,'offsite_conversion.fb_pixel_lead');const cv=purchases+leads;
+    const msg=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection');
+    const rev=getAct(v,'offsite_conversion.fb_pixel_purchase');
     const sp=parseFloat(ins?.spend||c.gasto?.toString().replace(/[^0-9.]/g,'')||0);
     const cl=parseInt(ins?.clicks||0);
     const roas=sp>0?rev/sp:0;const roi=sp>0?((rev-sp)/sp)*100:0;const cr=cl>0?(msg/cl)*100:0;
     const impr=parseInt(ins?.impressions||0);
     const running=camp?runIds.has(camp.id):false;
-    return{...c,cv,msg,rev,roas,roi,cr,sp,impr,running,campStatus:camp?.status||'UNKNOWN'};
+    return{...c,cv,purchases,leads,msg,rev,roas,roi,cr,sp,impr,running,campStatus:camp?.status||'UNKNOWN'};
   });
   let filtered=enriched;
   if(tf==='running')filtered=enriched.filter(c=>c.running);
   if(tf==='active')filtered=enriched.filter(c=>c.campStatus==='ACTIVE');
   if(tf==='paused')filtered=enriched.filter(c=>c.campStatus==='PAUSED');
   filtered.sort((a,b)=>{
-    const gv=c=>{switch(srtKey){case'nome':return c.nome||'';case'status':return c.running?0:c.campStatus==='ACTIVE'?1:2;case'gasto':return c.sp;case'impressoes':return c.impr;case'ctr':return parseFloat(c.ctr)||0;case'cpc':return parseFloat(String(c.cpc).replace(/[^0-9.]/g,''))||0;case'freq':return parseFloat(c.frequencia)||0;case'conversoes':return c.cv;case'mensagens':return c.msg;case'connect_rate':return c.cr;case'roas':return c.roas;case'roi':return c.roi;default:return 0;}};
+    const gv=c=>{switch(srtKey){case'nome':return c.nome||'';case'status':return c.running?0:c.campStatus==='ACTIVE'?1:2;case'gasto':return c.sp;case'impressoes':return c.impr;case'ctr':return parseFloat(c.ctr)||0;case'cpc':return parseFloat(String(c.cpc).replace(/[^0-9.]/g,''))||0;case'freq':return parseFloat(c.frequencia)||0;case'conversoes':return c.cv;case'purchases':return c.purchases||0;case'leads':return c.leads||0;case'mensagens':return c.msg;case'connect_rate':return c.cr;case'roas':return c.roas;case'roi':return c.roi;default:return 0;}};
     const va=gv(a),vb=gv(b);
     if(typeof va==='string')return srtAsc?va.localeCompare(vb):vb.localeCompare(va);
     return srtAsc?va-vb:vb-va;
@@ -701,7 +798,8 @@ function renderCampTable(){
       <td>${c.ctr||'-'}</td>
       <td>${c.cpc||'-'}</td>
       <td>${c.frequencia||'-'}</td>
-      <td style="font-weight:700;color:var(--purple)">${c.cv>0?fmtN(c.cv):'-'}</td>
+      <td style="font-weight:700;color:var(--purple)">${c.purchases>0?fmtN(c.purchases):'-'}</td>
+      <td style="font-weight:700;color:var(--yellow)">${c.leads>0?fmtN(c.leads):'-'}</td>
       <td style="font-weight:700;color:var(--cyan)">${c.msg>0?fmtN(c.msg):'-'}</td>
       <td>${c.cr>0?c.cr.toFixed(2)+'%':'-'}</td>
       <td style="font-weight:700;color:${rc}">${c.roas>0?c.roas.toFixed(2)+'x':'-'}</td>
@@ -738,9 +836,9 @@ function renderReport(){
     const camp=campaigns.find(x=>x.name===c.nome);
     const ins=camp?campInsMap[camp.id]:null;
     const a=ins?.actions||[];const v=ins?.action_values||[];
-    const cv=getAct(a,'purchase')+getAct(a,'lead')+getAct(a,'offsite_conversion.fb_pixel_purchase')+getAct(a,'complete_registration');
+    const purchases=getAct(a,'offsite_conversion.fb_pixel_purchase');const leads=getAct(a,'lead')+getAct(a,'complete_registration')+getAct(a,'offsite_conversion.fb_pixel_lead');const cv=purchases+leads;
     const msg=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection');
-    const rev=getAct(v,'purchase')+getAct(v,'offsite_conversion.fb_pixel_purchase');
+    const rev=getAct(v,'offsite_conversion.fb_pixel_purchase');
     const sp=parseFloat(ins?.spend||String(c.gasto||'0').replace(/[^0-9.]/g,'')||0);
     const cl=parseInt(ins?.clicks||0);
     const roas=sp>0?rev/sp:0;const roi=sp>0?((rev-sp)/sp)*100:0;
@@ -963,61 +1061,102 @@ async function loadCreatives(){
   if(!selAccountId)return;
   showLoad('Carregando criativos...');
   try{
-    const dr=document.getElementById('dateSel').value;
-    const r=await fetch(`/api/adaccounts/${selAccountId}/creatives?date_preset=${dr}`).then(r=>r.json());
+    const dp=getDateParams();
+    let url=`/api/adaccounts/${selAccountId}/creatives?`;
+    if(dp.preset) url+=`date_preset=${dp.preset}`;
+    else url+=`since=${dp.since}&until=${dp.until}`;
+    const r=await fetch(url).then(r=>r.json());
     allCreatives=r.data||[];
     const camps=[...new Set(allCreatives.map(a=>a.campaign?.name||'').filter(Boolean))].sort();
     const sel=document.getElementById('crCampF');
     sel.innerHTML='<option value="">Todas as campanhas</option>'+camps.map(c=>`<option value="${c}">${c}</option>`).join('');
     filtCreatives=[...allCreatives];
-    renderCreatives();
+    filterCr();
   }catch(e){
     document.getElementById('crGrid').innerHTML=`<div style="color:var(--red);font-size:12px">Erro: ${e.message}</div>`;
   }finally{hideLoad();}
 }
 
+function crAdMetrics(ad){
+  const ins=(ad.insights?.data||[])[0]||{};
+  const a=ins.actions||[];const v=ins.action_values||[];
+  const spend=parseFloat(ins.spend||0);
+  const impr=parseInt(ins.impressions||0);
+  const clicks=parseInt(ins.clicks||0);
+  const ctr=parseFloat(ins.ctr||0);
+  const freq=parseFloat(ins.frequency||0);
+  const purchases=getAct(a,'offsite_conversion.fb_pixel_purchase');
+  const leads=getAct(a,'lead')+getAct(a,'complete_registration')+getAct(a,'offsite_conversion.fb_pixel_lead');
+  const msg=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection');
+  const rev=getAct(v,'offsite_conversion.fb_pixel_purchase');
+  const roas=spend>0?rev/spend:0;
+  return{spend,impr,clicks,ctr,freq,purchases,leads,msg,rev,roas,running:spend>0&&ad.status==='ACTIVE'};
+}
+
 function filterCr(){
   const cf=document.getElementById('crCampF').value;
-  const sf=document.getElementById('crStatusF').value;
-  filtCreatives=allCreatives.filter(a=>{
+  const sf=document.getElementById('crSortF')?.value||'spend';
+  // Filter by mode
+  let list=allCreatives.filter(a=>{
     if(cf&&(a.campaign?.name||'')!==cf)return false;
-    if(sf&&a.status!==sf)return false;
+    if(crFilterMode==='running'){const m=crAdMetrics(a);return m.running;}
+    if(crFilterMode==='champion'){const m=crAdMetrics(a);return m.spend>0&&(m.ctr>=1||m.roas>=2||m.purchases>0);}
     return true;
   });
+  // Sort
+  list.sort((a,b)=>{
+    const ma=crAdMetrics(a),mb=crAdMetrics(b);
+    if(sf==='ctr') return mb.ctr-ma.ctr;
+    if(sf==='impressions') return mb.impr-ma.impr;
+    if(sf==='conversions') return (mb.purchases+mb.leads)-(ma.purchases+ma.leads);
+    if(sf==='roas') return mb.roas-ma.roas;
+    return mb.spend-ma.spend;
+  });
+  filtCreatives=list;
   renderCreatives();
 }
 
 function renderCreatives(){
   const el=document.getElementById('crGrid');
   document.getElementById('crCount').textContent=filtCreatives.length+' criativos';
-  if(!filtCreatives.length){el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:20px 0">Nenhum criativo encontrado.</div>';return;}
+  if(!filtCreatives.length){el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:20px 0">Nenhum criativo encontrado para esse filtro.</div>';return;}
   const S=sym();
   el.innerHTML=filtCreatives.map(ad=>{
     const cr=ad.creative||{};
-    const ins=(ad.insights?.data||[])[0]||{};
-    const spend=parseFloat(ins.spend||0);
-    const impr=parseInt(ins.impressions||0);
-    const clicks=parseInt(ins.clicks||0);
-    const ctr=parseFloat(ins.ctr||0);
+    const m=crAdMetrics(ad);
     const thumb=cr.thumbnail_url||cr.image_url||'';
     const title=(cr.title||cr.name||ad.name||'Sem titulo');
-    const body=(cr.body||'').slice(0,70);
+    const body=(cr.body||'').slice(0,80);
     const cta=cr.call_to_action_type||'';
-    return`<div class="creative-card">
-      <div class="creative-thumb">${thumb?`<img src="${thumb}" alt="${title}" onerror="this.parentElement.innerHTML='&#128444;'">`:'&#128444;'}</div>
+    const isChamp=m.spend>0&&(m.ctr>=1||m.roas>=2||m.purchases>0);
+    const isRunning=m.running;
+    const roasC=m.roas>=3?'var(--green)':m.roas>=1?'var(--cyan)':'var(--red)';
+    const ctrC=m.ctr>=1?'var(--green)':m.ctr>=0.5?'var(--orange)':'var(--red)';
+    return`<div class="creative-card" style="${isChamp?'border-color:rgba(0,230,118,.35)':''}">
+      ${isChamp?'<div style="font-size:9px;font-weight:700;color:var(--green);padding:3px 8px;background:rgba(0,230,118,.08);border-radius:4px 4px 0 0;border-bottom:1px solid rgba(0,230,118,.15)">&#127942; CAMPANHAO</div>':''}
+      <div class="creative-thumb">${thumb?`<img src="${thumb}" alt="" onerror="this.style.display='none';this.nextSibling.style.display='block'"><span style="display:none;font-size:28px">&#128444;</span>`:'<span style="font-size:28px">&#128444;</span>'}</div>
       <div class="creative-body">
-        <div class="creative-camp">${ad.campaign?.name||''}</div>
-        <div class="creative-name" title="${title}">${title}</div>
-        ${body?`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;line-height:1.4">${body}${(cr.body||'').length>70?'...':''}</div>`:''}
-        ${cta?`<div style="font-size:9px;color:var(--blue);margin-bottom:6px;font-weight:700">${cta.replace(/_/g,' ')}</div>`:''}
-        <div class="creative-stats">
-          <div class="cstat"><div class="cstat-val">${fmtN(impr)}</div><div class="cstat-lbl">Impr</div></div>
-          <div class="cstat"><div class="cstat-val">${fmtN(clicks)}</div><div class="cstat-lbl">Cliques</div></div>
-          <div class="cstat"><div class="cstat-val ${ctr>=1?'c-green':ctr>=0.5?'c-orange':'c-red'}">${ctr.toFixed(2)}%</div><div class="cstat-lbl">CTR</div></div>
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
+          <div class="dot ${isRunning?'dot-RUNNING':ad.status==='ACTIVE'?'dot-ACTIVE':'dot-PAUSED'}"></div>
+          <span style="font-size:9px;font-weight:700;color:${isRunning?'var(--cyan)':ad.status==='ACTIVE'?'var(--green)':'var(--orange)'}">${isRunning?'Rodando':ad.status==='ACTIVE'?'Ativo':'Pausado'}</span>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <span class="cstatus-chip cstatus-${ad.status}">${ad.status==='ACTIVE'?'Ativo':'Pausado'}</span>
-          ${spend>0?`<span style="font-size:10px;color:var(--blue);font-weight:700">${S} ${spend.toFixed(2)}</span>`:''}
+        <div class="creative-camp">${(ad.campaign?.name||'').slice(0,35)}</div>
+        <div class="creative-name" title="${title}">${title.slice(0,45)}${title.length>45?'...':''}</div>
+        ${body?`<div style="font-size:10px;color:var(--muted);margin-bottom:5px;line-height:1.35">${body}${(cr.body||'').length>80?'...':''}</div>`:''}
+        ${cta?`<div style="font-size:9px;color:var(--blue);margin-bottom:5px;font-weight:700;letter-spacing:.03em">${cta.replace(/_/g,' ')}</div>`:''}
+        <div class="creative-stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:6px">
+          <div class="cstat"><div class="cstat-val">${fmtN(m.impr)}</div><div class="cstat-lbl">Impr</div></div>
+          <div class="cstat"><div class="cstat-val">${fmtN(m.clicks)}</div><div class="cstat-lbl">Cliques</div></div>
+          <div class="cstat"><div class="cstat-val" style="color:${ctrC}">${m.ctr.toFixed(2)}%</div><div class="cstat-lbl">CTR</div></div>
+        </div>
+        <div class="creative-stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:6px">
+          <div class="cstat"><div class="cstat-val c-purple">${m.purchases>0?fmtN(m.purchases):'-'}</div><div class="cstat-lbl">Compras</div></div>
+          <div class="cstat"><div class="cstat-val" style="color:var(--yellow)">${m.leads>0?fmtN(m.leads):'-'}</div><div class="cstat-lbl">Leads</div></div>
+          <div class="cstat"><div class="cstat-val" style="color:${roasC}">${m.roas>0?m.roas.toFixed(2)+'x':'-'}</div><div class="cstat-lbl">ROAS</div></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--b1);padding-top:5px">
+          <span style="font-size:11px;color:var(--dim)">Freq: ${m.freq>0?m.freq.toFixed(1)+'x':'-'}</span>
+          ${m.spend>0?`<span style="font-size:11px;color:var(--blue);font-weight:700">${S} ${m.spend.toFixed(2)}</span>`:'<span style="font-size:10px;color:var(--muted)">Sem gasto</span>'}
         </div>
       </div>
     </div>`;

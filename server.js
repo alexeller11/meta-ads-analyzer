@@ -65,7 +65,16 @@ function auth(req, res, next) {
 app.get('/api/adaccounts', auth, async (req, res) => {
   try {
     const r = await axios.get('https://graph.facebook.com/v19.0/me/adaccounts', {
-      params: { fields: 'name,account_id,currency,account_status,business_name,timezone_name,amount_spent', access_token: req.session.accessToken, limit: 100 }
+      params: { fields: 'name,account_id,currency,account_status,business_name,timezone_name,amount_spent,balance,spend_cap', access_token: req.session.accessToken, limit: 100 }
+    });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+});
+
+app.get('/api/adaccounts/:id/balance', auth, async (req, res) => {
+  try {
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}`, {
+      params: { fields: 'name,balance,amount_spent,spend_cap,currency,account_status', access_token: req.session.accessToken }
     });
     res.json(r.data);
   } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
@@ -128,12 +137,18 @@ app.get('/api/adaccounts/:id/insights-compare', auth, async (req, res) => {
 // Criativos com métricas
 app.get('/api/adaccounts/:id/creatives', auth, async (req, res) => {
   try {
-    const datePreset = req.query.date_preset || 'last_30d';
+    const { since, until, date_preset } = req.query;
+    let insightsParam;
+    if (since && until) {
+      insightsParam = `insights.time_range({"since":"${since}","until":"${until}"})`;
+    } else {
+      insightsParam = `insights.date_preset(${date_preset || 'last_30d'})`;
+    }
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, {
       params: {
-        fields: `id,name,status,campaign_id,campaign{name},adset_id,adset{name},creative{id,name,thumbnail_url,image_url,body,title,call_to_action_type},insights.date_preset(${datePreset}){impressions,clicks,spend,ctr,cpc,actions,action_values,reach,frequency}`,
+        fields: `id,name,status,campaign_id,campaign{name},adset_id,adset{name},creative{id,name,thumbnail_url,image_url,body,title,call_to_action_type},${insightsParam}{impressions,clicks,spend,ctr,cpc,cpm,frequency,reach,actions,action_values}`,
         access_token: req.session.accessToken,
-        limit: 50
+        limit: 100
       }
     });
     res.json(r.data);
