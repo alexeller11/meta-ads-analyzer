@@ -5,6 +5,14 @@ const axios = require('axios');
 const nodemailer = require('nodemailer');
 const path = require('path');
 const db = require('./db');
+const { google } = require('googleapis');
+
+// Google Ads OAuth2 client
+const googleOAuth2 = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.BASE_URL + '/auth/google/callback'
+);
 
 const app = express();
 app.use(express.json());
@@ -92,7 +100,7 @@ app.get('/api/adaccounts/:id/campaigns', auth, async (req, res) => {
 app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
   try {
     const params = {
-      fields: 'campaign_id,campaign_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values,cost_per_action_type,unique_clicks,outbound_clicks,landing_page_view',
+      fields: 'campaign_id,campaign_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values,cost_per_action_type,unique_clicks,outbound_clicks',
       level: 'campaign',
       access_token: req.session.accessToken,
       limit: 200
@@ -958,6 +966,179 @@ app.delete('/api/notes/:id', auth, async (req, res) => {
     await db.deleteNote(parseInt(req.params.id), req.session.user.id);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── INSTAGRAM CONTENT PLANNING ─────────────────────────────────────────────
+
+// Get Instagram Business Accounts linked to FB ad account
+app.get('/api/instagram/accounts', auth, async (req, res) => {
+  try {
+    // Get Facebook Pages first
+    const pages = await axios.get('https://graph.facebook.com/v19.0/me/accounts', {
+      params: { fields: 'id,name,instagram_business_account{id,name,username,profile_picture_url,followers_count,media_count}', access_token: req.session.accessToken, limit: 20 }
+    });
+    const igAccounts = [];
+    (pages.data.data || []).forEach(page => {
+      if (page.instagram_business_account) {
+        igAccounts.push({ pageId: page.id, pageName: page.name, ...page.instagram_business_account });
+      }
+    });
+    res.json({ data: igAccounts });
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+});
+
+// Get recent Instagram posts with metrics
+app.get('/api/instagram/:igId/media', auth, async (req, res) => {
+  try {
+    const r = await axios.get(`https://graph.facebook.com/v19.0/${req.params.igId}/media`, {
+      params: {
+        fields: 'id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count,reach,impressions,engagement,saved,shares,ig_id,permalink',
+        access_token: req.session.accessToken,
+        limit: 24
+      }
+    });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+});
+
+// Get IG account insights
+app.get('/api/instagram/:igId/insights', auth, async (req, res) => {
+  try {
+    const r = await axios.get(`https://graph.facebook.com/v19.0/${req.params.igId}/insights`, {
+      params: {
+        metric: 'reach,impressions,profile_views,website_clicks,follower_count',
+        period: 'day',
+        since: Math.floor(Date.now()/1000) - 30*86400,
+        until: Math.floor(Date.now()/1000),
+        access_token: req.session.accessToken
+      }
+    });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+});
+
+// Generate content plan — motor de regras (sem API externa, sem custo)
+const { generateContentPlanEngine } = require('./content_engine');
+
+app.post('/api/content-plan', auth, (req, res) => {
+  const { niche, igUsername, businessName, recentPosts, accountMetrics, tone, audience } = req.body;
+  if (!niche) return res.status(400).json({ error: 'Nicho obrigatorio' });
+  try {
+    const plan = generateContentPlanEngine({ niche, igUsername, businessName, recentPosts, accountMetrics, tone, audience });
+    res.json({ success: true, plan });
+  } catch (e) {
+    console.error('Content plan error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── GOOGLE ADS AUTH ──────────────────────────────────────────────────────────
+
+app.get('/auth/google', auth, (req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID) return res.status(400).json({ error: 'Google Client ID nao configurado. Adicione GOOGLE_CLIENT_ID no .env' });
+  const url = googleOAuth2.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: [
+      'https://www.googleapis.com/auth/adwords',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/userinfo.email'
+    ],
+    state: req.session.user?.id || 'anon'
+  });
+  res.redirect(url);
+});
+
+app.get('/auth/google/callback', async (req, res) => {
+  const { code, error } = req.query;
+  if (error) return res.redirect('/dashboard?google_error=denied');
+  try {
+    const { tokens } = await googleOAuth2.getToken(code);
+    req.session.googleTokens = tokens;
+    res.redirect('/dashboard?google=connected');
+  } catch (e) {
+    console.error('Google auth error:', e.message);
+    res.redirect('/dashboard?google_error=failed');
+  }
+});
+
+app.get('/api/google/status', auth, (req, res) => {
+  res.json({ connected: !!req.session.googleTokens });
+});
+
+// Get Google Ads accessible customers
+app.get('/api/google/customers', auth, async (req, res) => {
+  if (!req.session.googleTokens) return res.status(401).json({ error: 'Google nao conectado' });
+  if (!process.env.GOOGLE_DEVELOPER_TOKEN) return res.status(400).json({ error: 'GOOGLE_DEVELOPER_TOKEN nao configurado' });
+  try {
+    googleOAuth2.setCredentials(req.session.googleTokens);
+    const token = await googleOAuth2.getAccessToken();
+    const r = await axios.get('https://googleads.googleapis.com/v17/customers:listAccessibleCustomers', {
+      headers: {
+        'Authorization': `Bearer ${token.token}`,
+        'developer-token': process.env.GOOGLE_DEVELOPER_TOKEN
+      }
+    });
+    // Get customer details
+    const customers = [];
+    for (const resourceName of (r.data.resourceNames || []).slice(0,10)) {
+      const custId = resourceName.replace('customers/','');
+      try {
+        const detail = await axios.post(`https://googleads.googleapis.com/v17/customers/${custId}/googleAds:search`,
+          { query: "SELECT customer.id, customer.descriptive_name, customer.currency_code, customer.status FROM customer LIMIT 1" },
+          { headers: { 'Authorization': `Bearer ${token.token}`, 'developer-token': process.env.GOOGLE_DEVELOPER_TOKEN, 'login-customer-id': custId } }
+        );
+        if (detail.data.results?.[0]) {
+          const c = detail.data.results[0].customer;
+          customers.push({ id: c.id, name: c.descriptiveName, currency: c.currencyCode, status: c.status });
+        }
+      } catch(err) { customers.push({ id: custId, name: custId, currency:'BRL', status:'UNKNOWN' }); }
+    }
+    res.json({ customers });
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+});
+
+// Google Ads campaigns
+app.get('/api/google/customers/:custId/campaigns', auth, async (req, res) => {
+  if (!req.session.googleTokens) return res.status(401).json({ error: 'Google nao conectado' });
+  try {
+    googleOAuth2.setCredentials(req.session.googleTokens);
+    const token = await googleOAuth2.getAccessToken();
+    const custId = req.params.custId;
+    const dr = req.query.date_range || 'LAST_30_DAYS';
+    const r = await axios.post(`https://googleads.googleapis.com/v17/customers/${custId}/googleAds:search`,
+      { query: `SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign_budget.amount_micros, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.conversions, metrics.conversions_value, metrics.search_impression_share, metrics.search_top_impression_share FROM campaign WHERE segments.date DURING ${dr} AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC LIMIT 100` },
+      { headers: { 'Authorization': `Bearer ${token.token}`, 'developer-token': process.env.GOOGLE_DEVELOPER_TOKEN, 'login-customer-id': custId } }
+    );
+    res.json({ data: r.data.results || [] });
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+});
+
+// Google Ads account metrics
+app.get('/api/google/customers/:custId/metrics', auth, async (req, res) => {
+  if (!req.session.googleTokens) return res.status(401).json({ error: 'Google nao conectado' });
+  try {
+    googleOAuth2.setCredentials(req.session.googleTokens);
+    const token = await googleOAuth2.getAccessToken();
+    const custId = req.params.custId;
+    const dr = req.query.date_range || 'LAST_30_DAYS';
+    const r = await axios.post(`https://googleads.googleapis.com/v17/customers/${custId}/googleAds:search`,
+      { query: `SELECT metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.average_cpm, metrics.conversions, metrics.conversions_value, metrics.search_impression_share, metrics.search_budget_lost_impression_share, metrics.search_rank_lost_impression_share FROM customer WHERE segments.date DURING ${dr}` },
+      { headers: { 'Authorization': `Bearer ${token.token}`, 'developer-token': process.env.GOOGLE_DEVELOPER_TOKEN, 'login-customer-id': custId } }
+    );
+    // Aggregate
+    let totalCost=0,totalImpr=0,totalClicks=0,totalConv=0,totalConvValue=0;
+    (r.data.results||[]).forEach(row=>{
+      const m=row.metrics||{};
+      totalCost+=parseInt(m.costMicros||0);
+      totalImpr+=parseInt(m.impressions||0);
+      totalClicks+=parseInt(m.clicks||0);
+      totalConv+=parseFloat(m.conversions||0);
+      totalConvValue+=parseFloat(m.conversionsValue||0);
+    });
+    const spend=totalCost/1e6;
+    res.json({ spend, impressions:totalImpr, clicks:totalClicks, ctr:totalImpr>0?(totalClicks/totalImpr)*100:0, avgCpc:totalClicks>0?spend/totalClicks:0, avgCpm:totalImpr>0?(spend/totalImpr)*1000:0, conversions:totalConv, conversionsValue:totalConvValue, roas:spend>0?totalConvValue/spend:0 });
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
 });
 
 // ─── PAGES ───────────────────────────────────────────────────────────────────
