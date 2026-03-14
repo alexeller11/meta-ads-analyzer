@@ -87,6 +87,18 @@ const SCHEMA = `
 
   CREATE INDEX IF NOT EXISTS idx_alerts_user ON budget_alerts(fb_user_id);
   CREATE INDEX IF NOT EXISTS idx_alerts_active ON budget_alerts(active, last_alert_sent);
+
+  CREATE TABLE IF NOT EXISTS campaign_notes (
+    id SERIAL PRIMARY KEY,
+    fb_user_id VARCHAR(64) NOT NULL,
+    fb_account_id VARCHAR(64) NOT NULL,
+    fb_campaign_id VARCHAR(64),
+    campaign_name TEXT,
+    note TEXT NOT NULL,
+    type VARCHAR(32) DEFAULT 'geral',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_notes_account ON campaign_notes(fb_account_id, created_at DESC);
 `;
 
 async function initDB() {
@@ -275,6 +287,25 @@ async function markAlertSent(id) {
 
 module.exports = {
   pool, initDB,
+  // Notes
+  saveNote: async ({ fbUserId, fbAccountId, fbCampaignId, campaignName, note, type }) => {
+    const { rows } = await pool.query(
+      `INSERT INTO campaign_notes (fb_user_id, fb_account_id, fb_campaign_id, campaign_name, note, type)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [fbUserId, fbAccountId, fbCampaignId||null, campaignName||null, note, type||'geral']
+    );
+    return rows[0];
+  },
+  getNotes: async (fbAccountId, fbUserId) => {
+    const { rows } = await pool.query(
+      `SELECT * FROM campaign_notes WHERE fb_account_id=$1 AND fb_user_id=$2 ORDER BY created_at DESC LIMIT 100`,
+      [fbAccountId, fbUserId]
+    );
+    return rows;
+  },
+  deleteNote: async (id, fbUserId) => {
+    await pool.query(`DELETE FROM campaign_notes WHERE id=$1 AND fb_user_id=$2`, [id, fbUserId]);
+  },
   saveRun, getRunHistory, getRunDetail,
   getCampaignHistory, getAccountTrend,
   compareRuns, getLastRun,

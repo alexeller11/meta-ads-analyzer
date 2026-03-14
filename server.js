@@ -92,7 +92,7 @@ app.get('/api/adaccounts/:id/campaigns', auth, async (req, res) => {
 app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
   try {
     const params = {
-      fields: 'campaign_id,campaign_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values,cost_per_action_type,unique_clicks,outbound_clicks',
+      fields: 'campaign_id,campaign_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values,cost_per_action_type,unique_clicks,outbound_clicks,landing_page_view',
       level: 'campaign',
       access_token: req.session.accessToken,
       limit: 200
@@ -866,6 +866,98 @@ app.post('/api/check-budget', auth, async (req, res) => {
     console.error('check-budget error:', e.message);
     res.json({ checked: false, error: e.message });
   }
+});
+
+// ─── CAMPAIGN ACTIONS ────────────────────────────────────────────────────────
+
+app.post('/api/campaigns/:campaignId/toggle', auth, async (req, res) => {
+  const { newStatus } = req.body; // 'ACTIVE' or 'PAUSED'
+  if (!['ACTIVE','PAUSED'].includes(newStatus)) return res.status(400).json({ error: 'Status inválido' });
+  try {
+    const r = await axios.post(`https://graph.facebook.com/v19.0/${req.params.campaignId}`,
+      { status: newStatus, access_token: req.session.accessToken }
+    );
+    res.json({ success: true, status: newStatus });
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+});
+
+// ─── BREAKDOWN ENDPOINTS ──────────────────────────────────────────────────────
+
+app.get('/api/adaccounts/:id/breakdown/placement', auth, async (req, res) => {
+  try {
+    const params = {
+      fields: 'impressions,clicks,spend,cpm,ctr,cpc,reach,actions,action_values',
+      breakdowns: 'publisher_platform,platform_position',
+      level: 'account',
+      access_token: req.session.accessToken, limit: 100
+    };
+    if (req.query.since && req.query.until) params.time_range = JSON.stringify({ since: req.query.since, until: req.query.until });
+    else params.date_preset = req.query.date_preset || 'last_30d';
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+});
+
+app.get('/api/adaccounts/:id/breakdown/device', auth, async (req, res) => {
+  try {
+    const params = {
+      fields: 'impressions,clicks,spend,cpm,ctr,cpc,reach,actions,action_values',
+      breakdowns: 'device_platform',
+      level: 'account',
+      access_token: req.session.accessToken, limit: 50
+    };
+    if (req.query.since && req.query.until) params.time_range = JSON.stringify({ since: req.query.since, until: req.query.until });
+    else params.date_preset = req.query.date_preset || 'last_30d';
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+});
+
+app.get('/api/adaccounts/:id/breakdown/daily', auth, async (req, res) => {
+  try {
+    const params = {
+      fields: 'impressions,clicks,spend,cpm,ctr,cpc,reach,actions,action_values,frequency',
+      time_increment: 1,
+      level: 'account',
+      access_token: req.session.accessToken, limit: 90
+    };
+    if (req.query.since && req.query.until) params.time_range = JSON.stringify({ since: req.query.since, until: req.query.until });
+    else params.date_preset = req.query.date_preset || 'last_30d';
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+});
+
+// ─── NOTES ───────────────────────────────────────────────────────────────────
+
+app.get('/api/notes/:accountId', auth, async (req, res) => {
+  try {
+    const notes = await db.getNotes(req.params.accountId, req.session.user.id);
+    res.json({ notes });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/notes', auth, async (req, res) => {
+  const { accountId, campaignId, campaignName, note, type } = req.body;
+  if (!accountId || !note) return res.status(400).json({ error: 'Campos obrigatórios: accountId, note' });
+  try {
+    const saved = await db.saveNote({
+      fbUserId: req.session.user.id,
+      fbAccountId: accountId,
+      fbCampaignId: campaignId,
+      campaignName,
+      note,
+      type
+    });
+    res.json({ success: true, note: saved });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/notes/:id', auth, async (req, res) => {
+  try {
+    await db.deleteNote(parseInt(req.params.id), req.session.user.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── PAGES ───────────────────────────────────────────────────────────────────

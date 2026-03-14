@@ -243,6 +243,8 @@
       <button class="nav-item" onclick="showView('campaigns')"><span class="nav-icon">&#128203;</span>Campanhas</button>
       <button class="nav-item" onclick="showView('creatives')"><span class="nav-icon">&#128444;</span>Criativos</button>
       <button class="nav-item" onclick="showView('report')"><span class="nav-icon">&#128196;</span>Relatorio</button>
+      <button class="nav-item" onclick="showView('breakdown')"><span class="nav-icon">&#128659;</span>Breakdown</button>
+      <button class="nav-item" onclick="showView('notes')"><span class="nav-icon">&#128221;</span>Notas</button>
       <button class="nav-item" onclick="showView('history')"><span class="nav-icon">&#128197;</span>Historico</button>
       <button class="nav-item" onclick="showView('trend')"><span class="nav-icon">&#128200;</span>Tendencias</button>
       <button class="nav-item" onclick="showView('plan')"><span class="nav-icon">&#128197;</span>Plano 30 dias</button>
@@ -277,8 +279,13 @@
       </div>
 
       <div id="view-overview">
+        <div id="fatigueBar" style="display:none;background:rgba(255,152,0,.08);border:1px solid rgba(255,152,0,.25);border-radius:8px;padding:10px 14px;margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:6px">&#9888; FADIGA DE CRIATIVO DETECTADA</div>
+          <div id="fatigueList" style="display:flex;flex-direction:column;gap:4px"></div>
+        </div>
         <div class="stitle" id="metricsTitle">METRICAS DO PERIODO</div>
         <div class="mgrid" id="metricsGrid"></div>
+        <div class="stitle" style="margin-top:8px">CONVERSOES & RECEITA</div>
         <div class="mgrid" id="convGrid"></div>
       </div>
 
@@ -321,12 +328,14 @@
               <th onclick="srt('cpc')">CPC</th>
               <th onclick="srt('freq')">Freq.</th>
               <th onclick="srt('purchases')">Compras</th>
+              <th>CPR Compra</th>
               <th onclick="srt('leads')">Leads</th>
-              <th onclick="srt('mensagens')">Mensagens</th>
+              <th onclick="srt('mensagens')">Msgs</th>
               <th onclick="srt('connect_rate')">Connect Rate</th>
               <th onclick="srt('roas')">ROAS</th>
               <th onclick="srt('roi')">ROI</th>
               <th>Diagnostico</th>
+              <th>Acao</th>
             </tr></thead>
             <tbody id="campTbody"></tbody>
           </table>
@@ -367,6 +376,42 @@
         <div id="reportContent">
           <div style="color:var(--muted);font-size:12px">Execute uma analise para gerar o relatorio.</div>
         </div>
+      </div>
+
+      <!-- BREAKDOWN -->
+      <div id="view-breakdown" style="display:none">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <div class="stitle" style="margin:0">BREAKDOWN</div>
+          <div style="display:flex;gap:3px">
+            <button class="tfilter active" id="bd_placement" onclick="setBDTab('placement')">Posicionamento</button>
+            <button class="tfilter" id="bd_device" onclick="setBDTab('device')">Dispositivo</button>
+            <button class="tfilter" id="bd_daily" onclick="setBDTab('daily')">Diario</button>
+          </div>
+          <button class="btn btn-ghost" style="font-size:11px;margin-left:auto" onclick="loadBreakdown()">&#128260; Atualizar</button>
+        </div>
+        <div id="bdContent"><div style="color:var(--muted);font-size:12px">Clique em Atualizar para carregar.</div></div>
+      </div>
+
+      <!-- NOTAS -->
+      <div id="view-notes" style="display:none">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div class="stitle" style="margin:0">NOTAS E DECISOES</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <select class="sel" id="noteType" style="font-size:11px">
+            <option value="geral">Geral</option>
+            <option value="decisao">Decisao Tomada</option>
+            <option value="teste">Teste A/B</option>
+            <option value="alerta">Alerta</option>
+            <option value="resultado">Resultado</option>
+          </select>
+          <select class="sel" id="noteCamp" style="font-size:11px;flex:1">
+            <option value="">Conta geral</option>
+          </select>
+          <input type="text" id="noteText" placeholder="Escreva uma nota, decisao ou observacao..." style="flex:3;padding:6px 10px;background:var(--s2);border:1px solid var(--b1);color:var(--text);border-radius:6px;font-size:12px;font-family:Arial,sans-serif">
+          <button onclick="saveNote()" class="btn btn-primary" style="font-size:11px">Salvar</button>
+        </div>
+        <div id="notesList"><div style="color:var(--muted);font-size:12px">Carregando notas...</div></div>
       </div>
 
       <div id="view-history" style="display:none">
@@ -598,19 +643,21 @@ async function fetchBalance(accountId){
     const d=await fetch(`/api/adaccounts/${accountId}/balance`).then(r=>r.json());
     if(d.error)return;
     const cur=d.currency==='BRL'?'R$':'$';
-    // balance is in cents for some currencies
-    let bal=parseFloat(d.balance||0);
-    // Meta returns balance in cents divided by 100
-    if(Math.abs(bal)>10000)bal=bal/100;
+    // Meta ALWAYS returns monetary values as integer cents (e.g. R$527,95 = 52795)
+    const bal=parseFloat(d.balance||0)/100;
+    const spent=parseFloat(d.amount_spent||0)/100;
+    const cap=parseFloat(d.spend_cap||0)/100;
     const chip=document.getElementById('balanceChip');
     const valEl=document.getElementById('balanceVal');
-    if(bal!==null&&bal!==undefined){
-      valEl.textContent=`${cur} ${bal.toFixed(2)}`;
-      chip.style.display='flex';
-      // Color: red if zero or negative
-      valEl.style.color=bal>0?'var(--green)':bal===0?'var(--orange)':'var(--red)';
+    chip.style.display='flex';
+    valEl.style.color=bal>0?'var(--green)':bal===0?'var(--orange)':'var(--red)';
+    // Show balance + optional spend cap context
+    if(cap>0){
+      valEl.textContent=`${cur} ${bal.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})} | Gasto: ${cur} ${spent.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})} / ${cur} ${cap.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+    } else {
+      valEl.textContent=`${cur} ${bal.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
     }
-  }catch(e){}
+  }catch(e){console.error('Balance error:',e);}
 }
 
 // CREATIVES FILTER MODE
@@ -630,21 +677,31 @@ function getAct(arr,type){if(!arr)return 0;const f=arr.find(a=>a.action_type===t
 // 'purchase' from actions can be same as fb_pixel_purchase causing double count
 // We use fb_pixel_purchase as source of truth; lead/registration are separate
 function convMetrics(rows){
-  let purchases=0,leads=0,msg=0,rev=0,sp=0,cl=0;
+  let purchases=0,leads=0,msg=0,rev=0,sp=0,cl=0,sessions=0;
   (rows||[]).forEach(m=>{
     const a=m.actions||[];const v=m.action_values||[];
-    // Purchases: use only fb_pixel_purchase (avoids double count with 'purchase')
+    // Purchases: fb_pixel_purchase is source of truth
     purchases+=getAct(a,'offsite_conversion.fb_pixel_purchase');
-    // Leads: registrations and lead gen forms
+    // Leads
     leads+=getAct(a,'lead')+getAct(a,'complete_registration')+getAct(a,'offsite_conversion.fb_pixel_lead');
     // Messages
     msg+=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection');
-    // Revenue: only fb_pixel_purchase value (source of truth for ROAS)
+    // Revenue
     rev+=getAct(v,'offsite_conversion.fb_pixel_purchase');
-    sp+=parseFloat(m.spend||0);cl+=parseInt(m.clicks||0);
+    sp+=parseFloat(m.spend||0);
+    cl+=parseInt(m.clicks||0);
+    // Connect Rate = Sessions/Clicks — landing_page_view is Meta's session proxy (page actually loaded)
+    sessions+=getAct(a,'landing_page_view');
   });
   const cv=purchases+leads;
-  return{purchases,leads,cv,msg,rev,sp,roas:sp>0?rev/sp:0,roi:sp>0?((rev-sp)/sp)*100:0,connectRate:cl>0?(msg/cl)*100:0};
+  // Cost per result
+  const cpr_purchase=purchases>0?sp/purchases:0;
+  const cpr_lead=leads>0?sp/leads:0;
+  const cpr_msg=msg>0?sp/msg:0;
+  return{purchases,leads,cv,msg,rev,sp,sessions,
+    roas:sp>0?rev/sp:0,roi:sp>0?((rev-sp)/sp)*100:0,
+    connectRate:cl>0?(sessions/cl)*100:0,
+    cpr_purchase,cpr_lead,cpr_msg};
 }
 
 // RENDER ALL
@@ -653,6 +710,11 @@ function renderAll(){
   document.getElementById('contentWrap').style.display='block';
   if(!analysis)return;
   renderMetrics();renderSummary();renderOptims();renderAlerts();renderHistInsights();renderOpps();renderCampTable();renderPlan();renderReport();
+  // Fatigue detection
+  const fatigues=detectFatigue(insData?.data||[]);
+  const fb=document.getElementById('fatigueBar');
+  const fl=document.getElementById('fatigueList');
+  if(fb&&fl){fb.style.display=fatigues.length?'block':'none';fl.innerHTML=fatigues.map(f=>`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:${f.level==='alta'?'rgba(255,56,96,.15)':'rgba(255,152,0,.12)'};color:${f.level==='alta'?'var(--red)':'var(--orange)'}">${f.level.toUpperCase()}</span><span style="font-size:11px;color:var(--dim)">${f.camp}</span><span style="font-size:11px;color:var(--text)">${f.msg}</span></div>`).join('');}
 }
 
 function mkD(cur,prv,better=true){
@@ -691,14 +753,18 @@ function renderMetrics(){
     <div class="mcard"><div class="mlabel">CAMPANHAS ATIVAS</div><div class="mval c-green">${m.activeCampaigns}</div><div class="msub">de ${m.totalCampaigns} total</div></div>
   `;
 
+  const projDays=30;const dp2=document.getElementById('dateSel').value;const daysElapsed={last_7d:7,last_14d:14,last_30d:30,last_90d:90,this_month:new Date().getDate(),last_month:new Date(new Date().getFullYear(),new Date().getMonth(),0).getDate()}[dp2]||30;
+  const projSpend=daysElapsed>0?((m.totalSpend/daysElapsed)*projDays).toFixed(2):'—';
   document.getElementById('convGrid').innerHTML=`
-    <div class="mcard"><div class="mlabel">COMPRAS (PIXEL)</div><div class="mval c-purple">${fmtN(conv.purchases)}</div><div class="msub">fb_pixel_purchase ${mkD(conv.purchases,pconv?.purchases,true)}</div></div>
-    <div class="mcard"><div class="mlabel">LEADS</div><div class="mval" style="color:var(--yellow)">${fmtN(conv.leads)}</div><div class="msub">cadastros + formularios ${mkD(conv.leads,pconv?.leads,true)}</div></div>
-    <div class="mcard"><div class="mlabel">MENSAGENS</div><div class="mval c-cyan">${fmtN(conv.msg)}</div><div class="msub">conversas iniciadas ${mkD(conv.msg,pconv?.msg,true)}</div></div>
-    <div class="mcard"><div class="mlabel">CONNECT RATE</div><div class="mval ${conv.connectRate>=5?'c-green':conv.connectRate>=2?'c-orange':'c-red'}">${conv.connectRate.toFixed(2)}%</div><div class="msub">mensagens/cliques ${mkD(conv.connectRate,pconv?.connectRate,true)}</div></div>
+    <div class="mcard"><div class="mlabel">COMPRAS (PIXEL)</div><div class="mval c-purple">${fmtN(conv.purchases)}</div><div class="msub">CPR: ${conv.cpr_purchase>0?S+' '+conv.cpr_purchase.toFixed(2):'sem dados'} ${mkD(conv.purchases,pconv?.purchases,true)}</div></div>
+    <div class="mcard"><div class="mlabel">LEADS</div><div class="mval" style="color:var(--yellow)">${fmtN(conv.leads)}</div><div class="msub">CPR: ${conv.cpr_lead>0?S+' '+conv.cpr_lead.toFixed(2):'sem dados'} ${mkD(conv.leads,pconv?.leads,true)}</div></div>
+    <div class="mcard"><div class="mlabel">MENSAGENS</div><div class="mval c-cyan">${fmtN(conv.msg)}</div><div class="msub">CPR: ${conv.cpr_msg>0?S+' '+conv.cpr_msg.toFixed(2):'sem dados'} ${mkD(conv.msg,pconv?.msg,true)}</div></div>
+    <div class="mcard"><div class="mlabel">SESSOES NO SITE</div><div class="mval c-blue">${fmtN(conv.sessions)}</div><div class="msub">landing_page_view ${mkD(conv.sessions,pconv?.sessions,true)}</div></div>
+    <div class="mcard"><div class="mlabel">CONNECT RATE</div><div class="mval ${conv.connectRate>=5?'c-green':conv.connectRate>=2?'c-orange':'c-red'}">${conv.connectRate.toFixed(2)}%</div><div class="msub">sessoes/cliques ${mkD(conv.connectRate,pconv?.connectRate,true)}</div></div>
     <div class="mcard"><div class="mlabel">RECEITA (PIXEL)</div><div class="mval c-green">${S} ${conv.rev>=1000?fmtN(conv.rev):conv.rev.toFixed(2)}</div><div class="msub">valor fb_pixel_purchase ${mkD(conv.rev,pconv?.rev,true)}</div></div>
     <div class="mcard"><div class="mlabel">ROAS</div><div class="mval ${conv.roas>=3?'c-green':conv.roas>=1?'c-orange':'c-red'}">${conv.roas.toFixed(2)}x</div><div class="msub">receita/gasto ${mkD(conv.roas,pconv?.roas,true)}</div></div>
     <div class="mcard"><div class="mlabel">ROI</div><div class="mval ${conv.roi>=100?'c-green':conv.roi>=0?'c-orange':'c-red'}">${conv.roi.toFixed(0)}%</div><div class="msub">(receita-gasto)/gasto ${mkD(conv.roi,pconv?.roi,true)}</div></div>
+    <div class="mcard" style="border-color:rgba(179,136,255,.25)"><div class="mlabel">PROJECAO 30D</div><div class="mval c-purple">${S} ${projSpend}</div><div class="msub">ritmo atual × 30 dias</div></div>
   `;
 }
 
@@ -764,13 +830,16 @@ function renderCampTable(){
     const a=ins?.actions||[];const v=ins?.action_values||[];
     const purchases=getAct(a,'offsite_conversion.fb_pixel_purchase');const leads=getAct(a,'lead')+getAct(a,'complete_registration')+getAct(a,'offsite_conversion.fb_pixel_lead');const cv=purchases+leads;
     const msg=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection');
+    const sessions=getAct(a,'landing_page_view');
     const rev=getAct(v,'offsite_conversion.fb_pixel_purchase');
     const sp=parseFloat(ins?.spend||c.gasto?.toString().replace(/[^0-9.]/g,'')||0);
     const cl=parseInt(ins?.clicks||0);
-    const roas=sp>0?rev/sp:0;const roi=sp>0?((rev-sp)/sp)*100:0;const cr=cl>0?(msg/cl)*100:0;
+    const roas=sp>0?rev/sp:0;const roi=sp>0?((rev-sp)/sp)*100:0;
+    // Connect Rate = Sessions (landing_page_view) / Clicks
+    const cr=cl>0?(sessions/cl)*100:0;
     const impr=parseInt(ins?.impressions||0);
     const running=camp?runIds.has(camp.id):false;
-    return{...c,cv,purchases,leads,msg,rev,roas,roi,cr,sp,impr,running,campStatus:camp?.status||'UNKNOWN'};
+    return{...c,cv,purchases,leads,msg,rev,roas,roi,cr,sp,impr,running,campStatus:camp?.status||'UNKNOWN',campId:camp?.id||null};
   });
   let filtered=enriched;
   if(tf==='running')filtered=enriched.filter(c=>c.running);
@@ -799,12 +868,14 @@ function renderCampTable(){
       <td>${c.cpc||'-'}</td>
       <td>${c.frequencia||'-'}</td>
       <td style="font-weight:700;color:var(--purple)">${c.purchases>0?fmtN(c.purchases):'-'}</td>
+      <td style="font-size:10px;color:var(--muted)">${c.purchases>0&&c.sp>0?S+' '+(c.sp/c.purchases).toFixed(2):'-'}</td>
       <td style="font-weight:700;color:var(--yellow)">${c.leads>0?fmtN(c.leads):'-'}</td>
       <td style="font-weight:700;color:var(--cyan)">${c.msg>0?fmtN(c.msg):'-'}</td>
       <td>${c.cr>0?c.cr.toFixed(2)+'%':'-'}</td>
       <td style="font-weight:700;color:${rc}">${c.roas>0?c.roas.toFixed(2)+'x':'-'}</td>
       <td style="font-weight:700;color:${ric}">${c.roi!==0?c.roi.toFixed(0)+'%':'-'}</td>
-      <td style="font-size:10px;color:var(--dim);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${c.problema_principal||''}">${c.problema_principal||'-'}</td>
+      <td style="font-size:10px;color:var(--dim);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${c.problema_principal||''}">${c.problema_principal||'-'}</td>
+      <td><button onclick="toggleCampaign('${c.campId||''}','${c.campStatus}')" class="btn ${c.campStatus==='ACTIVE'?'btn-danger':'btn-ghost'}" style="font-size:9px;padding:3px 7px">${c.campStatus==='ACTIVE'?'⏸ Pausar':'▶ Ativar'}</button></td>
     </tr>`;
   }).join('')||'<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:20px">Sem dados</td></tr>';
 }
@@ -838,6 +909,7 @@ function renderReport(){
     const a=ins?.actions||[];const v=ins?.action_values||[];
     const purchases=getAct(a,'offsite_conversion.fb_pixel_purchase');const leads=getAct(a,'lead')+getAct(a,'complete_registration')+getAct(a,'offsite_conversion.fb_pixel_lead');const cv=purchases+leads;
     const msg=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection');
+    const sessions2=getAct(a,'landing_page_view');
     const rev=getAct(v,'offsite_conversion.fb_pixel_purchase');
     const sp=parseFloat(ins?.spend||String(c.gasto||'0').replace(/[^0-9.]/g,'')||0);
     const cl=parseInt(ins?.clicks||0);
@@ -1088,9 +1160,11 @@ function crAdMetrics(ad){
   const purchases=getAct(a,'offsite_conversion.fb_pixel_purchase');
   const leads=getAct(a,'lead')+getAct(a,'complete_registration')+getAct(a,'offsite_conversion.fb_pixel_lead');
   const msg=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection');
+  const sessions=getAct(a,'landing_page_view');
   const rev=getAct(v,'offsite_conversion.fb_pixel_purchase');
   const roas=spend>0?rev/spend:0;
-  return{spend,impr,clicks,ctr,freq,purchases,leads,msg,rev,roas,running:spend>0&&ad.status==='ACTIVE'};
+  const connectRate=clicks>0?(sessions/clicks)*100:0;
+  return{spend,impr,clicks,ctr,freq,purchases,leads,msg,sessions,rev,roas,connectRate,running:spend>0&&ad.status==='ACTIVE'};
 }
 
 function filterCr(){
@@ -1149,10 +1223,11 @@ function renderCreatives(){
           <div class="cstat"><div class="cstat-val">${fmtN(m.clicks)}</div><div class="cstat-lbl">Cliques</div></div>
           <div class="cstat"><div class="cstat-val" style="color:${ctrC}">${m.ctr.toFixed(2)}%</div><div class="cstat-lbl">CTR</div></div>
         </div>
-        <div class="creative-stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:6px">
+        <div class="creative-stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:6px">
           <div class="cstat"><div class="cstat-val c-purple">${m.purchases>0?fmtN(m.purchases):'-'}</div><div class="cstat-lbl">Compras</div></div>
           <div class="cstat"><div class="cstat-val" style="color:var(--yellow)">${m.leads>0?fmtN(m.leads):'-'}</div><div class="cstat-lbl">Leads</div></div>
           <div class="cstat"><div class="cstat-val" style="color:${roasC}">${m.roas>0?m.roas.toFixed(2)+'x':'-'}</div><div class="cstat-lbl">ROAS</div></div>
+          <div class="cstat"><div class="cstat-val" style="color:${m.connectRate>=5?'var(--green)':m.connectRate>=2?'var(--orange)':'var(--dim)'}">${m.connectRate>0?m.connectRate.toFixed(1)+'%':'-'}</div><div class="cstat-lbl">Connect%</div></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--b1);padding-top:5px">
           <span style="font-size:11px;color:var(--dim)">Freq: ${m.freq>0?m.freq.toFixed(1)+'x':'-'}</span>
@@ -1279,16 +1354,20 @@ function drawLine(id,labels,data,color){
 
 // VIEWS
 function showView(v){
-  ['overview','analysis','campaigns','creatives','report','history','trend','plan'].forEach(id=>{
-    document.getElementById('view-'+id).style.display=id===v?'block':'none';
+  const views=['overview','analysis','campaigns','creatives','breakdown','notes','report','history','trend','plan'];
+  views.forEach(id=>{
+    const el=document.getElementById('view-'+id);
+    if(el) el.style.display=id===v?'block':'none';
   });
   document.querySelectorAll('.nav-item').forEach((btn,i)=>{
-    btn.classList.toggle('active',['overview','analysis','campaigns','creatives','report','history','trend','plan'][i]===v);
+    btn.classList.toggle('active',views[i]===v);
   });
   if(v==='history')loadHistory();
   if(v==='trend')loadTrend();
   if(v==='creatives'&&allCreatives.length===0)loadCreatives();
   if(v==='report')renderReport();
+  if(v==='breakdown')loadBreakdown();
+  if(v==='notes')loadNotes();
 }
 
 // ALERT
@@ -1350,6 +1429,200 @@ function fmtDate(d){return new Date(d).toLocaleDateString('pt-BR',{day:'2-digit'
 function fmtDS(d){const dt=new Date(d);return String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0');}
 function scC(s){if(!s)return'var(--dim)';if(s>=80)return'var(--green)';if(s>=60)return'var(--cyan)';if(s>=40)return'var(--orange)';return'var(--red)';}
 function scCls(n){if(!n)return'bom';const x=n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(x.includes('excelente'))return'excelente';if(x.includes('bom'))return'bom';if(x.includes('aten'))return'atencao';return'critico';}
+
+
+// ── CAMPAIGN TOGGLE ──────────────────────────────────────────────────────────
+async function toggleCampaign(campaignId, currentStatus){
+  if(!campaignId){alert('ID de campanha indisponivel. Execute a analise primeiro.');return;}
+  const newStatus = currentStatus==='ACTIVE'?'PAUSED':'ACTIVE';
+  const label = newStatus==='PAUSED'?'pausar':'ativar';
+  if(!confirm(`Confirma ${label} esta campanha?`))return;
+  try{
+    showLoad(label==='pausar'?'Pausando campanha...':'Ativando campanha...');
+    const r=await fetch(`/api/campaigns/${campaignId}/toggle`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({newStatus})}).then(r=>r.json());
+    if(r.error)throw new Error(r.error);
+    // Update local state
+    const camp=campaigns.find(c=>c.id===campaignId);
+    if(camp) camp.status=newStatus;
+    renderCampTable();
+    renderSidebar();
+    // Save note automatically
+    const campName=campaigns.find(c=>c.id===campaignId)?.name||campaignId;
+    await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accountId:selAccountId,campaignId,campaignName:campName,note:`Campanha ${newStatus==='PAUSED'?'PAUSADA':'ATIVADA'} manualmente via Meta Ads Analyzer`,type:'decisao'})});
+  }catch(e){alert('Erro: '+e.message);}
+  finally{hideLoad();}
+}
+
+// ── BREAKDOWN ────────────────────────────────────────────────────────────────
+let bdTab='placement';
+function setBDTab(tab){
+  bdTab=tab;
+  ['placement','device','daily'].forEach(t=>{
+    const b=document.getElementById('bd_'+t);
+    if(b)b.classList.toggle('active',t===tab);
+  });
+  loadBreakdown();
+}
+
+async function loadBreakdown(){
+  if(!selAccountId)return;
+  showLoad('Carregando breakdown...');
+  try{
+    const dp=getDateParams();
+    let qs=dp.preset?`date_preset=${dp.preset}`:`since=${dp.since}&until=${dp.until}`;
+    const r=await fetch(`/api/adaccounts/${selAccountId}/breakdown/${bdTab}?${qs}`).then(r=>r.json());
+    renderBreakdown(r.data||[],bdTab);
+  }catch(e){document.getElementById('bdContent').innerHTML=`<div style="color:var(--red);font-size:12px">Erro: ${e.message}</div>`;}
+  finally{hideLoad();}
+}
+
+function renderBreakdown(data,tab){
+  const S=sym();
+  const el=document.getElementById('bdContent');
+  if(!data.length){el.innerHTML='<div style="color:var(--muted);font-size:12px">Sem dados para este periodo.</div>';return;}
+
+  if(tab==='daily'){
+    // Line chart via canvas
+    const labels=data.map(d=>d.date_start?fmtDS(d.date_start):'');
+    const spends=data.map(d=>parseFloat(d.spend||0));
+    const ctrs=data.map(d=>parseFloat(d.ctr||0));
+    const impr=data.map(d=>parseInt(d.impressions||0));
+    const totalSp=spends.reduce((a,b)=>a+b,0);
+    const avgCtr=(ctrs.reduce((a,b)=>a+b,0)/ctrs.length).toFixed(2);
+    const projDay=spends.length>0?(totalSp/spends.length).toFixed(2):'0';
+    el.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+        <div class="mcard"><div class="mlabel">GASTO TOTAL</div><div class="mval c-blue">${S} ${totalSp.toFixed(2)}</div></div>
+        <div class="mcard"><div class="mlabel">CTR MEDIO</div><div class="mval">${avgCtr}%</div></div>
+        <div class="mcard"><div class="mlabel">MEDIA/DIA</div><div class="mval c-purple">${S} ${projDay}</div></div>
+      </div>
+      <div class="chart-wrap"><div class="chart-title">Gasto diario (${S})</div><canvas id="bdChartSpend" height="100"></canvas></div>
+      <div class="two-col">
+        <div class="chart-wrap"><div class="chart-title">CTR diario (%)</div><canvas id="bdChartCtr" height="100"></canvas></div>
+        <div class="chart-wrap"><div class="chart-title">Impressoes diarias</div><canvas id="bdChartImpr" height="100"></canvas></div>
+      </div>`;
+    setTimeout(()=>{
+      const mkLine=(id,lbs,vals,color,label)=>{const cv=document.getElementById(id);if(!cv)return;new Chart(cv,{type:'line',data:{labels:lbs,datasets:[{data:vals,borderColor:color,backgroundColor:color+'22',tension:0.4,fill:true,pointRadius:2,label}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#1e2433'},ticks:{color:'#8892a4',font:{size:8}}},y:{grid:{color:'#1e2433'},ticks:{color:'#8892a4',font:{size:8}}}}}});};
+      mkLine('bdChartSpend',labels,spends,'#1877F2','Gasto');
+      mkLine('bdChartCtr',labels,ctrs,'#00e676','CTR');
+      mkLine('bdChartImpr',labels,impr,'#00d4ff','Impressoes');
+    },100);
+    return;
+  }
+
+  // Table for placement and device
+  const sorted=[...data].sort((a,b)=>parseFloat(b.spend||0)-parseFloat(a.spend||0));
+  const totalSpAll=sorted.reduce((s,r)=>s+parseFloat(r.spend||0),0);
+  const getA=(actions,type)=>{if(!actions)return 0;const f=actions.find(a=>a.action_type===type);return f?parseFloat(f.value||0):0;};
+
+  const labelKey=tab==='placement'?['publisher_platform','platform_position']:['device_platform'];
+  el.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr>
+      <th>${tab==='placement'?'Plataforma / Posicao':'Dispositivo'}</th>
+      <th>% Gasto</th><th>Gasto</th><th>Impr.</th><th>Cliques</th>
+      <th>CTR</th><th>CPC</th><th>CPM</th><th>Compras</th><th>ROAS</th>
+    </tr></thead>
+    <tbody>${sorted.map(r=>{
+      const sp=parseFloat(r.spend||0);
+      const pct=totalSpAll>0?((sp/totalSpAll)*100).toFixed(1):0;
+      const purchases=getA(r.actions,'offsite_conversion.fb_pixel_purchase');
+      const rev=r.action_values?getA(r.action_values,'offsite_conversion.fb_pixel_purchase'):0;
+      const roas=sp>0?rev/sp:0;
+      const lbl=labelKey.map(k=>r[k]||'').filter(Boolean).join(' / ')||'Outro';
+      const pctBar=`<div style="display:flex;align-items:center;gap:5px"><div style="width:50px;height:4px;background:var(--b1);border-radius:2px"><div style="width:${pct}%;height:100%;background:var(--blue);border-radius:2px"></div></div><span>${pct}%</span></div>`;
+      return`<tr>
+        <td style="font-weight:700;font-size:11px">${lbl}</td>
+        <td>${pctBar}</td>
+        <td>${S} ${sp.toFixed(2)}</td>
+        <td>${fmtN(r.impressions)}</td>
+        <td>${fmtN(r.clicks)}</td>
+        <td style="color:${parseFloat(r.ctr)>=1?'var(--green)':parseFloat(r.ctr)>=0.5?'var(--orange)':'var(--red)'}">${parseFloat(r.ctr||0).toFixed(2)}%</td>
+        <td>${S} ${parseFloat(r.cpc||0).toFixed(2)}</td>
+        <td>${S} ${parseFloat(r.cpm||0).toFixed(2)}</td>
+        <td style="color:var(--purple);font-weight:700">${purchases>0?fmtN(purchases):'-'}</td>
+        <td style="color:${roas>=3?'var(--green)':roas>=1?'var(--cyan)':'var(--red)'};font-weight:700">${roas>0?roas.toFixed(2)+'x':'-'}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+// ── NOTES ────────────────────────────────────────────────────────────────────
+let notesData=[];
+async function loadNotes(){
+  if(!selAccountId)return;
+  try{
+    const r=await fetch(`/api/notes/${selAccountId}`).then(r=>r.json());
+    notesData=r.notes||[];
+    // Populate campaign select
+    const sel=document.getElementById('noteCamp');
+    if(sel){
+      const camps=[...new Set(campaigns.map(c=>({id:c.id,name:c.name})))];
+      sel.innerHTML='<option value="">Conta geral</option>'+camps.map(c=>`<option value="${c.id}" data-name="${c.name}">${c.name.slice(0,40)}</option>`).join('');
+    }
+    renderNotes();
+  }catch(e){document.getElementById('notesList').innerHTML=`<div style="color:var(--red);font-size:12px">Erro: ${e.message}</div>`;}
+}
+
+async function saveNote(){
+  const text=document.getElementById('noteText').value.trim();
+  if(!text){alert('Escreva uma nota antes de salvar.');return;}
+  const type=document.getElementById('noteType').value;
+  const campSel=document.getElementById('noteCamp');
+  const campId=campSel.value||null;
+  const campName=campId?campSel.selectedOptions[0]?.dataset?.name||null:null;
+  try{
+    const r=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accountId:selAccountId,campaignId:campId,campaignName:campName,note:text,type})}).then(r=>r.json());
+    if(r.error)throw new Error(r.error);
+    document.getElementById('noteText').value='';
+    notesData=[r.note,...notesData];
+    renderNotes();
+  }catch(e){alert('Erro: '+e.message);}
+}
+
+async function deleteNote(id){
+  if(!confirm('Apagar esta nota?'))return;
+  try{
+    await fetch(`/api/notes/${id}`,{method:'DELETE'});
+    notesData=notesData.filter(n=>n.id!==id);
+    renderNotes();
+  }catch(e){alert('Erro: '+e.message);}
+}
+
+function renderNotes(){
+  const el=document.getElementById('notesList');
+  if(!notesData.length){el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:12px 0">Nenhuma nota ainda. Registre decisoes, testes e observacoes.</div>';return;}
+  const typeIcon={geral:'📝',decisao:'⚡',teste:'🧪',alerta:'⚠️',resultado:'📊'};
+  const typeColor={geral:'var(--dim)',decisao:'var(--cyan)',teste:'var(--yellow)',alerta:'var(--orange)',resultado:'var(--green)'};
+  el.innerHTML=notesData.map(n=>`
+    <div style="display:flex;gap:10px;padding:10px 12px;background:var(--s1);border:1px solid var(--b1);border-left:3px solid ${typeColor[n.type]||'var(--dim)'};border-radius:7px;margin-bottom:6px">
+      <div style="font-size:16px;flex-shrink:0">${typeIcon[n.type]||'📝'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
+          <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:${typeColor[n.type]||'var(--dim)'}">${n.type}</span>
+          ${n.campaign_name?`<span style="font-size:10px;color:var(--cyan);background:rgba(0,212,255,.08);padding:1px 6px;border-radius:3px">${n.campaign_name.slice(0,30)}</span>`:''}
+          <span style="font-size:10px;color:var(--muted);margin-left:auto">${fmtDate(n.created_at)}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text);line-height:1.5">${n.note}</div>
+      </div>
+      <button onclick="deleteNote(${n.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0;padding:2px 4px" title="Apagar">&#128465;</button>
+    </div>`).join('');
+}
+
+// ── FATIGUE DETECTION (overview) ─────────────────────────────────────────────
+function detectFatigue(rows){
+  const alerts=[];
+  rows.forEach(r=>{
+    const freq=parseFloat(r.frequency||0);
+    const ctr=parseFloat(r.ctr||0);
+    const impr=parseInt(r.impressions||0);
+    const spend=parseFloat(r.spend||0);
+    if(impr<1000||spend===0)return;
+    if(freq>4&&ctr<0.5) alerts.push({camp:r.campaign_name,msg:`Freq ${freq.toFixed(1)}x + CTR ${ctr.toFixed(2)}% — criativo saturado`,level:'alta'});
+    else if(freq>3&&ctr<0.8) alerts.push({camp:r.campaign_name,msg:`Freq ${freq.toFixed(1)}x — inicio de fadiga`,level:'media'});
+  });
+  return alerts;
+}
+
 
 init();
 </script>
