@@ -459,4 +459,293 @@
           <div style="font-size:12px;font-weight:700;color:var(--cyan);margin-bottom:12px">CONFIGURACAO DO PLANEJAMENTO</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:12px">
             <div>
-              <div style="font-size:10px;font-weight:700;color:var(--dim
+              <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">NICHO DA EMPRESA *</div>
+              <input id="igNiche" type="text" placeholder="ex: Materiais de construcao" class="sel" style="width:100%;padding:7px 10px;font-size:12px">
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">NOME DA EMPRESA</div>
+              <input id="igBusiness" type="text" placeholder="ex: WIG Construcao" class="sel" style="width:100%;padding:7px 10px;font-size:12px">
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">PUBLICO-ALVO</div>
+              <input id="igAudience" type="text" placeholder="ex: Arquitetos e construtores" class="sel" style="width:100%;padding:7px 10px;font-size:12px">
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">TOM DE VOZ</div>
+              <select id="igTone" class="sel" style="width:100%;font-size:12px">
+                <option value="profissional">Profissional e confiavel</option>
+                <option value="descontraido">Descontraido e proximo</option>
+                <option value="inspirador">Inspirador e aspiracional</option>
+                <option value="educativo">Educativo e autoridade</option>
+                <option value="vendas">Foco em vendas e ofertas</option>
+              </select>
+            </div>
+          </div>
+          <button onclick="generateContentPlan()" class="btn btn-primary" id="btnGenPlan" style="font-size:12px">
+            <span id="genIcon">&#127775;</span> Gerar Planejamento Mensal com IA
+          </button>
+        </div>
+
+        <div id="igProfile" style="display:none;background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:14px;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <img id="igAvatar" src="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--b2)">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700" id="igName">-</div>
+              <div style="font-size:11px;color:var(--cyan)" id="igUser">-</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="text-align:center"><div style="font-size:14px;font-weight:700;color:var(--text)" id="igFollowers">-</div><div style="font-size:9px;color:var(--muted)">seguidores</div></div>
+              <div style="text-align:center"><div style="font-size:14px;font-weight:700;color:var(--text)" id="igMediaCount">-</div><div style="font-size:9px;color:var(--muted)">posts</div></div>
+              <div style="text-align:center"><div style="font-size:14px;font-weight:700;color:var(--cyan)" id="igEngRate">-</div><div style="font-size:9px;color:var(--muted)">eng. medio</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="contentAnalysis" style="display:none;margin-bottom:16px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px">
+              <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px">PONTOS FORTES</div>
+              <div id="cpPontosFortes" style="font-size:11px;color:var(--dim);line-height:1.7"></div>
+            </div>
+            <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px">
+              <div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:6px">PONTOS DE MELHORIA</div>
+              <div id="cpPontosMelhoria" style="font-size:11px;color:var(--dim);line-height:1.7"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+            <div class="mcard" style="flex:1;min-width:120px"><div class="mlabel">MELHOR FORMATO</div><div id="cpFormato" style="font-size:14px;font-weight:700;color:var(--cyan)">-</div></div>
+            <div class="mcard" style="flex:1;min-width:120px"><div class="mlabel">MELHOR HORARIO</div><div id="cpHorario" style="font-size:14px;font-weight:700;color:var(--green)">-</div></div>
+            <div class="mcard" style="flex:1;min-width:120px"><div class="mlabel">ENG. MEDIO</div><div id="cpEngMedio" style="font-size:14px;font-weight:700;color:var(--orange)">-</div></div>
+          </div>
+        </div>
+
+        <div id="contentCalendar" style="display:none">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <div style="display:flex;gap:3px">
+              <button class="tfilter active" id="cv_calendar" onclick="setContentView('calendar')">&#128197; Calendario</button>
+              <button class="tfilter" id="cv_list" onclick="setContentView('list')">&#128203; Lista</button>
+            </div>
+            <button onclick="exportContentPlan()" class="btn btn-ghost" style="font-size:11px;margin-left:auto">&#128229; Exportar PDF</button>
+          </div>
+          <div id="contentPlanOutput"></div>
+        </div>
+      </div>
+
+      <div id="view-google" style="display:none">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <div class="stitle" style="margin:0">&#127774; GOOGLE ADS</div>
+          <div id="gConnectArea">
+            <button onclick="connectGoogle()" class="btn btn-primary" id="btnGoogleConn" style="font-size:11px;background:linear-gradient(90deg,#4285F4,#34A853)">
+              &#128279; Conectar Google Ads
+            </button>
+          </div>
+          <div id="gConnectedArea" style="display:none;align-items:center;gap:10px">
+            <select class="sel" id="gCustSel" onchange="onGCustChange()" style="font-size:11px;max-width:220px">
+              <option value="">Selecione a conta...</option>
+            </select>
+          </div>
+        </div>
+        <div id="gMetricsArea" style="display:none">
+          <div class="mgrid" id="gMetricsGrid"></div>
+          <div class="table-wrap">
+            <table id="gCampTable">
+              <thead><tr><th>Campanha</th><th>Tipo</th><th>Status</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>ROAS</th></tr></thead>
+              <tbody id="gCampTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="load-text" id="loadText">Carregando...</div>
+  <div class="load-sub" id="loadSub">Aguarde</div>
+</div>
+
+<div id="alertModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#0f1118;border:1px solid #1e2433;border-radius:12px;padding:24px;width:100%;max-width:420px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:700">&#128276; Alerta de Orcamento</div>
+      <button onclick="closeAlertModal()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">x</button>
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:11px;font-weight:700;color:var(--dim);display:block;margin-bottom:5px">EMAIL</label>
+      <input id="aEmail" type="email" placeholder="seu@email.com" style="width:100%;background:#161923;border:1px solid #1e2433;color:var(--text);padding:9px 11px;border-radius:6px;">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:11px;font-weight:700;color:var(--dim);display:block;margin-bottom:5px">VALOR LIMITE (R$)</label>
+      <input id="aThresh" type="number" value="100" style="width:100%;background:#161923;border:1px solid #1e2433;color:var(--text);padding:9px 11px;border-radius:6px;">
+    </div>
+    <div id="aStatus" style="font-size:12px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px">
+      <button id="btnSvAlert" class="btn btn-primary" onclick="saveAlert()" style="flex:1">Salvar Alerta</button>
+      <button id="btnRmAlert" class="btn btn-danger" onclick="removeAlert()" style="display:none">Remover</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// --- STATE & UTILS ---
+let accounts=[],campaigns=[],insData=null,analysis=null,metrics=null,prevRun=null;
+let selAccountId=null,selCurrency='BRL',trendData=[],selRuns=[],allCreatives=[],filtCreatives=[],campInsMap={};
+
+function sym(){return selCurrency==='USD'?'$':'R$';}
+function showLoad(t){document.getElementById('loadingOverlay').classList.add('show');document.getElementById('loadText').textContent=t;}
+function hideLoad(){document.getElementById('loadingOverlay').classList.remove('show');}
+function fmtN(n){n=parseInt(n||0);if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1000)return(n/1000).toFixed(1)+'K';return n.toString();}
+function fmtDate(d){return new Date(d).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+function fmtDS(d){const dt=new Date(d);return String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0');}
+function scC(s){if(!s)return'var(--dim)';return s>=80?'var(--green)':s>=60?'var(--cyan)':s>=40?'var(--orange)':'var(--red)';}
+function scCls(n){if(!n)return'bom';const x=n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');return x.includes('excelente')?'excelente':x.includes('bom')?'bom':x.includes('aten')?'atencao':'critico';}
+
+// --- INITIALIZATION ---
+async function init(){
+  try {
+    const me=await fetch('/api/me').then(r=>r.json());
+    if(!me.authenticated){location.href='/';return;}
+    document.getElementById('uName').textContent=me.user.name?.split(' ')[0]||'Usuario';
+    const av=me.user.picture?.data?.url||me.user.picture;
+    if(av) document.getElementById('uAvatar').src=av;
+    await loadAccounts();
+  } catch(e) { console.error("Init error", e); }
+}
+
+async function loadAccounts(){
+  const sel=document.getElementById('accountSel');
+  try{
+    const d=await fetch('/api/adaccounts').then(r=>r.json());
+    if(d.error){sel.innerHTML=`<option value="">Erro: ${d.error}</option>`;return;}
+    accounts=d.data||[];
+    if(!accounts.length){sel.innerHTML='<option value="">Sem contas encontradas</option>';return;}
+    sel.innerHTML='<option value="">Selecione uma conta...</option>'+accounts.map(a=>`<option value="${a.account_id}">${a.name} (${a.currency})</option>`).join('');
+    sel.addEventListener('change',onAccChange);
+  }catch(e){sel.innerHTML='<option value="">Erro ao carregar</option>';}
+}
+
+async function onAccChange(){
+  selAccountId=document.getElementById('accountSel').value;
+  if(!selAccountId)return;
+  showLoad('Carregando campanhas...');
+  try{
+    const d=await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
+    campaigns=d.data||[];
+    const lr=await fetch(`/api/lastrun/${selAccountId}`).then(r=>r.json());
+    if(lr.run){prevRun=lr.run;document.getElementById('lastRunBadge').textContent='Ultima analise: '+fmtDate(lr.run.created_at);document.getElementById('lastRunBadge').style.display='block';}
+    const acct=accounts.find(a=>a.account_id===selAccountId);
+    if(acct) selCurrency=acct.currency||'BRL';
+    renderSidebar();
+    fetchBalance(selAccountId);
+  }finally{hideLoad();}
+}
+
+// --- ANALYSIS LOGIC ---
+async function runAnalysis(){
+  if(!selAccountId){alert('Selecione uma conta.');return;}
+  const dp=getDateParams();
+  showLoad('Analisando dados...');
+  try{
+    let url=`/api/adaccounts/${selAccountId}/insights?`;
+    url+=dp.preset?`date_preset=${dp.preset}`:`since=${dp.since}&until=${dp.until}`;
+    const insRes=await fetch(url).then(r=>r.json());
+    insData=insRes;
+    campInsMap={}; (insRes.data||[]).forEach(m=>{if(m.campaign_id)campInsMap[m.campaign_id]=m;});
+    const acct=accounts.find(a=>a.account_id===selAccountId);
+    const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accountData:acct,campaigns,insights:insRes,dateRange:dp.preset||'custom'})}).then(r=>r.json());
+    analysis=res.analysis; metrics=res.metrics;
+    renderAll(); showView('overview');
+  }catch(e){alert('Erro: '+e.message);}
+  finally{hideLoad();}
+}
+
+function renderAll(){
+  document.getElementById('stateEmpty').style.display='none';
+  document.getElementById('contentWrap').style.display='block';
+  renderMetrics(); renderSummary(); renderOptims(); renderAlerts(); renderCampTable();
+}
+
+function renderMetrics(){
+  const m=metrics; if(!m)return;
+  const S=sym();
+  document.getElementById('metricsGrid').innerHTML=`
+    <div class="mcard"><div class="mlabel">GASTO TOTAL</div><div class="mval c-blue">${S} ${m.totalSpend.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">CTR MEDIO</div><div class="mval">${m.avgCtr.toFixed(2)}%</div></div>
+    <div class="mcard"><div class="mlabel">CPC MEDIO</div><div class="mval">${S} ${m.avgCpc.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">SCORE</div><div class="mval" style="color:${scC(analysis.resumo_geral.score_saude)}">${analysis.resumo_geral.score_saude}</div></div>
+  `;
+}
+
+function renderSummary(){
+  const r=analysis.resumo_geral;
+  document.getElementById('analysisSummary').innerHTML=`
+    <div class="summary-hdr">
+      <div class="score-ring score-${scCls(r.nivel_saude)}"><span class="score-num">${r.score_saude}</span></div>
+      <div class="summary-info"><div class="summary-title">${r.nivel_saude}</div></div>
+    </div>`;
+}
+
+function renderOptims(){
+  const opts=analysis.otimizacoes_prioritarias||[];
+  document.getElementById('optimList').innerHTML=opts.map(o=>`
+    <div class="optim-card">
+      <div class="optim-title">#${o.prioridade} ${o.titulo}</div>
+      <div class="optim-desc">${o.descricao}</div>
+    </div>`).join('');
+}
+
+function renderAlerts(){
+  const al=analysis.alertas_criticos||[];
+  document.getElementById('alertList').innerHTML=al.map(a=>`
+    <div class="alert-item a-alta"><div class="alert-msg">${a.mensagem}</div></div>`).join('');
+}
+
+function renderCampTable(){
+  const ca=analysis.campanhas_analise||[];
+  document.getElementById('campTbody').innerHTML=ca.map(c=>`
+    <tr><td>${c.nome}</td><td>${c.status_performance}</td><td>${c.gasto}</td><td>${c.ctr}</td><td>${c.cpc}</td></tr>`).join('');
+}
+
+// --- INTERFACE CONTROL ---
+function showView(v){
+  ['overview','analysis','campaigns','creatives','breakdown','notes','report','content','google','history','trend','plan'].forEach(id=>{
+    const el=document.getElementById('view-'+id); if(el) el.style.display=id===v?'block':'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(btn=>btn.classList.remove('active'));
+}
+
+function onDateSelChange(){
+  const v=document.getElementById('dateSel').value;
+  document.getElementById('customDateWrap').style.display=v==='custom'?'flex':'none';
+}
+
+function getDateParams(){
+  const v=document.getElementById('dateSel').value;
+  if(v==='custom') return {since:document.getElementById('customSince').value, until:document.getElementById('customUntil').value};
+  return {preset:v};
+}
+
+// --- OTHER FEATURES (STUBS) ---
+async function fetchBalance(id){/*...*/}
+function setCampFilter(f){/*...*/}
+function renderSidebar(){
+  const el=document.getElementById('campSidebar');
+  el.innerHTML=campaigns.map(c=>`<div class="camp-item"><div class="camp-name">${c.name}</div></div>`).join('');
+}
+async function exportContentPlan(){
+  if(!contentPlan){alert('Gere o planejamento.');return;}
+  let html='<html><body><h1>Planejamento</h1>';
+  (contentPlan.plano||[]).forEach(p=>{
+    html+=`<div><b>Dia ${p.dia}</b>: ${p.titulo}<br>${p.copy.replace(/\n/g,'<br>')}</div><hr>`;
+  });
+  html+='</body></html>';
+  const w=window.open('','_blank'); w.document.write(html); w.document.close();
+}
+
+init();
+</script>
+</body>
+</html>
