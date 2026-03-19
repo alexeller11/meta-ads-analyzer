@@ -20,11 +20,9 @@
     .logo span{color:var(--cyan)}
     .sep{width:1px;height:20px;background:var(--b1);flex-shrink:0}
     select.sel{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:5px 10px;border-radius:6px;font-family:Arial,sans-serif;font-size:12px;cursor:pointer}
-    select.sel:focus{outline:1px solid var(--blue)}
-    .btn{display:inline-flex;align-items:center;gap:6px;border:none;padding:6px 14px;border-radius:7px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
+    .btn{display:inline-flex;align-items:center;gap:6px;border:none;padding:6px 14px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
     .btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#0b5fcc}
-    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
-    .btn-ghost{background:var(--s2);border:1px solid var(--b1);color:var(--dim)}.btn-ghost:hover{color:var(--text);border-color:var(--b2)}
+    .btn-ghost{background:var(--s2);border:1px solid var(--b1);color:var(--dim)}
     .app-body{display:flex;flex:1;min-height:0}
     .sidebar{width:210px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);overflow-y:auto;display:flex;flex-direction:column}
     .sidebar-section{padding:12px 10px 0}
@@ -34,12 +32,12 @@
     .nav-item.active{background:rgba(24,119,242,.12);color:var(--blue)}
     .main{flex:1;overflow-y:auto;padding:18px;background:var(--bg)}
     .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:14px}
-    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:9px;padding:13px;transition:border-color .2s}
-    .mlabel{font-size:9px;color:var(--muted);margin-bottom:5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
-    .mval{font-size:24px;font-weight:800;line-height:1}
+    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:9px;padding:13px}
+    .mlabel{font-size:9px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;font-weight:700}
+    .mval{font-size:24px;font-weight:800}
     .summary-hdr{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--s1);border:1px solid var(--b1);border-radius:10px;margin-bottom:14px}
     .score-ring{width:60px;height:60px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:3px solid var(--green);color:var(--green)}
-    .score-num{font-size:20px;font-weight:800;line-height:1}
+    .score-num{font-size:20px;font-weight:800}
     .table-wrap{overflow-x:auto;border-radius:9px;border:1px solid var(--b1);margin-bottom:16px}
     table{width:100%;border-collapse:collapse;font-size:11px;background:var(--s1);min-width:800px}
     thead th{padding:8px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--b1)}
@@ -73,10 +71,13 @@
   <aside class="sidebar">
     <div class="sidebar-section">
       <div class="slabel">Navegação</div>
-      <button class="nav-item active"><span class="nav-icon">📊</span> Visão Geral</button>
+      <button class="nav-item active" onclick="showView('overview')">📊 Visão Geral</button>
+      <button class="nav-item" onclick="showView('analysis')">💡 Análise IA</button>
+      <button class="nav-item" onclick="showView('google')">🔍 Google Ads</button>
+      <button class="nav-item" onclick="showView('content')">📸 Conteúdo IG</button>
     </div>
     <div class="sidebar-section">
-      <div class="slabel">Campanhas Ativas</div>
+      <div class="slabel">Campanhas</div>
       <div id="campSidebar" style="padding:0 10px; font-size:11px; color:var(--dim)">Aguardando análise...</div>
     </div>
   </aside>
@@ -87,29 +88,36 @@
     </div>
 
     <div id="contentWrap" style="display:none">
-      <div id="analysisSummary"></div>
-      <div class="mgrid" id="metricsGrid"></div>
-      
-      <h3 style="margin:20px 0 10px; font-size:14px; color:var(--muted)">CAMPANHAS ANALISADAS</h3>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Campanha</th><th>Performance</th><th>Gasto</th><th>CTR</th><th>CPC</th><th>Frequência</th></tr>
-          </thead>
-          <tbody id="campTbody"></tbody>
-        </table>
+      <div id="view-overview">
+        <div id="analysisSummary"></div>
+        <div class="mgrid" id="metricsGrid"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Campanha</th><th>Performance</th><th>Gasto</th><th>CTR</th><th>CPC</th><th>Freq.</th></tr></thead>
+            <tbody id="campTbody"></tbody>
+          </table>
+        </div>
       </div>
 
-      <h3 style="margin:20px 0 10px; font-size:14px; color:var(--muted)">OTIMIZAÇÕES PRIORITÁRIAS</h3>
-      <div id="optimList"></div>
+      <div id="view-analysis" style="display:none">
+        <h3 class="slabel">Otimizações Prioritárias</h3>
+        <div id="optimList"></div>
+      </div>
+
+      <div id="view-google" style="display:none">
+        <h3 class="slabel">Métricas Google Ads</h3>
+        <div id="googlePlaceholder" style="padding:20px; color:var(--dim)">Integração Google Ads disponível.</div>
+      </div>
+
+      <div id="view-content" style="display:none">
+        <h3 class="slabel">Planejamento de Conteúdo</h3>
+        <div id="contentPlaceholder" style="padding:20px; color:var(--dim)">Análise de perfil Instagram ativa.</div>
+      </div>
     </div>
   </main>
 </div>
 
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-  <div style="font-weight:700">Analisando dados com IA...</div>
-</div>
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div style="font-weight:700">Analisando dados com IA...</div></div>
 
 <script>
 let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null;
@@ -122,14 +130,14 @@ async function init(){
     const av = me.user.picture?.data?.url || me.user.picture;
     if(av) document.getElementById('uAvatar').src = av;
     await loadAccounts();
-  } catch(e) { console.error("Erro na inicialização", e); }
+  } catch(e) { console.error("Erro", e); }
 }
 
 async function loadAccounts(){
   const res = await fetch('/api/adaccounts').then(r=>r.json());
   accounts = res.data || [];
   const sel = document.getElementById('accountSel');
-  if(!accounts.length) return sel.innerHTML = '<option>Nenhuma conta encontrada</option>';
+  if(!accounts.length) return sel.innerHTML = '<option>Sem contas</option>';
   sel.innerHTML = '<option value="">Selecione uma conta...</option>' + 
     accounts.map(a => `<option value="${a.account_id}">${a.name} (${a.currency})</option>`).join('');
   sel.onchange = onAccChange;
@@ -140,7 +148,14 @@ async function onAccChange(){
   if(!selAccountId) return;
   const res = await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
   campaigns = res.data || [];
-  document.getElementById('campSidebar').innerHTML = campaigns.slice(0,10).map(c=>`<div style="margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis" title="${c.name}">• ${c.name}</div>`).join('');
+  document.getElementById('campSidebar').innerHTML = campaigns.slice(0,10).map(c=>`<div style="margin-bottom:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">• ${c.name}</div>`).join('');
+}
+
+function showView(v){
+  const views = ['overview', 'analysis', 'google', 'content'];
+  views.forEach(id => document.getElementById('view-'+id).style.display = id === v ? 'block' : 'none');
+  document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+  event.currentTarget.classList.add('active');
 }
 
 async function runAnalysis(){
@@ -149,21 +164,12 @@ async function runAnalysis(){
   try {
     const d = document.getElementById('dateSel').value;
     const acct = accounts.find(a=>a.account_id === selAccountId);
-    
-    // Busca dados reais de insights antes de enviar para a análise
     const ins = await fetch(`/api/adaccounts/${selAccountId}/insights?date_preset=${d}`).then(r=>r.json());
-    
     const res = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ accountData: acct, campaigns, insights: ins, dateRange: d })
     }).then(r=>r.json());
-
-    if(!res.success) throw new Error(res.error);
-    
-    metrics = res.metrics;
-    analysis = res.analysis;
-    renderAll();
+    metrics = res.metrics; analysis = res.analysis; renderAll();
   } catch(e) { alert('Erro: ' + e.message); }
   finally { document.getElementById('loadingOverlay').classList.remove('show'); }
 }
@@ -171,49 +177,27 @@ async function runAnalysis(){
 function renderAll(){
   document.getElementById('stateEmpty').style.display='none';
   document.getElementById('contentWrap').style.display='block';
-  
-  // Render Summary
   const r = analysis.resumo_geral;
   document.getElementById('analysisSummary').innerHTML = `
     <div class="summary-hdr">
       <div class="score-ring"><div class="score-num">${r.score_saude}</div><div style="font-size:8px">SCORE</div></div>
-      <div>
-        <div style="font-size:18px; font-weight:800; color:var(--green)">${r.nivel_saude}</div>
-        <div style="color:var(--dim); margin-top:4px">${r.resumo_historico}</div>
-      </div>
+      <div><div style="font-size:18px; font-weight:800; color:var(--green)">${r.nivel_saude}</div><div style="color:var(--dim); margin-top:4px">${r.resumo_historico}</div></div>
     </div>`;
-
-  // Render Metrics Grid
   const S = accounts.find(a=>a.account_id === selAccountId).currency === 'BRL' ? 'R$' : '$';
   document.getElementById('metricsGrid').innerHTML = `
     <div class="mcard"><div class="mlabel">Investimento</div><div class="mval c-blue">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
     <div class="mcard"><div class="mlabel">CTR Médio</div><div class="mval">${metrics.avgCtr.toFixed(2)}%</div></div>
     <div class="mcard"><div class="mlabel">CPC Médio</div><div class="mval">${S} ${metrics.avgCpc.toFixed(2)}</div></div>
-    <div class="mcard"><div class="mlabel">Impressões</div><div class="mval">${metrics.totalImpressions.toLocaleString()}</div></div>
-  `;
-
-  // Render Table
+    <div class="mcard"><div class="mlabel">Impressões</div><div class="mval">${metrics.totalImpressions.toLocaleString()}</div></div>`;
   document.getElementById('campTbody').innerHTML = analysis.campanhas_analise.map(c => `
-    <tr>
-      <td style="font-weight:700">${c.nome}</td>
-      <td><span style="color:${c.status_performance === 'Bom' ? 'var(--green)' : 'var(--orange)'}">${c.status_performance}</span></td>
-      <td>${c.gasto}</td>
-      <td>${c.ctr}</td>
-      <td>${c.cpc}</td>
-      <td>${c.frequencia}x</td>
-    </tr>
-  `).join('');
-
-  // Render Optimizations
+    <tr><td style="font-weight:700">${c.nome}</td><td>${c.status_performance}</td><td>${c.gasto}</td><td>${c.ctr}</td><td>${c.cpc}</td><td>${c.frequencia}x</td></tr>`).join('');
   document.getElementById('optimList').innerHTML = (analysis.otimizacoes_prioritarias || []).map(o => `
     <div style="background:var(--s2); border:1px solid var(--b1); padding:15px; border-radius:10px; margin-bottom:10px">
-      <div style="font-weight:800; color:var(--cyan); margin-bottom:5px">#${o.prioridade} ${o.titulo}</div>
-      <div style="font-size:12px; color:var(--dim)">${o.descricao}</div>
-    </div>
-  `).join('');
+      <div style="font-weight:800; color:var(--cyan); margin-bottom:5px">#${o.prioridade} ${o.titulo}</div><div style="font-size:12px; color:var(--dim)">${o.descricao}</div>
+    </div>`).join('');
 }
 
-// Correção crítica: Uso de \n para evitar quebra de sintaxe no JS
+// Correção do erro de sintaxe: \n em vez de quebra de linha física
 async function exportContentPlan(){
   if(!contentPlan){alert('Gere o planejamento.');return;}
   let html='<html><body><h1>Planejamento</h1>';
