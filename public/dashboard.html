@@ -13,732 +13,186 @@
       --orange:#ff9800;--red:#ff3860;--yellow:#ffeb3b;--purple:#b388ff;
       --text:#e8eaf0;--dim:#8892a4;--muted:#3d4456;
     }
-    body{background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;min-height:100vh;display:flex;flex-direction:column;font-size:13px}
-    .topbar{height:52px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;position:sticky;top:0;z-index:100}
-    .logo{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;white-space:nowrap}
-    .logo-icon{width:26px;height:26px;background:var(--blue);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px}
-    .logo span{color:var(--cyan)}
-    .sep{width:1px;height:20px;background:var(--b1);flex-shrink:0}
-    select.sel{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:5px 10px;border-radius:6px;font-family:Arial,sans-serif;font-size:12px;cursor:pointer}
-    select.sel:focus{outline:1px solid var(--blue)}
-    .btn{display:inline-flex;align-items:center;gap:6px;border:none;padding:6px 14px;border-radius:7px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
-    .btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#0b5fcc}
-    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
-    .btn-ghost{background:var(--s2);border:1px solid var(--b1);color:var(--dim)}.btn-ghost:hover{color:var(--text);border-color:var(--b2)}
-    .btn-danger{background:rgba(255,56,96,.12);border:1px solid rgba(255,56,96,.2);color:var(--red)}.btn-danger:hover{background:rgba(255,56,96,.2)}
-    .btn-compare{background:rgba(179,136,255,.1);border:1px solid rgba(179,136,255,.25);color:var(--purple)}.btn-compare:hover{background:rgba(179,136,255,.18)}
-    .btn-compare.on{background:rgba(179,136,255,.2);border-color:var(--purple);color:#fff}
-    .topbar-mid{display:flex;align-items:center;gap:8px;flex:1;overflow:hidden}
-    .topbar-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
-    .user-chip{display:flex;align-items:center;gap:6px;padding:3px 10px 3px 3px;background:var(--s2);border:1px solid var(--b1);border-radius:20px}
-    .user-avatar{width:24px;height:24px;border-radius:50%;object-fit:cover;background:var(--b2)}
-    .user-name{font-size:12px;font-weight:700}
-    .last-run-badge{font-size:10px;padding:3px 8px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15);color:var(--cyan);border-radius:4px;white-space:nowrap}
-    .app-body{display:flex;flex:1;min-height:0}
-    .sidebar{width:210px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);overflow-y:auto;display:flex;flex-direction:column}
-    .sidebar-section{padding:12px 10px 0}
-    .slabel{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 6px;margin-bottom:5px;font-weight:700}
-    .nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;font-size:12px;font-weight:700;color:var(--dim);cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .15s}
-    .nav-item:hover{background:var(--s2);color:var(--text)}
-    .nav-item.active{background:rgba(24,119,242,.12);color:var(--blue)}
-    .nav-icon{font-size:13px;width:18px;text-align:center}
-    .cfrow{display:flex;gap:3px;margin-bottom:7px;padding:0 2px;flex-wrap:wrap}
-    .cfbtn{flex:1;min-width:40px;padding:3px 4px;border-radius:5px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--b1);background:var(--s2);color:var(--muted);transition:all .15s;text-align:center}
-    .cfbtn:hover{color:var(--text)}
-    .cfbtn.active{background:rgba(24,119,242,.15);border-color:rgba(24,119,242,.3);color:var(--blue)}
-    .camp-list{padding:0 10px 14px;flex:1;overflow-y:auto}
-    .camp-item{padding:7px 8px;border-radius:6px;cursor:pointer;margin-bottom:2px;border:1px solid transparent;transition:all .15s}
-    .camp-item:hover{background:var(--s2)}
-    .camp-item.selected{background:rgba(0,212,255,.05);border-color:rgba(0,212,255,.12)}
-    .camp-name{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
-    .camp-meta{display:flex;align-items:center;gap:4px}
-    .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-    .dot-ACTIVE{background:var(--green)}.dot-PAUSED{background:var(--orange)}.dot-RUNNING{background:var(--cyan)}.dot-OTHER{background:var(--muted)}
-    .camp-status-lbl{font-size:10px;color:var(--muted)}
-    .main{flex:1;overflow-y:auto;padding:18px;background:var(--bg)}
-    .state-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:12px;color:var(--dim);text-align:center}
-    .state-empty .ei{font-size:52px;opacity:.4}
-    .state-empty h2{font-size:18px;font-weight:700}
-    .state-empty p{font-size:12px;color:var(--muted);max-width:320px;line-height:1.6}
-    .loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,9,13,.9);backdrop-filter:blur(6px);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+    body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column;font-size:13px}
+    .topbar{height:52px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 16px;gap:10px;position:sticky;top:0;z-index:100}
+    .logo{font-weight:700;font-size:14px}.logo span{color:var(--cyan)}
+    .sel{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:5px 10px;border-radius:6px;cursor:pointer}
+    .btn{padding:6px 14px;border-radius:7px;font-weight:700;cursor:pointer;border:none}
+    .btn-primary{background:var(--blue);color:#fff}
+    .app-body{display:flex;flex:1}.sidebar{width:210px;background:var(--s1);border-right:1px solid var(--b1);padding:10px}
+    .main{flex:1;padding:18px}.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:15px}
+    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:9px;padding:12px}
+    .mval{font-size:20px;font-weight:800}.mlabel{font-size:9px;color:var(--muted);text-transform:uppercase}
+    .loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;color:#fff}
     .loading-overlay.show{display:flex}
-    .spinner{width:40px;height:40px;border:3px solid var(--b2);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .load-text{font-size:14px;font-weight:700;color:var(--dim)}
-    .load-sub{font-size:11px;color:var(--muted)}
-    .stitle{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-weight:700}
-    .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;margin-bottom:14px}
-    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:9px;padding:13px;transition:border-color .2s}
-    .mcard:hover{border-color:var(--b2)}
-    .mlabel{font-size:9px;color:var(--muted);margin-bottom:5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
-    .mval{font-size:24px;font-weight:800;line-height:1}
-    .msub{font-size:10px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
-    .delta{display:inline-flex;align-items:center;gap:2px;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:700}
-    .delta-up{background:rgba(0,230,118,.1);color:var(--green)}
-    .delta-dn{background:rgba(255,56,96,.1);color:var(--red)}
-    .delta-eq{background:var(--s3);color:var(--muted)}
-    .c-cyan{color:var(--cyan)}.c-blue{color:var(--blue)}.c-green{color:var(--green)}.c-orange{color:var(--orange)}.c-red{color:var(--red)}.c-purple{color:var(--purple)}.c-yellow{color:var(--yellow)}
-    .period-bar{display:none;background:rgba(179,136,255,.06);border:1px solid rgba(179,136,255,.18);border-radius:9px;padding:10px 14px;margin-bottom:12px;align-items:center;flex-wrap:wrap;gap:10px}
-    .period-bar.show{display:flex}
-    .summary-hdr{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--s1);border:1px solid var(--b1);border-radius:10px;margin-bottom:14px}
-    .score-ring{width:60px;height:60px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:3px solid}
-    .score-num{font-size:20px;font-weight:800;line-height:1}
-    .score-lbl{font-size:8px;text-transform:uppercase;letter-spacing:.05em;opacity:.7}
-    .score-critico{border-color:var(--red);color:var(--red)}.score-atencao{border-color:var(--orange);color:var(--orange)}.score-bom{border-color:var(--cyan);color:var(--cyan)}.score-excelente{border-color:var(--green);color:var(--green)}
-    .summary-info{flex:1}
-    .summary-title{font-size:15px;font-weight:700;margin-bottom:5px}
-    .summary-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
-    .stag{font-size:11px;padding:2px 9px;background:var(--s2);border-radius:12px;color:var(--dim)}
-    .trend-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700}
-    .trend-melhora{background:rgba(0,230,118,.1);color:var(--green)}
-    .trend-piora{background:rgba(255,56,96,.1);color:var(--red)}
-    .trend-estavel{background:var(--s3);color:var(--dim)}
-    .trend-sem{background:var(--s3);color:var(--muted)}
-    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
-    .panel{background:var(--s1);border:1px solid var(--b1);border-radius:10px;overflow:hidden;margin-bottom:14px}
-    .panel-hdr{padding:11px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between}
-    .panel-title{font-size:12px;font-weight:700}
-    .pbadge{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:700}
-    .pb-red{background:rgba(255,56,96,.12);color:var(--red)}.pb-orange{background:rgba(255,152,0,.12);color:var(--orange)}.pb-green{background:rgba(0,230,118,.1);color:var(--green)}.pb-cyan{background:rgba(0,212,255,.08);color:var(--cyan)}.pb-purple{background:rgba(179,136,255,.1);color:var(--purple)}
-    .panel-body{padding:12px 14px}
-    .optim-list{display:flex;flex-direction:column;gap:8px}
-    .optim-card{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:11px}
-    .optim-hdr{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px}
-    .pri-badge{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
-    .pri-1{background:rgba(255,56,96,.12);color:var(--red)}.pri-2{background:rgba(255,152,0,.12);color:var(--orange)}.pri-3{background:rgba(255,235,59,.1);color:var(--yellow)}.pri-n{background:var(--s3);color:var(--muted)}
-    .optim-title{font-size:12px;font-weight:700;margin-bottom:3px}
-    .tag-row{display:flex;gap:4px;flex-wrap:wrap}
-    .tag{font-size:10px;padding:2px 6px;border-radius:3px;background:var(--s3);color:var(--dim)}
-    .tag-alto{background:rgba(0,230,118,.08);color:var(--green)}.tag-medio{background:rgba(255,152,0,.08);color:var(--orange)}.tag-baixo{background:var(--s3);color:var(--dim)}
-    .optim-desc{font-size:11px;color:var(--dim);line-height:1.6;margin-bottom:7px}
-    .optim-action{font-size:10px;color:var(--cyan);line-height:1.5;padding:7px 9px;background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.1);border-radius:5px}
-    .alert-list{display:flex;flex-direction:column;gap:6px}
-    .alert-item{display:flex;gap:9px;padding:9px 11px;border-radius:7px;align-items:flex-start}
-    .a-alta{background:rgba(255,56,96,.07);border:1px solid rgba(255,56,96,.18)}
-    .a-media{background:rgba(255,152,0,.07);border:1px solid rgba(255,152,0,.18)}
-    .alert-icon{font-size:14px;flex-shrink:0}
-    .alert-msg{font-size:12px;font-weight:700;margin-bottom:2px}
-    .alert-act{font-size:10px;color:var(--muted)}
-    .opp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-bottom:14px}
-    .opp-card{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px;border-left:3px solid var(--cyan)}
-    .opp-title{font-size:12px;font-weight:700;margin-bottom:4px}
-    .opp-desc{font-size:11px;color:var(--dim);line-height:1.6;margin-bottom:6px}
-    .opp-impact{font-size:10px;color:var(--green);font-weight:700}
-    .hist-list{display:flex;flex-direction:column;gap:7px}
-    .hist-item{padding:9px 11px;background:var(--s2);border:1px solid var(--b1);border-radius:7px;border-left:3px solid var(--purple)}
-    .hist-title{font-size:11px;font-weight:700;margin-bottom:2px}
-    .hist-obs{font-size:11px;color:var(--dim);line-height:1.55;margin-bottom:3px}
-    .hist-impl{font-size:10px;color:var(--purple);font-weight:700}
-    /* TABLE */
-    .tbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-    .tfilter{padding:4px 11px;border-radius:5px;font-family:Arial,sans-serif;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--b1);background:var(--s2);color:var(--muted);transition:all .15s}
-    .tfilter:hover{color:var(--text)}
-    .tfilter.active{background:rgba(24,119,242,.15);border-color:rgba(24,119,242,.3);color:var(--blue)}
-    .table-wrap{overflow-x:auto;border-radius:9px;border:1px solid var(--b1);margin-bottom:16px}
-    table{width:100%;border-collapse:collapse;font-size:11px;background:var(--s1);min-width:980px}
-    thead th{padding:8px 10px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--b1);white-space:nowrap;cursor:pointer;user-select:none}
-    thead th:hover{color:var(--cyan)}
-    tbody td{padding:8px 10px;border-bottom:1px solid var(--b1);vertical-align:middle}
-    tbody tr:last-child td{border-bottom:none}
-    tbody tr:hover td{background:var(--s2)}
-    .perf-badge{font-size:9px;padding:2px 6px;border-radius:3px;display:inline-block;font-weight:700}
-    .perf-excelente{background:rgba(0,230,118,.1);color:var(--green)}.perf-bom{background:rgba(0,212,255,.08);color:var(--cyan)}.perf-atencao{background:rgba(255,152,0,.1);color:var(--orange)}.perf-critico{background:rgba(255,56,96,.1);color:var(--red)}
-    /* PLAN */
-    .plan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
-    .week-card{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px}
-    .week-hdr{font-size:9px;color:var(--cyan);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;font-weight:700}
-    .week-foco{font-size:11px;font-weight:700;margin-bottom:8px;color:var(--dim)}
-    .week-act{font-size:10px;color:var(--dim);line-height:1.55;padding:3px 0 3px 12px;position:relative;border-bottom:1px solid var(--b1)}
-    .week-act:last-child{border-bottom:none}
-    .week-act::before{content:'->  ';position:absolute;left:0;color:var(--muted)}
-    /* HISTORY */
-    .run-row{display:grid;grid-template-columns:140px 90px 80px 80px 80px 80px 70px auto;align-items:center;gap:6px;padding:9px 12px;background:var(--s1);border:1px solid var(--b1);border-radius:7px;margin-bottom:5px;cursor:pointer;transition:border-color .15s}
-    .run-row:hover{border-color:var(--b2)}
-    .run-row.selected{border-color:var(--blue);background:rgba(24,119,242,.05)}
-    .run-date{font-size:11px;color:var(--dim)}
-    .run-range{font-size:10px;color:var(--muted)}
-    .run-val{font-size:11px;font-weight:700}
-    /* COMPARE */
-    .compare-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-bottom:14px}
-    .compare-metric{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px;text-align:center}
-    .cm-label{font-size:9px;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
-    .cm-vals{display:flex;align-items:center;justify-content:center;gap:10px}
-    .cm-before{font-size:14px;font-weight:700;color:var(--muted)}
-    .cm-arrow{font-size:16px}
-    .cm-after{font-size:18px;font-weight:800}
-    .cm-delta{margin-top:5px}
-    /* CHARTS */
-    .chart-wrap{background:var(--s1);border:1px solid var(--b1);border-radius:9px;padding:14px;margin-bottom:14px}
-    .chart-title{font-size:12px;font-weight:700;margin-bottom:12px}
-    canvas{display:block}
-    /* CREATIVES */
-    .creative-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:14px}
-    .creative-card{background:var(--s1);border:1px solid var(--b1);border-radius:9px;overflow:hidden;transition:border-color .15s}
-    .creative-card:hover{border-color:var(--b2)}
-    .creative-thumb{width:100%;aspect-ratio:4/3;background:var(--s2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:32px;overflow:hidden}
-    .creative-thumb img{width:100%;height:100%;object-fit:cover}
-    .creative-body{padding:10px}
-    .creative-camp{font-size:9px;color:var(--muted);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
-    .creative-name{font-size:11px;font-weight:700;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .creative-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:6px}
-    .cstat{text-align:center;padding:4px;background:var(--s2);border-radius:4px}
-    .cstat-val{font-size:11px;font-weight:700}
-    .cstat-lbl{font-size:9px;color:var(--muted)}
-    .cstatus-chip{display:inline-block;font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700}
-    .cstatus-ACTIVE{background:rgba(0,230,118,.1);color:var(--green)}
-    .cstatus-PAUSED{background:rgba(255,152,0,.1);color:var(--orange)}
-    /* REPORT */
-    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:16px}
-    .kpi-card{background:var(--s1);border:1px solid var(--b1);border-radius:9px;padding:14px;text-align:center}
-    .kpi-val{font-size:26px;font-weight:800;margin-bottom:2px}
-    .kpi-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
-    ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
-    @media(max-width:900px){.sidebar{display:none}.two-col{grid-template-columns:1fr}.plan-grid{grid-template-columns:repeat(2,1fr)}}
-    @media print{.topbar,.sidebar,.loading-overlay{display:none!important}.main{padding:0}.app-body{display:block}}
+    .score-ring{width:60px;height:60px;border:3px solid var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:10px;text-align:left;border-bottom:1px solid var(--b1)}
   </style>
 </head>
 <body>
 
 <header class="topbar">
-  <div class="logo"><div class="logo-icon">&#9889;</div>Meta Ads <span>Analyzer</span></div>
-  <div class="sep"></div>
-  <div class="topbar-mid">
-    <select class="sel" id="accountSel" style="max-width:230px"><option value="">Carregando contas...</option></select>
-    <select class="sel" id="dateSel" onchange="onDateSelChange()">
-      <option value="last_7d">7 dias</option>
-      <option value="last_14d">14 dias</option>
-      <option value="last_30d" selected>30 dias</option>
-      <option value="last_90d">90 dias</option>
-      <option value="this_month">Este mes</option>
-      <option value="last_month">Mes passado</option>
-      <option value="custom">Personalizado...</option>
-    </select>
-    <div id="customDateWrap" style="display:none;align-items:center;gap:4px">
-      <input type="date" id="customSince" class="sel" style="padding:4px 8px;font-size:11px;width:130px">
-      <span style="color:var(--muted);font-size:11px">ate</span>
-      <input type="date" id="customUntil" class="sel" style="padding:4px 8px;font-size:11px;width:130px">
-    </div>
-    <button class="btn btn-primary" id="btnAnalyze" onclick="runAnalysis()"><span id="aIcon">&#129504;</span><span id="aText">Analisar</span></button>
-    <button class="btn btn-compare" id="btnCompPeriod" onclick="togglePeriodCompare()" style="display:none">&#128202; Comparar periodo</button>
-    <span class="last-run-badge" id="lastRunBadge" style="display:none"></span>
-    <div id="balanceChip" style="display:none;align-items:center;gap:5px;padding:3px 10px;background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.18);border-radius:5px;font-size:11px;font-weight:700;white-space:nowrap">
-      <span style="color:var(--green)">&#128178;</span>
-      <span style="color:var(--muted)">Verba:</span>
-      <span style="color:var(--green)" id="balanceVal">—</span>
-    </div>
+  <div class="logo">Meta Ads <span>Analyzer</span></div>
+  <select class="sel" id="accountSel"><option value="">A carregar contas...</option></select>
+  <select class="sel" id="dateSel" onchange="onDateSelChange()">
+    <option value="last_7d">7 dias</option>
+    <option value="last_30d" selected>30 dias</option>
+    <option value="custom">Personalizado...</option>
+  </select>
+  <div id="customDateWrap" style="display:none;gap:5px">
+    <input type="date" id="customSince" class="sel">
+    <input type="date" id="customUntil" class="sel">
   </div>
-  <div class="topbar-right">
-    <button class="btn btn-ghost" id="btnAlert" onclick="openAlertModal()" style="font-size:11px;display:none">&#128276; Alerta</button>
-    <div class="user-chip"><img class="user-avatar" id="uAvatar" src=""><span class="user-name" id="uName">...</span></div>
-    <a href="/auth/logout" class="btn btn-ghost" style="font-size:11px">Sair</a>
+  <button class="btn btn-primary" onclick="runAnalysis()">Analisar</button>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+    <span id="uName">...</span>
+    <img id="uAvatar" src="" style="width:24px;border-radius:50%">
+    <a href="/auth/logout" style="color:var(--dim);text-decoration:none;font-size:11px">Sair</a>
   </div>
 </header>
 
 <div class="app-body">
   <aside class="sidebar">
-    <div class="sidebar-section">
-      <div class="slabel">Navegacao</div>
-      <button class="nav-item active" onclick="showView('overview')"><span class="nav-icon">&#128202;</span>Visao Geral</button>
-      <button class="nav-item" onclick="showView('analysis')"><span class="nav-icon">&#129504;</span>Analise IA</button>
-      <button class="nav-item" onclick="showView('campaigns')"><span class="nav-icon">&#128203;</span>Campanhas</button>
-      <button class="nav-item" onclick="showView('creatives')"><span class="nav-icon">&#128444;</span>Criativos</button>
-      <button class="nav-item" onclick="showView('report')"><span class="nav-icon">&#128196;</span>Relatorio</button>
-      <button class="nav-item" onclick="showView('breakdown')"><span class="nav-icon">&#128659;</span>Breakdown</button>
-      <button class="nav-item" onclick="showView('notes')"><span class="nav-icon">&#128221;</span>Notas</button>
-      <button class="nav-item" onclick="showView('content')"><span class="nav-icon">&#128248;</span>Conteudo IG</button>
-      <button class="nav-item" onclick="showView('google')"><span class="nav-icon">&#127774;</span>Google Ads</button>
-      <button class="nav-item" onclick="showView('history')"><span class="nav-icon">&#128197;</span>Historico</button>
-      <button class="nav-item" onclick="showView('trend')"><span class="nav-icon">&#128200;</span>Tendencias</button>
-      <button class="nav-item" onclick="showView('plan')"><span class="nav-icon">&#128197;</span>Plano 30 dias</button>
-    </div>
-    <div class="sidebar-section" style="margin-top:8px">
-      <div class="slabel">Filtrar Campanhas</div>
-      <div class="cfrow">
-        <button class="cfbtn active" id="sf_all" onclick="setCampFilter('all')">Todas</button>
-        <button class="cfbtn" id="sf_running" onclick="setCampFilter('running')">Rodando</button>
-        <button class="cfbtn" id="sf_active" onclick="setCampFilter('active')">Ativas</button>
-        <button class="cfbtn" id="sf_paused" onclick="setCampFilter('paused')">Pausadas</button>
-      </div>
-    </div>
-    <div class="camp-list" id="campSidebar">
-      <div style="padding:6px 8px;font-size:11px;color:var(--muted)">Selecione uma conta</div>
-    </div>
+    <div id="campSidebar" style="font-size:11px;color:var(--dim)">Selecione uma conta</div>
   </aside>
-
-  <main class="main" id="mainContent">
-    <div class="state-empty" id="stateEmpty">
-      <div class="ei">&#9889;</div>
-      <h2>Selecione uma conta</h2>
-      <p>Escolha uma conta de anuncios no topo e clique em <strong>Analisar</strong> para ver o diagnostico completo.</p>
-    </div>
-
+  <main class="main">
+    <div id="stateEmpty" style="text-align:center;padding:50px"><h2>Selecione uma conta e clique em Analisar</h2></div>
     <div id="contentWrap" style="display:none">
-      <div class="period-bar" id="periodBar">
-        <span style="font-size:11px;font-weight:700;color:var(--purple)">&#128202; COMPARANDO COM PERIODO ANTERIOR</span>
-        <span style="font-size:11px;color:var(--dim)" id="periodBarInfo"></span>
-        <button class="btn btn-ghost" style="font-size:10px;margin-left:auto" onclick="togglePeriodCompare()">Fechar</button>
-      </div>
-
-      <div id="view-overview">
-        <div id="fatigueBar" style="display:none;background:rgba(255,152,0,.08);border:1px solid rgba(255,152,0,.25);border-radius:8px;padding:10px 14px;margin-bottom:12px">
-          <div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:6px">&#9888; FADIGA DE CRIATIVO DETECTADA</div>
-          <div id="fatigueList" style="display:flex;flex-direction:column;gap:4px"></div>
-        </div>
-        <div class="stitle" id="metricsTitle">METRICAS DO PERIODO</div>
-        <div class="mgrid" id="metricsGrid"></div>
-        <div class="stitle" style="margin-top:8px">CONVERSOES & RECEITA</div>
-        <div class="mgrid" id="convGrid"></div>
-      </div>
-
-      <div id="view-analysis" style="display:none">
-        <div id="analysisSummary"></div>
-        <div class="two-col">
-          <div>
-            <div class="stitle">OTIMIZACOES PRIORITARIAS</div>
-            <div class="optim-list" id="optimList"></div>
-          </div>
-          <div>
-            <div class="stitle">ALERTAS CRITICOS</div>
-            <div class="alert-list" id="alertList" style="margin-bottom:16px"></div>
-            <div class="stitle">INSIGHTS HISTORICOS</div>
-            <div class="hist-list" id="histList" style="margin-bottom:16px"></div>
-            <div class="stitle">OPORTUNIDADES</div>
-            <div id="oppList"></div>
-          </div>
-        </div>
-      </div>
-
-      <div id="view-campaigns" style="display:none">
-        <div class="tbar">
-          <span class="stitle" style="margin:0">CAMPANHAS</span>
-          <button class="tfilter active" id="tf_all" onclick="setTF('all')">Todas</button>
-          <button class="tfilter" id="tf_running" onclick="setTF('running')">Rodando no periodo</button>
-          <button class="tfilter" id="tf_active" onclick="setTF('active')">Ativas</button>
-          <button class="tfilter" id="tf_paused" onclick="setTF('paused')">Pausadas</button>
-          <span id="tcount" style="font-size:11px;color:var(--muted);margin-left:auto"></span>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr>
-              <th onclick="srt('nome')">Campanha</th>
-              <th onclick="srt('status')">Status</th>
-              <th>Perf.</th>
-              <th onclick="srt('gasto')">Gasto</th>
-              <th onclick="srt('impressoes')">Impr.</th>
-              <th onclick="srt('ctr')">CTR</th>
-              <th onclick="srt('cpc')">CPC</th>
-              <th onclick="srt('freq')">Freq.</th>
-              <th onclick="srt('purchases')">Compras</th>
-              <th>CPR Compra</th>
-              <th onclick="srt('leads')">Leads</th>
-              <th onclick="srt('mensagens')">Msgs</th>
-              <th onclick="srt('connect_rate')">Connect Rate</th>
-              <th onclick="srt('roas')">ROAS</th>
-              <th onclick="srt('roi')">ROI</th>
-              <th>Diagnostico</th>
-              <th>Acao</th>
-            </tr></thead>
-            <tbody id="campTbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="view-creatives" style="display:none">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <div class="stitle" style="margin:0">CRIATIVOS</div>
-          <button class="btn btn-ghost" style="font-size:11px" onclick="loadCreatives()">&#128260; Recarregar</button>
-          <div style="display:flex;gap:3px;margin-left:4px">
-            <button class="tfilter active" id="crf_all" onclick="setCrFilter('all')">Todos</button>
-            <button class="tfilter" id="crf_running" onclick="setCrFilter('running')" style="border-color:rgba(0,212,255,.3);color:var(--cyan)">&#9654; Rodando</button>
-            <button class="tfilter" id="crf_champion" onclick="setCrFilter('champion')" style="border-color:rgba(0,230,118,.3);color:var(--green)">&#127942; Campeoes</button>
-          </div>
-          <select class="sel" id="crCampF" onchange="filterCr()" style="font-size:11px">
-            <option value="">Todas as campanhas</option>
-          </select>
-          <select class="sel" id="crSortF" onchange="filterCr()" style="font-size:11px">
-            <option value="spend">Ordenar: Gasto</option>
-            <option value="ctr">Ordenar: CTR</option>
-            <option value="impressions">Ordenar: Impressoes</option>
-            <option value="conversions">Ordenar: Conversoes</option>
-            <option value="roas">Ordenar: ROAS</option>
-          </select>
-          <span id="crCount" style="font-size:11px;color:var(--muted);margin-left:auto"></span>
-        </div>
-        <div class="creative-grid" id="crGrid">
-          <div style="color:var(--muted);font-size:12px;padding:20px 0">Clique em Recarregar para buscar os criativos.</div>
-        </div>
-      </div>
-
-      <div id="view-report" style="display:none">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-          <div class="stitle" style="margin:0">RELATORIO VISUAL</div>
-          <button class="btn btn-ghost" style="font-size:11px" onclick="window.print()">&#128424; Imprimir</button>
-        </div>
-        <div id="reportContent">
-          <div style="color:var(--muted);font-size:12px">Execute uma analise para gerar o relatorio.</div>
-        </div>
-      </div>
-
-      <div id="view-breakdown" style="display:none">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-          <div class="stitle" style="margin:0">BREAKDOWN</div>
-          <div style="display:flex;gap:3px">
-            <button class="tfilter active" id="bd_placement" onclick="setBDTab('placement')">Posicionamento</button>
-            <button class="tfilter" id="bd_device" onclick="setBDTab('device')">Dispositivo</button>
-            <button class="tfilter" id="bd_daily" onclick="setBDTab('daily')">Diario</button>
-          </div>
-          <button class="btn btn-ghost" style="font-size:11px;margin-left:auto" onclick="loadBreakdown()">&#128260; Atualizar</button>
-        </div>
-        <div id="bdContent"><div style="color:var(--muted);font-size:12px">Clique em Atualizar para carregar.</div></div>
-      </div>
-
-      <div id="view-notes" style="display:none">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-          <div class="stitle" style="margin:0">NOTAS E DECISOES</div>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:14px">
-          <select class="sel" id="noteType" style="font-size:11px">
-            <option value="geral">Geral</option>
-            <option value="decisao">Decisao Tomada</option>
-            <option value="teste">Teste A/B</option>
-            <option value="alerta">Alerta</option>
-            <option value="resultado">Resultado</option>
-          </select>
-          <select class="sel" id="noteCamp" style="font-size:11px;flex:1">
-            <option value="">Conta geral</option>
-          </select>
-          <input type="text" id="noteText" placeholder="Escreva uma nota, decisao ou observacao..." style="flex:3;padding:6px 10px;background:var(--s2);border:1px solid var(--b1);color:var(--text);border-radius:6px;font-size:12px;font-family:Arial,sans-serif">
-          <button onclick="saveNote()" class="btn btn-primary" style="font-size:11px">Salvar</button>
-        </div>
-        <div id="notesList"><div style="color:var(--muted);font-size:12px">Carregando notas...</div></div>
-      </div>
-
-      <div id="view-history" style="display:none">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <div class="stitle" style="margin:0;flex:1">HISTORICO DE ANALISES</div>
-          <button class="btn btn-ghost" id="btnCmpRuns" onclick="compareRuns()" disabled>Comparar selecionados</button>
-        </div>
-        <div id="runList"></div>
-        <div id="cmpResult" style="display:none">
-          <div class="stitle" style="margin-bottom:10px">COMPARATIVO</div>
-          <div class="compare-grid" id="cmpGrid"></div>
-        </div>
-      </div>
-
-      <div id="view-trend" style="display:none">
-        <div class="stitle" style="margin-bottom:12px">EVOLUCAO DE METRICAS (90 DIAS)</div>
-        <div class="chart-wrap"><div class="chart-title">Score de Saude</div><canvas id="cHealth" height="80"></canvas></div>
-        <div class="two-col">
-          <div class="chart-wrap"><div class="chart-title">CTR Medio (%)</div><canvas id="cCtr" height="110"></canvas></div>
-          <div class="chart-wrap"><div class="chart-title">CPC Medio</div><canvas id="cCpc" height="110"></canvas></div>
-        </div>
-        <div class="two-col">
-          <div class="chart-wrap"><div class="chart-title">Investimento</div><canvas id="cSpend" height="110"></canvas></div>
-          <div class="chart-wrap"><div class="chart-title">Frequencia Media</div><canvas id="cFreq" height="110"></canvas></div>
-        </div>
-      </div>
-
-      <div id="view-plan" style="display:none">
-        <div class="stitle">PLANO DE ACAO 30 DIAS</div>
-        <div class="plan-grid" id="planGrid"></div>
-        <div class="stitle">PROXIMOS PASSOS</div>
-        <div id="nextSteps"></div>
-      </div>
-
-      <div id="view-content" style="display:none">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-          <div class="stitle" style="margin:0">&#128248; PLANEJAMENTO DE CONTEUDO</div>
-          <select class="sel" id="igAccSel" style="font-size:11px;flex:1;max-width:220px" onchange="onIgAccChange()">
-            <option value="">Carregando contas IG...</option>
-          </select>
-          <button class="btn btn-ghost" style="font-size:11px" onclick="loadIgAccounts()">&#128260; Buscar contas</button>
-        </div>
-
-        <div id="contentSetup" style="background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:18px;margin-bottom:16px">
-          <div style="font-size:12px;font-weight:700;color:var(--cyan);margin-bottom:12px">CONFIGURACAO DO PLANEJAMENTO</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:12px">
-            <div>
-              <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">NICHO DA EMPRESA *</div>
-              <input id="igNiche" type="text" placeholder="ex: Materiais de construcao" class="sel" style="width:100%;padding:7px 10px;font-size:12px">
-            </div>
-            <div>
-              <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">NOME DA EMPRESA</div>
-              <input id="igBusiness" type="text" placeholder="ex: WIG Construcao" class="sel" style="width:100%;padding:7px 10px;font-size:12px">
-            </div>
-            <div>
-              <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">PUBLICO-ALVO</div>
-              <input id="igAudience" type="text" placeholder="ex: Arquitetos e construtores" class="sel" style="width:100%;padding:7px 10px;font-size:12px">
-            </div>
-            <div>
-              <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">TOM DE VOZ</div>
-              <select id="igTone" class="sel" style="width:100%;font-size:12px">
-                <option value="profissional">Profissional e confiavel</option>
-                <option value="descontraido">Descontraido e proximo</option>
-                <option value="inspirador">Inspirador e aspiracional</option>
-                <option value="educativo">Educativo e autoridade</option>
-                <option value="vendas">Foco em vendas e ofertas</option>
-              </select>
-            </div>
-          </div>
-          <button onclick="generateContentPlan()" class="btn btn-primary" id="btnGenPlan" style="font-size:12px">
-            <span id="genIcon">&#127775;</span> Gerar Planejamento Mensal com IA
-          </button>
-        </div>
-
-        <div id="igProfile" style="display:none;background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:14px;margin-bottom:14px">
-          <div style="display:flex;align-items:center;gap:12px">
-            <img id="igAvatar" src="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--b2)">
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:700" id="igName">-</div>
-              <div style="font-size:11px;color:var(--cyan)" id="igUser">-</div>
-            </div>
-            <div style="display:flex;gap:16px">
-              <div style="text-align:center"><div style="font-size:14px;font-weight:700;color:var(--text)" id="igFollowers">-</div><div style="font-size:9px;color:var(--muted)">seguidores</div></div>
-              <div style="text-align:center"><div style="font-size:14px;font-weight:700;color:var(--text)" id="igMediaCount">-</div><div style="font-size:9px;color:var(--muted)">posts</div></div>
-              <div style="text-align:center"><div style="font-size:14px;font-weight:700;color:var(--cyan)" id="igEngRate">-</div><div style="font-size:9px;color:var(--muted)">eng. medio</div></div>
-            </div>
-          </div>
-        </div>
-
-        <div id="contentAnalysis" style="display:none;margin-bottom:16px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-            <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px">
-              <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px">PONTOS FORTES</div>
-              <div id="cpPontosFortes" style="font-size:11px;color:var(--dim);line-height:1.7"></div>
-            </div>
-            <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px">
-              <div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:6px">PONTOS DE MELHORIA</div>
-              <div id="cpPontosMelhoria" style="font-size:11px;color:var(--dim);line-height:1.7"></div>
-            </div>
-          </div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-            <div class="mcard" style="flex:1;min-width:120px"><div class="mlabel">MELHOR FORMATO</div><div id="cpFormato" style="font-size:14px;font-weight:700;color:var(--cyan)">-</div></div>
-            <div class="mcard" style="flex:1;min-width:120px"><div class="mlabel">MELHOR HORARIO</div><div id="cpHorario" style="font-size:14px;font-weight:700;color:var(--green)">-</div></div>
-            <div class="mcard" style="flex:1;min-width:120px"><div class="mlabel">ENG. MEDIO</div><div id="cpEngMedio" style="font-size:14px;font-weight:700;color:var(--orange)">-</div></div>
-          </div>
-        </div>
-
-        <div id="contentCalendar" style="display:none">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-            <div style="display:flex;gap:3px">
-              <button class="tfilter active" id="cv_calendar" onclick="setContentView('calendar')">&#128197; Calendario</button>
-              <button class="tfilter" id="cv_list" onclick="setContentView('list')">&#128203; Lista</button>
-            </div>
-            <button onclick="exportContentPlan()" class="btn btn-ghost" style="font-size:11px;margin-left:auto">&#128229; Exportar PDF</button>
-          </div>
-          <div id="contentPlanOutput"></div>
-        </div>
-      </div>
-
-      <div id="view-google" style="display:none">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-          <div class="stitle" style="margin:0">&#127774; GOOGLE ADS</div>
-          <div id="gConnectArea">
-            <button onclick="connectGoogle()" class="btn btn-primary" id="btnGoogleConn" style="font-size:11px;background:linear-gradient(90deg,#4285F4,#34A853)">
-              &#128279; Conectar Google Ads
-            </button>
-          </div>
-          <div id="gConnectedArea" style="display:none;align-items:center;gap:10px">
-            <select class="sel" id="gCustSel" onchange="onGCustChange()" style="font-size:11px;max-width:220px">
-              <option value="">Selecione a conta...</option>
-            </select>
-          </div>
-        </div>
-        <div id="gMetricsArea" style="display:none">
-          <div class="mgrid" id="gMetricsGrid"></div>
-          <div class="table-wrap">
-            <table id="gCampTable">
-              <thead><tr><th>Campanha</th><th>Tipo</th><th>Status</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>ROAS</th></tr></thead>
-              <tbody id="gCampTbody"></tbody>
-            </table>
-          </div>
-        </div>
+      <div id="analysisSummary" style="background:var(--s1);padding:15px;border-radius:10px;margin-bottom:15px;display:flex;align-items:center;gap:20px"></div>
+      <div class="mgrid" id="metricsGrid"></div>
+      <h3>Otimizações</h3>
+      <div id="optimList" style="margin-bottom:20px"></div>
+      <h3>Campanhas</h3>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Campanha</th><th>Performance</th><th>Gasto</th><th>CTR</th><th>CPC</th></tr></thead>
+          <tbody id="campTbody"></tbody>
+        </table>
       </div>
     </div>
   </main>
 </div>
 
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-  <div class="load-text" id="loadText">Carregando...</div>
-  <div class="load-sub" id="loadSub">Aguarde</div>
-</div>
+<div class="loading-overlay" id="loadingOverlay">A carregar...</div>
 
-<div id="alertModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:1000;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#0f1118;border:1px solid #1e2433;border-radius:12px;padding:24px;width:100%;max-width:420px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:14px;font-weight:700">&#128276; Alerta de Orcamento</div>
-      <button onclick="closeAlertModal()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">x</button>
-    </div>
-    <div style="margin-bottom:12px">
-      <label style="font-size:11px;font-weight:700;color:var(--dim);display:block;margin-bottom:5px">EMAIL</label>
-      <input id="aEmail" type="email" placeholder="seu@email.com" style="width:100%;background:#161923;border:1px solid #1e2433;color:var(--text);padding:9px 11px;border-radius:6px;">
-    </div>
-    <div style="margin-bottom:16px">
-      <label style="font-size:11px;font-weight:700;color:var(--dim);display:block;margin-bottom:5px">VALOR LIMITE (R$)</label>
-      <input id="aThresh" type="number" value="100" style="width:100%;background:#161923;border:1px solid #1e2433;color:var(--text);padding:9px 11px;border-radius:6px;">
-    </div>
-    <div id="aStatus" style="font-size:12px;margin-bottom:14px"></div>
-    <div style="display:flex;gap:8px">
-      <button id="btnSvAlert" class="btn btn-primary" onclick="saveAlert()" style="flex:1">Salvar Alerta</button>
-      <button id="btnRmAlert" class="btn btn-danger" onclick="removeAlert()" style="display:none">Remover</button>
-    </div>
-  </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-let accounts=[],campaigns=[],insData=null,analysis=null,metrics=null,prevRun=null,contentPlan=null;
-let selAccountId=null,selCurrency='BRL',trendData=[],selRuns=[],allCreatives=[],filtCreatives=[],campInsMap={},igAccounts=[],currentIgAcc=null,igMedia=[],contentViewMode='calendar';
-
-function sym(){return selCurrency==='USD'?'$':'R$';}
-function showLoad(t){document.getElementById('loadingOverlay').classList.add('show');document.getElementById('loadText').textContent=t;}
-function hideLoad(){document.getElementById('loadingOverlay').classList.remove('show');}
-function fmtN(n){n=parseInt(n||0);if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1000)return(n/1000).toFixed(1)+'K';return n.toString();}
-function fmtDate(d){return new Date(d).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
-function fmtDS(d){const dt=new Date(d);return String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0');}
-function scC(s){if(!s)return'var(--dim)';return s>=80?'var(--green)':s>=60?'var(--cyan)':s>=40?'var(--orange)':'var(--red)';}
-function scCls(n){if(!n)return'bom';const x=n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');return x.includes('excelente')?'excelente':x.includes('bom')?'bom':x.includes('aten')?'atencao':'critico';}
+let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null, selCurrency='BRL';
 
 async function init(){
-  try {
-    const me=await fetch('/api/me').then(r=>r.json());
-    if(!me.authenticated){location.href='/';return;}
-    document.getElementById('uName').textContent=me.user.name?.split(' ')[0]||'Usuario';
-    const av=me.user.picture?.data?.url||me.user.picture;
-    if(av) document.getElementById('uAvatar').src=av;
-    await loadAccounts();
-  } catch(e) { console.error("Init error", e); }
+  const me = await fetch('/api/me').then(r=>r.json());
+  if(!me.authenticated) return location.href='/';
+  document.getElementById('uName').textContent = me.user.name;
+  if(me.user.picture) document.getElementById('uAvatar').src = me.user.picture.data?.url || me.user.picture;
+  await loadAccounts();
 }
 
 async function loadAccounts(){
-  const sel=document.getElementById('accountSel');
-  try{
-    const d=await fetch('/api/adaccounts').then(r=>r.json());
-    if(d.error){sel.innerHTML=`<option value="">Erro: ${d.error}</option>`;return;}
-    accounts=d.data||[];
-    if(!accounts.length){sel.innerHTML='<option value="">Sem contas encontradas</option>';return;}
-    sel.innerHTML='<option value="">Selecione uma conta...</option>'+accounts.map(a=>`<option value="${a.account_id}">${a.name} (${a.currency})</option>`).join('');
-    sel.addEventListener('change',onAccChange);
-  }catch(e){sel.innerHTML='<option value="">Erro ao carregar</option>';}
+  const res = await fetch('/api/adaccounts').then(r=>r.json());
+  accounts = res.data || [];
+  const sel = document.getElementById('accountSel');
+  if(!accounts.length) return sel.innerHTML = '<option>Sem contas</option>';
+  sel.innerHTML = '<option value="">Selecione uma conta...</option>' + 
+    accounts.map(a => `<option value="${a.account_id}">${a.name} (${a.currency})</option>`).join('');
+  sel.onchange = onAccChange;
 }
 
 async function onAccChange(){
-  selAccountId=document.getElementById('accountSel').value;
-  if(!selAccountId)return;
-  showLoad('Carregando campanhas...');
-  try{
-    const d=await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
-    campaigns=d.data||[];
-    const lr=await fetch(`/api/lastrun/${selAccountId}`).then(r=>r.json());
-    if(lr.run){prevRun=lr.run;document.getElementById('lastRunBadge').textContent='Ultima analise: '+fmtDate(lr.run.created_at);document.getElementById('lastRunBadge').style.display='block';}
-    const acct=accounts.find(a=>a.account_id===selAccountId);
-    if(acct) selCurrency=acct.currency||'BRL';
-    renderSidebar();
-  }finally{hideLoad();}
+  selAccountId = document.getElementById('accountSel').value;
+  if(!selAccountId) return;
+  const acct = accounts.find(a=>a.account_id === selAccountId);
+  selCurrency = acct.currency;
+  const res = await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
+  campaigns = res.data || [];
+  document.getElementById('campSidebar').innerHTML = campaigns.map(c=>`<div>${c.name}</div>`).join('');
 }
 
-function renderSidebar(){
-  const el=document.getElementById('campSidebar');
-  el.innerHTML=campaigns.map(c=>`<div class="camp-item"><div class="camp-name">${c.name}</div></div>`).join('');
+function onDateSelChange(){
+  document.getElementById('customDateWrap').style.display = document.getElementById('dateSel').value === 'custom' ? 'flex' : 'none';
 }
 
 async function runAnalysis(){
-  if(!selAccountId){alert('Selecione uma conta.');return;}
-  const dp=getDateParams();
-  showLoad('Analisando dados...');
-  try{
-    let url=`/api/adaccounts/${selAccountId}/insights?`;
-    url+=dp.preset?`date_preset=${dp.preset}`:`since=${dp.since}&until=${dp.until}`;
-    const insRes=await fetch(url).then(r=>r.json());
-    insData=insRes;
-    campInsMap={}; (insRes.data||[]).forEach(m=>{if(m.campaign_id)campInsMap[m.campaign_id]=m;});
-    const acct=accounts.find(a=>a.account_id===selAccountId);
-    const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accountData:acct,campaigns,insights:insRes,dateRange:dp.preset||'custom'})}).then(r=>r.json());
-    analysis=res.analysis; metrics=res.metrics;
-    renderAll(); showView('overview');
-  }catch(e){alert('Erro: '+e.message);}
-  finally{hideLoad();}
+  if(!selAccountId) return alert('Selecione uma conta');
+  const d = document.getElementById('dateSel').value;
+  const body = {
+    accountData: accounts.find(a=>a.account_id === selAccountId),
+    campaigns,
+    dateRange: d,
+    insights: {}
+  };
+  
+  if(d === 'custom'){
+    body.since = document.getElementById('customSince').value;
+    body.until = document.getElementById('customUntil').value;
+  }
+
+  document.getElementById('loadingOverlay').classList.add('show');
+  try {
+    const ins = await fetch(`/api/adaccounts/${selAccountId}/insights?date_preset=${d}`).then(r=>r.json());
+    body.insights = ins;
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    }).then(r=>r.json());
+    
+    if(res.error) throw new Error(res.error);
+    metrics = res.metrics; analysis = res.analysis;
+    renderAll();
+  } catch(e) { alert('Erro: ' + e.message); }
+  finally { document.getElementById('loadingOverlay').classList.remove('show'); }
 }
 
 function renderAll(){
-  document.getElementById('stateEmpty').style.display='none';
-  document.getElementById('contentWrap').style.display='block';
-  renderMetrics(); renderSummary(); renderOptims(); renderAlerts(); renderCampTable();
+  document.getElementById('stateEmpty').style.display = 'none';
+  document.getElementById('contentWrap').style.display = 'block';
+  renderMetrics(); renderSummary(); renderOptims(); renderTable();
 }
 
 function renderMetrics(){
-  const m=metrics; if(!m)return;
-  const S=sym();
-  document.getElementById('metricsGrid').innerHTML=`
-    <div class="mcard"><div class="mlabel">GASTO TOTAL</div><div class="mval c-blue">${S} ${m.totalSpend.toFixed(2)}</div></div>
-    <div class="mcard"><div class="mlabel">CTR MEDIO</div><div class="mval">${m.avgCtr.toFixed(2)}%</div></div>
-    <div class="mcard"><div class="mlabel">CPC MEDIO</div><div class="mval">${S} ${m.avgCpc.toFixed(2)}</div></div>
-    <div class="mcard"><div class="mlabel">SCORE</div><div class="mval" style="color:${scC(analysis.resumo_geral.score_saude)}">${analysis.resumo_geral.score_saude}</div></div>
+  if(!metrics) return;
+  const S = selCurrency === 'BRL' ? 'R$' : '$';
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="mcard"><div class="mlabel">Gasto</div><div class="mval">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">CTR</div><div class="mval">${metrics.avgCtr.toFixed(2)}%</div></div>
+    <div class="mcard"><div class="mlabel">CPC</div><div class="mval">${S} ${metrics.avgCpc.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">Impres.</div><div class="mval">${metrics.totalImpressions}</div></div>
   `;
 }
 
 function renderSummary(){
-  const r=analysis.resumo_geral;
-  document.getElementById('analysisSummary').innerHTML=`
-    <div class="summary-hdr">
-      <div class="score-ring score-${scCls(r.nivel_saude)}"><span class="score-num">${r.score_saude}</span></div>
-      <div class="summary-info"><div class="summary-title">${r.nivel_saude}</div></div>
-    </div>`;
+  if(!analysis) return;
+  const r = analysis.resumo_geral;
+  document.getElementById('analysisSummary').innerHTML = `
+    <div class="score-ring">${r.score_saude}</div>
+    <div>
+      <div style="font-size:18px;font-weight:800">${r.nivel_saude}</div>
+      <div style="color:var(--dim)">${r.resumo_historico}</div>
+    </div>
+  `;
 }
 
 function renderOptims(){
-  const opts=analysis.otimizacoes_prioritarias||[];
-  document.getElementById('optimList').innerHTML=opts.map(o=>`
-    <div class="optim-card">
-      <div class="optim-title">#${o.prioridade} ${o.titulo}</div>
-      <div class="optim-desc">${o.descricao}</div>
-    </div>`).join('');
+  const list = analysis.otimizacoes_prioritarias || [];
+  document.getElementById('optimList').innerHTML = list.map(o => `
+    <div style="background:var(--s2);padding:10px;border-radius:8px;margin-bottom:5px">
+      <strong>#${o.prioridade} ${o.titulo}</strong> - ${o.descricao}
+    </div>
+  `).join('');
 }
 
-function renderAlerts(){
-  const al=analysis.alertas_criticos||[];
-  document.getElementById('alertList').innerHTML=al.map(a=>`
-    <div class="alert-item a-alta"><div class="alert-msg">${a.mensagem}</div></div>`).join('');
+function renderTable(){
+  const list = analysis.campanhas_analise || [];
+  document.getElementById('campTbody').innerHTML = list.map(c => `
+    <tr>
+      <td>${c.nome}</td>
+      <td>${c.status_performance}</td>
+      <td>${c.gasto}</td>
+      <td>${c.ctr}</td>
+      <td>${c.cpc}</td>
+    </tr>
+  `).join('');
 }
-
-function renderCampTable(){
-  const ca=analysis.campanhas_analise||[];
-  document.getElementById('campTbody').innerHTML=ca.map(c=>`
-    <tr><td>${c.nome}</td><td>${c.status_performance}</td><td>${c.gasto}</td><td>${c.ctr}</td><td>${c.cpc}</td></tr>`).join('');
-}
-
-function showView(v){
-  const views=['overview','analysis','campaigns','creatives','breakdown','notes','report','content','google','history','trend','plan'];
-  views.forEach(id=>{
-    const el=document.getElementById('view-'+id); if(el) el.style.display=id===v?'block':'none';
-  });
-  document.querySelectorAll('.nav-item').forEach(btn=>btn.classList.remove('active'));
-}
-
-function onDateSelChange(){
-  const v=document.getElementById('dateSel').value;
-  document.getElementById('customDateWrap').style.display=v==='custom'?'flex':'none';
-}
-
-function getDateParams(){
-  const v=document.getElementById('dateSel').value;
-  if(v==='custom') return {since:document.getElementById('customSince').value, until:document.getElementById('customUntil').value};
-  return {preset:v};
-}
-
-async function exportContentPlan(){
-  if(!contentPlan){alert('Gere o planejamento.');return;}
-  let html='<html><body><h1>Planejamento</h1>';
-  (contentPlan.plano||[]).forEach(p=>{
-    html+=`<div><b>Dia ${p.dia}</b>: ${p.titulo}<br>${p.copy.replace(/\n/g,'<br>')}</div><hr>`;
-  });
-  html+='</body></html>';
-  const w=window.open('','_blank'); w.document.write(html); w.document.close();
-}
-
-function closeAlertModal(){document.getElementById('alertModal').style.display='none';}
-function openAlertModal(){document.getElementById('alertModal').style.display='flex';}
 
 init();
 </script>
