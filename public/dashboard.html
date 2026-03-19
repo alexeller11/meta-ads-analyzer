@@ -13,85 +13,123 @@
       --orange:#ff9800;--red:#ff3860;--yellow:#ffeb3b;--purple:#b388ff;
       --text:#e8eaf0;--dim:#8892a4;--muted:#3d4456;
     }
-    body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column;font-size:13px}
-    .topbar{height:52px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 16px;gap:10px;position:sticky;top:0;z-index:100}
-    .logo{font-weight:700;font-size:14px}.logo span{color:var(--cyan)}
-    .sel{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:5px 10px;border-radius:6px;cursor:pointer}
-    .btn{padding:6px 14px;border-radius:7px;font-weight:700;cursor:pointer;border:none}
-    .btn-primary{background:var(--blue);color:#fff}
-    .app-body{display:flex;flex:1}.sidebar{width:210px;background:var(--s1);border-right:1px solid var(--b1);padding:10px}
-    .main{flex:1;padding:18px}.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:15px}
-    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:9px;padding:12px}
-    .mval{font-size:20px;font-weight:800}.mlabel{font-size:9px;color:var(--muted);text-transform:uppercase}
-    .loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;color:#fff}
+    body{background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;min-height:100vh;display:flex;flex-direction:column;font-size:13px}
+    .topbar{height:52px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;position:sticky;top:0;z-index:100}
+    .logo{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;white-space:nowrap}
+    .logo-icon{width:26px;height:26px;background:var(--blue);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px}
+    .logo span{color:var(--cyan)}
+    .sep{width:1px;height:20px;background:var(--b1);flex-shrink:0}
+    select.sel{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:5px 10px;border-radius:6px;font-family:Arial,sans-serif;font-size:12px;cursor:pointer}
+    select.sel:focus{outline:1px solid var(--blue)}
+    .btn{display:inline-flex;align-items:center;gap:6px;border:none;padding:6px 14px;border-radius:7px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
+    .btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#0b5fcc}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .btn-ghost{background:var(--s2);border:1px solid var(--b1);color:var(--dim)}.btn-ghost:hover{color:var(--text);border-color:var(--b2)}
+    .app-body{display:flex;flex:1;min-height:0}
+    .sidebar{width:210px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);overflow-y:auto;display:flex;flex-direction:column}
+    .sidebar-section{padding:12px 10px 0}
+    .slabel{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 6px;margin-bottom:5px;font-weight:700}
+    .nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;font-size:12px;font-weight:700;color:var(--dim);cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .15s}
+    .nav-item:hover{background:var(--s2);color:var(--text)}
+    .nav-item.active{background:rgba(24,119,242,.12);color:var(--blue)}
+    .main{flex:1;overflow-y:auto;padding:18px;background:var(--bg)}
+    .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:14px}
+    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:9px;padding:13px;transition:border-color .2s}
+    .mlabel{font-size:9px;color:var(--muted);margin-bottom:5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+    .mval{font-size:24px;font-weight:800;line-height:1}
+    .summary-hdr{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--s1);border:1px solid var(--b1);border-radius:10px;margin-bottom:14px}
+    .score-ring{width:60px;height:60px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:3px solid var(--green);color:var(--green)}
+    .score-num{font-size:20px;font-weight:800;line-height:1}
+    .table-wrap{overflow-x:auto;border-radius:9px;border:1px solid var(--b1);margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:11px;background:var(--s1);min-width:800px}
+    thead th{padding:8px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--b1)}
+    tbody td{padding:8px 10px;border-bottom:1px solid var(--b1)}
+    .loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,9,13,.9);backdrop-filter:blur(6px);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:14px}
     .loading-overlay.show{display:flex}
-    .score-ring{width:60px;height:60px;border:3px solid var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{padding:10px;text-align:left;border-bottom:1px solid var(--b1)}
+    .spinner{width:40px;height:40px;border:3px solid var(--b2);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
 
 <header class="topbar">
-  <div class="logo">Meta Ads <span>Analyzer</span></div>
-  <select class="sel" id="accountSel"><option value="">A carregar contas...</option></select>
-  <select class="sel" id="dateSel" onchange="onDateSelChange()">
+  <div class="logo"><div class="logo-icon">&#9889;</div>Meta Ads <span>Analyzer</span></div>
+  <div class="sep"></div>
+  <select class="sel" id="accountSel" style="max-width:230px"><option value="">Carregando contas...</option></select>
+  <select class="sel" id="dateSel">
     <option value="last_7d">7 dias</option>
     <option value="last_30d" selected>30 dias</option>
-    <option value="custom">Personalizado...</option>
+    <option value="last_90d">90 dias</option>
   </select>
-  <div id="customDateWrap" style="display:none;gap:5px">
-    <input type="date" id="customSince" class="sel">
-    <input type="date" id="customUntil" class="sel">
-  </div>
-  <button class="btn btn-primary" onclick="runAnalysis()">Analisar</button>
-  <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
-    <span id="uName">...</span>
-    <img id="uAvatar" src="" style="width:24px;border-radius:50%">
-    <a href="/auth/logout" style="color:var(--dim);text-decoration:none;font-size:11px">Sair</a>
+  <button class="btn btn-primary" onclick="runAnalysis()">🧠 Analisar</button>
+  <div style="margin-left:auto; display:flex; align-items:center; gap:10px">
+    <span id="uName" style="font-weight:700">...</span>
+    <img id="uAvatar" src="" style="width:24px; height:24px; border-radius:50%">
+    <a href="/auth/logout" class="btn btn-ghost" style="font-size:11px">Sair</a>
   </div>
 </header>
 
 <div class="app-body">
   <aside class="sidebar">
-    <div id="campSidebar" style="font-size:11px;color:var(--dim)">Selecione uma conta</div>
+    <div class="sidebar-section">
+      <div class="slabel">Navegação</div>
+      <button class="nav-item active"><span class="nav-icon">📊</span> Visão Geral</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="slabel">Campanhas Ativas</div>
+      <div id="campSidebar" style="padding:0 10px; font-size:11px; color:var(--dim)">Aguardando análise...</div>
+    </div>
   </aside>
+
   <main class="main">
-    <div id="stateEmpty" style="text-align:center;padding:50px"><h2>Selecione uma conta e clique em Analisar</h2></div>
+    <div id="stateEmpty" style="text-align:center; padding:100px 0">
+      <h2 style="font-size:24px; opacity:0.5">Selecione uma conta para começar</h2>
+    </div>
+
     <div id="contentWrap" style="display:none">
-      <div id="analysisSummary" style="background:var(--s1);padding:15px;border-radius:10px;margin-bottom:15px;display:flex;align-items:center;gap:20px"></div>
+      <div id="analysisSummary"></div>
       <div class="mgrid" id="metricsGrid"></div>
-      <h3>Otimizações</h3>
-      <div id="optimList" style="margin-bottom:20px"></div>
-      <h3>Campanhas</h3>
-      <div style="overflow-x:auto">
+      
+      <h3 style="margin:20px 0 10px; font-size:14px; color:var(--muted)">CAMPANHAS ANALISADAS</h3>
+      <div class="table-wrap">
         <table>
-          <thead><tr><th>Campanha</th><th>Performance</th><th>Gasto</th><th>CTR</th><th>CPC</th></tr></thead>
+          <thead>
+            <tr><th>Campanha</th><th>Performance</th><th>Gasto</th><th>CTR</th><th>CPC</th><th>Frequência</th></tr>
+          </thead>
           <tbody id="campTbody"></tbody>
         </table>
       </div>
+
+      <h3 style="margin:20px 0 10px; font-size:14px; color:var(--muted)">OTIMIZAÇÕES PRIORITÁRIAS</h3>
+      <div id="optimList"></div>
     </div>
   </main>
 </div>
 
-<div class="loading-overlay" id="loadingOverlay">A carregar...</div>
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="font-weight:700">Analisando dados com IA...</div>
+</div>
 
 <script>
-let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null, selCurrency='BRL';
+let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null;
 
 async function init(){
-  const me = await fetch('/api/me').then(r=>r.json());
-  if(!me.authenticated) return location.href='/';
-  document.getElementById('uName').textContent = me.user.name;
-  if(me.user.picture) document.getElementById('uAvatar').src = me.user.picture.data?.url || me.user.picture;
-  await loadAccounts();
+  try {
+    const me = await fetch('/api/me').then(r=>r.json());
+    if(!me.authenticated) return location.href='/';
+    document.getElementById('uName').textContent = me.user.name.split(' ')[0];
+    const av = me.user.picture?.data?.url || me.user.picture;
+    if(av) document.getElementById('uAvatar').src = av;
+    await loadAccounts();
+  } catch(e) { console.error("Erro na inicialização", e); }
 }
 
 async function loadAccounts(){
   const res = await fetch('/api/adaccounts').then(r=>r.json());
   accounts = res.data || [];
   const sel = document.getElementById('accountSel');
-  if(!accounts.length) return sel.innerHTML = '<option>Sem contas</option>';
+  if(!accounts.length) return sel.innerHTML = '<option>Nenhuma conta encontrada</option>';
   sel.innerHTML = '<option value="">Selecione uma conta...</option>' + 
     accounts.map(a => `<option value="${a.account_id}">${a.name} (${a.currency})</option>`).join('');
   sel.onchange = onAccChange;
@@ -100,98 +138,90 @@ async function loadAccounts(){
 async function onAccChange(){
   selAccountId = document.getElementById('accountSel').value;
   if(!selAccountId) return;
-  const acct = accounts.find(a=>a.account_id === selAccountId);
-  selCurrency = acct.currency;
   const res = await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
   campaigns = res.data || [];
-  document.getElementById('campSidebar').innerHTML = campaigns.map(c=>`<div>${c.name}</div>`).join('');
-}
-
-function onDateSelChange(){
-  document.getElementById('customDateWrap').style.display = document.getElementById('dateSel').value === 'custom' ? 'flex' : 'none';
+  document.getElementById('campSidebar').innerHTML = campaigns.slice(0,10).map(c=>`<div style="margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis" title="${c.name}">• ${c.name}</div>`).join('');
 }
 
 async function runAnalysis(){
   if(!selAccountId) return alert('Selecione uma conta');
-  const d = document.getElementById('dateSel').value;
-  const body = {
-    accountData: accounts.find(a=>a.account_id === selAccountId),
-    campaigns,
-    dateRange: d,
-    insights: {}
-  };
-  
-  if(d === 'custom'){
-    body.since = document.getElementById('customSince').value;
-    body.until = document.getElementById('customUntil').value;
-  }
-
   document.getElementById('loadingOverlay').classList.add('show');
   try {
+    const d = document.getElementById('dateSel').value;
+    const acct = accounts.find(a=>a.account_id === selAccountId);
+    
+    // Busca dados reais de insights antes de enviar para a análise
     const ins = await fetch(`/api/adaccounts/${selAccountId}/insights?date_preset=${d}`).then(r=>r.json());
-    body.insights = ins;
+    
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
+      body: JSON.stringify({ accountData: acct, campaigns, insights: ins, dateRange: d })
     }).then(r=>r.json());
+
+    if(!res.success) throw new Error(res.error);
     
-    if(res.error) throw new Error(res.error);
-    metrics = res.metrics; analysis = res.analysis;
+    metrics = res.metrics;
+    analysis = res.analysis;
     renderAll();
   } catch(e) { alert('Erro: ' + e.message); }
   finally { document.getElementById('loadingOverlay').classList.remove('show'); }
 }
 
 function renderAll(){
-  document.getElementById('stateEmpty').style.display = 'none';
-  document.getElementById('contentWrap').style.display = 'block';
-  renderMetrics(); renderSummary(); renderOptims(); renderTable();
-}
-
-function renderMetrics(){
-  if(!metrics) return;
-  const S = selCurrency === 'BRL' ? 'R$' : '$';
-  document.getElementById('metricsGrid').innerHTML = `
-    <div class="mcard"><div class="mlabel">Gasto</div><div class="mval">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
-    <div class="mcard"><div class="mlabel">CTR</div><div class="mval">${metrics.avgCtr.toFixed(2)}%</div></div>
-    <div class="mcard"><div class="mlabel">CPC</div><div class="mval">${S} ${metrics.avgCpc.toFixed(2)}</div></div>
-    <div class="mcard"><div class="mlabel">Impres.</div><div class="mval">${metrics.totalImpressions}</div></div>
-  `;
-}
-
-function renderSummary(){
-  if(!analysis) return;
+  document.getElementById('stateEmpty').style.display='none';
+  document.getElementById('contentWrap').style.display='block';
+  
+  // Render Summary
   const r = analysis.resumo_geral;
   document.getElementById('analysisSummary').innerHTML = `
-    <div class="score-ring">${r.score_saude}</div>
-    <div>
-      <div style="font-size:18px;font-weight:800">${r.nivel_saude}</div>
-      <div style="color:var(--dim)">${r.resumo_historico}</div>
-    </div>
+    <div class="summary-hdr">
+      <div class="score-ring"><div class="score-num">${r.score_saude}</div><div style="font-size:8px">SCORE</div></div>
+      <div>
+        <div style="font-size:18px; font-weight:800; color:var(--green)">${r.nivel_saude}</div>
+        <div style="color:var(--dim); margin-top:4px">${r.resumo_historico}</div>
+      </div>
+    </div>`;
+
+  // Render Metrics Grid
+  const S = accounts.find(a=>a.account_id === selAccountId).currency === 'BRL' ? 'R$' : '$';
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="mcard"><div class="mlabel">Investimento</div><div class="mval c-blue">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">CTR Médio</div><div class="mval">${metrics.avgCtr.toFixed(2)}%</div></div>
+    <div class="mcard"><div class="mlabel">CPC Médio</div><div class="mval">${S} ${metrics.avgCpc.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">Impressões</div><div class="mval">${metrics.totalImpressions.toLocaleString()}</div></div>
   `;
-}
 
-function renderOptims(){
-  const list = analysis.otimizacoes_prioritarias || [];
-  document.getElementById('optimList').innerHTML = list.map(o => `
-    <div style="background:var(--s2);padding:10px;border-radius:8px;margin-bottom:5px">
-      <strong>#${o.prioridade} ${o.titulo}</strong> - ${o.descricao}
-    </div>
-  `).join('');
-}
-
-function renderTable(){
-  const list = analysis.campanhas_analise || [];
-  document.getElementById('campTbody').innerHTML = list.map(c => `
+  // Render Table
+  document.getElementById('campTbody').innerHTML = analysis.campanhas_analise.map(c => `
     <tr>
-      <td>${c.nome}</td>
-      <td>${c.status_performance}</td>
+      <td style="font-weight:700">${c.nome}</td>
+      <td><span style="color:${c.status_performance === 'Bom' ? 'var(--green)' : 'var(--orange)'}">${c.status_performance}</span></td>
       <td>${c.gasto}</td>
       <td>${c.ctr}</td>
       <td>${c.cpc}</td>
+      <td>${c.frequencia}x</td>
     </tr>
   `).join('');
+
+  // Render Optimizations
+  document.getElementById('optimList').innerHTML = (analysis.otimizacoes_prioritarias || []).map(o => `
+    <div style="background:var(--s2); border:1px solid var(--b1); padding:15px; border-radius:10px; margin-bottom:10px">
+      <div style="font-weight:800; color:var(--cyan); margin-bottom:5px">#${o.prioridade} ${o.titulo}</div>
+      <div style="font-size:12px; color:var(--dim)">${o.descricao}</div>
+    </div>
+  `).join('');
+}
+
+// Correção crítica: Uso de \n para evitar quebra de sintaxe no JS
+async function exportContentPlan(){
+  if(!contentPlan){alert('Gere o planejamento.');return;}
+  let html='<html><body><h1>Planejamento</h1>';
+  (contentPlan.plano||[]).forEach(p=>{
+    html+=`<div><b>Dia ${p.dia}</b>: ${p.titulo}<br>${p.copy.replace(/\n/g,'<br>')}</div><hr>`;
+  });
+  html+='</body></html>';
+  const w=window.open('','_blank'); w.document.write(html); w.document.close();
 }
 
 init();
