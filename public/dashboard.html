@@ -245,6 +245,8 @@
       <button class="nav-item" onclick="showView('report')"><span class="nav-icon">&#128196;</span>Relatorio</button>
       <button class="nav-item" onclick="showView('breakdown')"><span class="nav-icon">&#128659;</span>Breakdown</button>
       <button class="nav-item" onclick="showView('notes')"><span class="nav-icon">&#128221;</span>Notas</button>
+      <button class="nav-item" onclick="showView('content')"><span class="nav-icon">&#128248;</span>Conteudo IG</button>
+      <button class="nav-item" onclick="showView('google')"><span class="nav-icon">&#127774;</span>Google Ads</button>
       <button class="nav-item" onclick="showView('history')"><span class="nav-icon">&#128197;</span>Historico</button>
       <button class="nav-item" onclick="showView('trend')"><span class="nav-icon">&#128200;</span>Tendencias</button>
       <button class="nav-item" onclick="showView('plan')"><span class="nav-icon">&#128197;</span>Plano 30 dias</button>
@@ -446,6 +448,179 @@
         <div id="nextSteps"></div>
       </div>
 
+      <!-- CONTEUDO INSTAGRAM -->
+      <div id="view-content" style="display:none">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <div class="stitle" style="margin:0">&#128248; PLANEJAMENTO DE CONTEUDO</div>
+          <select class="sel" id="igAccSel" style="font-size:11px;flex:1;max-width:220px" onchange="onIgAccChange()">
+            <option value="">Carregando contas IG...</option>
+          </select>
+          <button class="btn btn-ghost" style="font-size:11px" onclick="loadIgAccounts()">&#128260; Buscar contas</button>
+        </div>
+
+        <!-- Setup form -->
+        <div id="contentSetup" style="background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:18px;margin-bottom:16px">
+          <div style="font-size:12px;font-weight:700;color:var(--cyan);margin-bottom:12px">CONFIGURACAO DO PLANEJAMENTO</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:12px">
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">NICHO DA EMPRESA *</div>
+              <input id="igNiche" type="text" placeholder="ex: Materiais de construcao" class="sel" style="width:100%;padding:7px 10px;font-size:12px">
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">NOME DA EMPRESA</div>
+              <input id="igBusiness" type="text" placeholder="ex: WIG Construcao" class="sel" style="width:100%;padding:7px 10px;font-size:12px">
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">PUBLICO-ALVO</div>
+              <input id="igAudience" type="text" placeholder="ex: Arquitetos e construtores" class="sel" style="width:100%;padding:7px 10px;font-size:12px">
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">TOM DE VOZ</div>
+              <select id="igTone" class="sel" style="width:100%;font-size:12px">
+                <option value="profissional">Profissional e confiavel</option>
+                <option value="descontraido">Descontraido e proximo</option>
+                <option value="inspirador">Inspirador e aspiracional</option>
+                <option value="educativo">Educativo e autoridade</option>
+                <option value="vendas">Foco em vendas e ofertas</option>
+              </select>
+            </div>
+          </div>
+          <button onclick="generateContentPlan()" class="btn btn-primary" id="btnGenPlan" style="font-size:12px">
+            <span id="genIcon">&#127775;</span> Gerar Planejamento Mensal com IA
+          </button>
+          <span style="font-size:10px;color:var(--muted);margin-left:10px">A IA analisa seus ultimos posts + tendencias do nicho</span>
+        </div>
+
+        <!-- IG profile summary -->
+        <div id="igProfile" style="display:none;background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:14px;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <img id="igAvatar" src="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--b2)">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700" id="igName">-</div>
+              <div style="font-size:11px;color:var(--cyan)" id="igUser">-</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="text-align:center"><div style="font-size:14px;font-weight:700;color:var(--text)" id="igFollowers">-</div><div style="font-size:9px;color:var(--muted)">seguidores</div></div>
+              <div style="text-align:center"><div style="font-size:14px;font-weight:700;color:var(--text)" id="igMediaCount">-</div><div style="font-size:9px;color:var(--muted)">posts</div></div>
+              <div style="text-align:center"><div style="font-size:14px;font-weight:700;color:var(--cyan)" id="igEngRate">-</div><div style="font-size:9px;color:var(--muted)">eng. medio</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Analysis output -->
+        <div id="contentAnalysis" style="display:none;margin-bottom:16px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px">
+              <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px">PONTOS FORTES</div>
+              <div id="cpPontosFortes" style="font-size:11px;color:var(--dim);line-height:1.7"></div>
+            </div>
+            <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px">
+              <div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:6px">PONTOS DE MELHORIA</div>
+              <div id="cpPontosMelhoria" style="font-size:11px;color:var(--dim);line-height:1.7"></div>
+            </div>
+          </div>
+          <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:8px;padding:12px;margin-bottom:12px">
+            <div style="font-size:10px;font-weight:700;color:var(--cyan);margin-bottom:6px">TENDENCIAS DO NICHO</div>
+            <div id="cpTendencias" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+            <div class="mcard" style="flex:1;min-width:120px"><div class="mlabel">MELHOR FORMATO</div><div id="cpFormato" style="font-size:14px;font-weight:700;color:var(--cyan)">-</div></div>
+            <div class="mcard" style="flex:1;min-width:120px"><div class="mlabel">MELHOR HORARIO</div><div id="cpHorario" style="font-size:14px;font-weight:700;color:var(--green)">-</div></div>
+            <div class="mcard" style="flex:1;min-width:120px"><div class="mlabel">ENG. MEDIO</div><div id="cpEngMedio" style="font-size:14px;font-weight:700;color:var(--orange)">-</div></div>
+          </div>
+        </div>
+
+        <!-- Calendar view tabs -->
+        <div id="contentCalendar" style="display:none">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <div style="font-size:11px;font-weight:700;color:var(--dim)">VISUALIZAR:</div>
+            <div style="display:flex;gap:3px">
+              <button class="tfilter active" id="cv_calendar" onclick="setContentView('calendar')">&#128197; Calendario</button>
+              <button class="tfilter" id="cv_list" onclick="setContentView('list')">&#128203; Lista</button>
+              <button class="tfilter" id="cv_post" onclick="setContentView('post')" style="color:var(--blue)">&#128247; Posts</button>
+              <button class="tfilter" id="cv_carrossel" onclick="setContentView('carrossel')" style="color:var(--purple)">&#128211; Carrosseis</button>
+              <button class="tfilter" id="cv_reel" onclick="setContentView('reel')" style="color:var(--red)">&#127909; Reels</button>
+            </div>
+            <button onclick="exportContentPlan()" class="btn btn-ghost" style="font-size:11px;margin-left:auto">&#128229; Exportar PDF</button>
+          </div>
+          <div id="contentPlanOutput"></div>
+        </div>
+      </div>
+
+      <!-- GOOGLE ADS -->
+      <div id="view-google" style="display:none">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <div class="stitle" style="margin:0">&#127774; GOOGLE ADS</div>
+          <div id="gConnectArea">
+            <button onclick="connectGoogle()" class="btn btn-primary" id="btnGoogleConn" style="font-size:11px;background:linear-gradient(90deg,#4285F4,#34A853)">
+              &#128279; Conectar Google Ads
+            </button>
+            <span style="font-size:10px;color:var(--muted);margin-left:8px">Requer: GOOGLE_CLIENT_ID + GOOGLE_DEVELOPER_TOKEN no servidor</span>
+          </div>
+          <div id="gConnectedArea" style="display:none;align-items:center;gap:10px">
+            <span style="font-size:11px;color:var(--green);font-weight:700">&#10003; Conectado</span>
+            <select class="sel" id="gCustSel" onchange="onGCustChange()" style="font-size:11px;max-width:220px">
+              <option value="">Selecione a conta Google Ads...</option>
+            </select>
+            <select class="sel" id="gDateSel" onchange="loadGoogleMetrics()" style="font-size:11px">
+              <option value="LAST_7_DAYS">7 dias</option>
+              <option value="LAST_30_DAYS" selected>30 dias</option>
+              <option value="LAST_90_DAYS">90 dias</option>
+              <option value="THIS_MONTH">Este mes</option>
+              <option value="LAST_MONTH">Mes passado</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Setup instructions when not connected -->
+        <div id="gSetupGuide" style="background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:20px;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px">Como configurar o Google Ads:</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+            <div style="padding:12px;background:var(--s2);border-radius:8px">
+              <div style="font-size:20px;margin-bottom:6px">1&#65039;&#8419;</div>
+              <div style="font-size:11px;font-weight:700;margin-bottom:3px">Google Cloud Console</div>
+              <div style="font-size:10px;color:var(--dim)">Crie um projeto, ative Google Ads API, crie credenciais OAuth2. Adicione GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env</div>
+            </div>
+            <div style="padding:12px;background:var(--s2);border-radius:8px">
+              <div style="font-size:20px;margin-bottom:6px">2&#65039;&#8419;</div>
+              <div style="font-size:11px;font-weight:700;margin-bottom:3px">Developer Token</div>
+              <div style="font-size:10px;color:var(--dim)">Acesse ads.google.com > Ferramentas > API Center. Solicite o Developer Token. Adicione como GOOGLE_DEVELOPER_TOKEN no .env</div>
+            </div>
+            <div style="padding:12px;background:var(--s2);border-radius:8px">
+              <div style="font-size:20px;margin-bottom:6px">3&#65039;&#8419;</div>
+              <div style="font-size:11px;font-weight:700;margin-bottom:3px">Conectar</div>
+              <div style="font-size:10px;color:var(--dim)">Clique em Conectar Google Ads, autorize o acesso e selecione a conta para comecar a analise</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Google metrics (shown when connected + account selected) -->
+        <div id="gMetricsArea" style="display:none">
+          <div class="mgrid" id="gMetricsGrid"></div>
+          <div style="margin-top:14px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <div class="stitle" style="margin:0">CAMPANHAS GOOGLE ADS</div>
+              <span id="gCampCount" style="font-size:11px;color:var(--muted)"></span>
+            </div>
+            <div class="table-wrap">
+              <table id="gCampTable">
+                <thead><tr>
+                  <th>Campanha</th><th>Tipo</th><th>Status</th>
+                  <th>Gasto</th><th>Impr.</th><th>Cliques</th>
+                  <th>CTR</th><th>CPC</th><th>Conv.</th><th>Val.Conv.</th>
+                  <th>ROAS</th><th>Imp. Share</th>
+                </tr></thead>
+                <tbody id="gCampTbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="gAiAnalysis" style="margin-top:14px;display:none">
+            <div class="stitle">ANALISE IA — GOOGLE ADS</div>
+            <div id="gAiContent"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
 </div>
@@ -560,9 +735,13 @@ async function runAnalysis(){
     if(dp.preset) insUrl+=`date_preset=${dp.preset}`;
     else insUrl+=`since=${dp.since}&until=${dp.until}`;
     const insRes=await fetch(insUrl).then(r=>r.json());
+    if(insRes.error) throw new Error('Meta API: '+insRes.error);
     insData=insRes;
     campInsMap={};
     (insRes.data||[]).forEach(m=>{if(m.campaign_id)campInsMap[m.campaign_id]=m;});
+    if(!insRes.data||insRes.data.length===0){
+      console.warn('Insights returned 0 rows — conta pode nao ter dados no periodo selecionado');
+    }
     updateLoad('Analisando com IA...','Aguarde 20-30s');
     const acct=accounts.find(a=>a.account_id===selAccountId);
     const dr=dp.preset||`${dp.since}_${dp.until}`;
@@ -643,19 +822,49 @@ async function fetchBalance(accountId){
     const d=await fetch(`/api/adaccounts/${accountId}/balance`).then(r=>r.json());
     if(d.error)return;
     const cur=d.currency==='BRL'?'R$':'$';
-    // Meta ALWAYS returns monetary values as integer cents (e.g. R$527,95 = 52795)
-    const bal=parseFloat(d.balance||0)/100;
-    const spent=parseFloat(d.amount_spent||0)/100;
-    const cap=parseFloat(d.spend_cap||0)/100;
     const chip=document.getElementById('balanceChip');
     const valEl=document.getElementById('balanceVal');
     chip.style.display='flex';
-    valEl.style.color=bal>0?'var(--green)':bal===0?'var(--orange)':'var(--red)';
-    // Show balance + optional spend cap context
-    if(cap>0){
-      valEl.textContent=`${cur} ${bal.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})} | Gasto: ${cur} ${spent.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})} / ${cur} ${cap.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+    const fmt=(v)=>v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+    // Meta retorna centavos (inteiros) para contas pré-pagas
+    // Para contas pós-pagas (cartão), balance = 0 e amount_spent tem o gasto
+    // amount_spent = SEMPRE em centavos
+    // balance = centavos se > 0, ou 0 se pós-pago
+    // spend_cap = centavos se configurado, ou 0
+    // Heurística: se o valor raw > 100 (provável centavos) OU se já é decimal pequeno
+
+    const rawBal   = parseFloat(d.balance||0);
+    const rawSpent = parseFloat(d.amount_spent||0);
+    const rawCap   = parseFloat(d.spend_cap||0);
+
+    // Meta Graph API v19+ retorna em centavos (unidade mínima da moeda)
+    // Para BRL: 1 real = 100 centavos, então sempre dividir por 100
+    const bal   = rawBal   / 100;
+    const spent = rawSpent / 100;
+    const cap   = rawCap   / 100;
+
+    const isPostPaid = rawBal === 0 && rawCap === 0;
+    const hasSpendCap = cap > 0;
+
+    if(isPostPaid){
+      // Conta pós-paga (cartão de crédito): sem saldo pré-carregado
+      valEl.style.color='var(--cyan)';
+      if(spent>0){
+        valEl.textContent=`Pos-pago | Gasto: ${cur} ${fmt(spent)}`;
+      } else {
+        valEl.textContent='Pos-pago (cartao) | Sem dados de saldo';
+        valEl.style.color='var(--muted)';
+      }
+    } else if(hasSpendCap){
+      const pct=((spent/cap)*100).toFixed(0);
+      const restante=cap-spent;
+      valEl.style.color=restante>cap*0.3?'var(--green)':restante>cap*0.1?'var(--orange)':'var(--red)';
+      valEl.textContent=`Verba restante: ${cur} ${fmt(restante)} | ${pct}% usado de ${cur} ${fmt(cap)}`;
     } else {
-      valEl.textContent=`${cur} ${bal.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+      // Pre-pago simples: mostra saldo disponivel
+      valEl.style.color=bal>100?'var(--green)':bal>20?'var(--orange)':'var(--red)';
+      valEl.textContent=`Saldo: ${cur} ${fmt(bal)}${spent>0?' | Gasto: '+cur+' '+fmt(spent):''}`;
     }
   }catch(e){console.error('Balance error:',e);}
 }
@@ -680,21 +889,51 @@ function convMetrics(rows){
   let purchases=0,leads=0,msg=0,rev=0,sp=0,cl=0,sessions=0;
   (rows||[]).forEach(m=>{
     const a=m.actions||[];const v=m.action_values||[];
-    // Purchases: fb_pixel_purchase is source of truth
-    purchases+=getAct(a,'offsite_conversion.fb_pixel_purchase');
-    // Leads
-    leads+=getAct(a,'lead')+getAct(a,'complete_registration')+getAct(a,'offsite_conversion.fb_pixel_lead');
-    // Messages
-    msg+=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection');
-    // Revenue
-    rev+=getAct(v,'offsite_conversion.fb_pixel_purchase');
-    sp+=parseFloat(m.spend||0);
-    cl+=parseInt(m.clicks||0);
-    // Connect Rate = Sessions/Clicks — landing_page_view is Meta's session proxy (page actually loaded)
-    sessions+=getAct(a,'landing_page_view');
+
+    // ── COMPRAS ─────────────────────────────────────────────────────────
+    // Hierarquia: fb_pixel_purchase > onsite_fb_pixel_purchase > purchase nativo
+    // NUNCA somar mais de uma — cada evento representa a mesma compra
+    const _pixelPurchase   = getAct(a,'offsite_conversion.fb_pixel_purchase');
+    const _onsitePurchase  = getAct(a,'onsite_conversion.fb_pixel_purchase');
+    const _nativePurchase  = getAct(a,'purchase');
+    // Usar o maior valor não-zero — pixel é mais confiável que nativo
+    if      (_pixelPurchase > 0)  purchases += _pixelPurchase;
+    else if (_onsitePurchase > 0) purchases += _onsitePurchase;
+    else                          purchases += _nativePurchase;
+
+    // ── LEADS ───────────────────────────────────────────────────────────
+    // fb_pixel_lead e fb_pixel_complete_registration SÃO eventos distintos (ok somar)
+    // 'lead' nativo = MESMO que fb_pixel_lead — NÃO somar junto
+    const _pixelLead  = getAct(a,'offsite_conversion.fb_pixel_lead');
+    const _pixelReg   = getAct(a,'offsite_conversion.fb_pixel_complete_registration');
+    const _nativeLead = getAct(a,'lead');
+    if (_pixelLead > 0 || _pixelReg > 0) {
+      leads += _pixelLead + _pixelReg; // pixel disponível — usar só pixel
+    } else {
+      leads += _nativeLead + getAct(a,'complete_registration');
+    }
+
+    // ── MENSAGENS ───────────────────────────────────────────────────────
+    // PROBLEMA CLÁSSICO DE DUPLICAÇÃO:
+    // messaging_conversation_started_7d = conversas iniciadas (janela 7d)
+    // total_messaging_connection = INCLUI as conversas acima + reconexões
+    // São overlapping — usar APENAS o started_7d (mais específico e sem overlap)
+    const _msgStarted = getAct(a,'onsite_conversion.messaging_conversation_started_7d');
+    const _msgFirst   = getAct(a,'onsite_conversion.messaging_first_reply');
+    // Se started > 0: usar ele. Se não: usar first_reply como proxy
+    msg += _msgStarted > 0 ? _msgStarted : _msgFirst;
+
+    // ── RECEITA ─────────────────────────────────────────────────────────
+    // Sempre usar action_values do pixel — não somar native e pixel
+    const _revPixel  = getAct(v,'offsite_conversion.fb_pixel_purchase');
+    const _revOnsite = getAct(v,'onsite_conversion.fb_pixel_purchase');
+    rev += _revPixel > 0 ? _revPixel : _revOnsite;
+
+    sp += parseFloat(m.spend||0);
+    cl += parseInt(m.clicks||0);
+    sessions += getAct(a,'landing_page_view');
   });
   const cv=purchases+leads;
-  // Cost per result
   const cpr_purchase=purchases>0?sp/purchases:0;
   const cpr_lead=leads>0?sp/leads:0;
   const cpr_msg=msg>0?sp/msg:0;
@@ -786,11 +1025,45 @@ function renderSummary(){
 
 function renderOptims(){
   const opts=analysis?.otimizacoes_prioritarias||[];
-  document.getElementById('optimList').innerHTML=opts.map(o=>{
+  document.getElementById('optimList').innerHTML=opts.map((o,i)=>{
     const pc=o.prioridade===1?'pri-1':o.prioridade===2?'pri-2':o.prioridade===3?'pri-3':'pri-n';
     const ic='tag-'+(o.impacto_esperado||'').toLowerCase();
-    return`<div class="optim-card"><div class="optim-hdr"><div class="pri-badge ${pc}">#${o.prioridade}</div><div><div class="optim-title">${o.titulo}</div><div class="tag-row"><span class="tag">${o.categoria}</span><span class="tag ${ic}">${o.impacto_esperado}</span><span class="tag">${o.prazo}</span></div></div></div><div class="optim-desc">${o.descricao}</div><div class="optim-action">&#9658; ${o.acao}</div></div>`;
+    const prazoColor=o.prazo==='Imediato'?'var(--red)':o.prazo==='Esta semana'?'var(--orange)':'var(--muted)';
+    // Format acao as numbered steps if has \n
+    const acaoFmt=(o.acao||'').replace(/\n(\d+\.)/g,'<br><strong style="color:var(--cyan)">$1</strong>').replace(/^(\d+\.)/,'<strong style="color:var(--cyan)">$1</strong>');
+    return\`<div class="optim-card" id="opt_\${i}">
+      <div class="optim-hdr">
+        <div class="pri-badge \${pc}">#\${o.prioridade}</div>
+        <div style="flex:1">
+          <div class="optim-title">\${o.titulo}</div>
+          <div class="tag-row">
+            <span class="tag">\${o.categoria}</span>
+            <span class="tag \${ic}">\${o.impacto_esperado}</span>
+            <span class="tag" style="color:\${prazoColor}">&#9201; \${o.prazo}</span>
+          </div>
+        </div>
+        <button onclick="toggleOptim(\${i})" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:2px 6px" title="Expandir">&#8964;</button>
+      </div>
+      <div class="optim-desc">\${o.descricao}</div>
+      <div id="opt_detail_\${i}" style="display:none;margin-top:8px;padding:10px;background:var(--s2);border-radius:6px;border-left:3px solid var(--cyan)">
+        <div style="font-size:10px;font-weight:700;color:var(--cyan);margin-bottom:6px;letter-spacing:.05em">PLANO DE ACAO PASSO A PASSO</div>
+        <div style="font-size:11px;color:var(--dim);line-height:1.8">\${acaoFmt}</div>
+      </div>
+      <div class="optim-action" onclick="toggleOptim(\${i})" style="cursor:pointer">&#9658; Ver plano de acao detalhado</div>
+    </div>\`;
   }).join('')||'<div style="font-size:11px;color:var(--muted)">Execute a analise para ver otimizacoes.</div>';
+}
+
+function toggleOptim(i){
+  const d=document.getElementById('opt_detail_'+i);
+  const btn=document.querySelector('#opt_'+i+' .optim-action');
+  if(d.style.display==='none'){
+    d.style.display='block';
+    if(btn) btn.innerHTML='&#9660; Fechar plano de acao';
+  } else {
+    d.style.display='none';
+    if(btn) btn.innerHTML='&#9658; Ver plano de acao detalhado';
+  }
 }
 
 function renderAlerts(){
@@ -806,7 +1079,13 @@ function renderHistInsights(){
 
 function renderOpps(){
   const op=analysis?.oportunidades||[];
-  document.getElementById('oppList').innerHTML=`<div class="opp-grid">${op.map(o=>`<div class="opp-card"><div class="opp-title">&#128161; ${o.titulo}</div><div class="opp-desc">${o.descricao}</div><div class="opp-impact">&#128200; ${o.potencial_impacto}</div></div>`).join('')}</div>`;
+  document.getElementById('oppList').innerHTML=`<div class="opp-grid">${op.map((o,i)=>`
+    <div class="opp-card">
+      <div class="opp-title">&#128161; ${o.titulo}</div>
+      <div class="opp-desc">${o.descricao}</div>
+      <div class="opp-impact">&#128200; ${o.potencial_impacto}</div>
+      ${o.como_implementar?`<div style="margin-top:8px;padding:8px;background:var(--s1);border-radius:5px;font-size:10px;color:var(--muted);line-height:1.6"><span style="color:var(--cyan);font-weight:700">Como fazer: </span>${o.como_implementar}</div>`:''}
+    </div>`).join('')}</div>`;
 }
 
 // CAMPAIGN TABLE
@@ -828,10 +1107,23 @@ function renderCampTable(){
     const camp=campaigns.find(x=>x.name===c.nome);
     const ins=camp?campInsMap[camp.id]:null;
     const a=ins?.actions||[];const v=ins?.action_values||[];
-    const purchases=getAct(a,'offsite_conversion.fb_pixel_purchase');const leads=getAct(a,'lead')+getAct(a,'complete_registration')+getAct(a,'offsite_conversion.fb_pixel_lead');const cv=purchases+leads;
-    const msg=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection');
+    // Compras: hierarquia pixel > onsite > nativo (nunca somar)
+    const _pp2=getAct(a,'offsite_conversion.fb_pixel_purchase');
+    const _op2=getAct(a,'onsite_conversion.fb_pixel_purchase');
+    const purchases=_pp2>0?_pp2:(_op2>0?_op2:getAct(a,'purchase'));
+    // Leads: pixel separado de nativo (nunca somar os dois)
+    const _pl2=getAct(a,'offsite_conversion.fb_pixel_lead');
+    const _pr2=getAct(a,'offsite_conversion.fb_pixel_complete_registration');
+    const leads=(_pl2>0||_pr2>0)?(_pl2+_pr2):(getAct(a,'lead')+getAct(a,'complete_registration'));
+    const cv=purchases+leads;
+    // Mensagens: started_7d apenas (total_messaging_connection duplica)
+    const _ms2=getAct(a,'onsite_conversion.messaging_conversation_started_7d');
+    const _mf2=getAct(a,'onsite_conversion.messaging_first_reply');
+    const msg=_ms2>0?_ms2:_mf2;
     const sessions=getAct(a,'landing_page_view');
-    const rev=getAct(v,'offsite_conversion.fb_pixel_purchase');
+    const _rv2=getAct(v,'offsite_conversion.fb_pixel_purchase');
+    const _ro2=getAct(v,'onsite_conversion.fb_pixel_purchase');
+    const rev=_rv2>0?_rv2:_ro2;
     const sp=parseFloat(ins?.spend||c.gasto?.toString().replace(/[^0-9.]/g,'')||0);
     const cl=parseInt(ins?.clicks||0);
     const roas=sp>0?rev/sp:0;const roi=sp>0?((rev-sp)/sp)*100:0;
@@ -907,7 +1199,13 @@ function renderReport(){
     const camp=campaigns.find(x=>x.name===c.nome);
     const ins=camp?campInsMap[camp.id]:null;
     const a=ins?.actions||[];const v=ins?.action_values||[];
-    const purchases=getAct(a,'offsite_conversion.fb_pixel_purchase');const leads=getAct(a,'lead')+getAct(a,'complete_registration')+getAct(a,'offsite_conversion.fb_pixel_lead');const cv=purchases+leads;
+    const _pp3=getAct(a,'offsite_conversion.fb_pixel_purchase');
+    const _pl3=getAct(a,'offsite_conversion.fb_pixel_lead');
+    const _pr3=getAct(a,'offsite_conversion.fb_pixel_complete_registration');
+    const _hasP3=_pp3>0||_pl3>0||_pr3>0;
+    const purchases=_hasP3?_pp3:getAct(a,'purchase');
+    const leads=_hasP3?(_pl3+_pr3):(getAct(a,'lead')+getAct(a,'complete_registration'));
+    const cv=purchases+leads;
     const msg=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection');
     const sessions2=getAct(a,'landing_page_view');
     const rev=getAct(v,'offsite_conversion.fb_pixel_purchase');
@@ -1157,11 +1455,19 @@ function crAdMetrics(ad){
   const clicks=parseInt(ins.clicks||0);
   const ctr=parseFloat(ins.ctr||0);
   const freq=parseFloat(ins.frequency||0);
-  const purchases=getAct(a,'offsite_conversion.fb_pixel_purchase');
-  const leads=getAct(a,'lead')+getAct(a,'complete_registration')+getAct(a,'offsite_conversion.fb_pixel_lead');
-  const msg=getAct(a,'onsite_conversion.messaging_conversation_started_7d')+getAct(a,'onsite_conversion.total_messaging_connection');
+  const _p5=getAct(a,'offsite_conversion.fb_pixel_purchase');
+  const _o5=getAct(a,'onsite_conversion.fb_pixel_purchase');
+  const purchases=_p5>0?_p5:(_o5>0?_o5:getAct(a,'purchase'));
+  const _l5=getAct(a,'offsite_conversion.fb_pixel_lead');
+  const _r5=getAct(a,'offsite_conversion.fb_pixel_complete_registration');
+  const leads=(_l5>0||_r5>0)?(_l5+_r5):(getAct(a,'lead')+getAct(a,'complete_registration'));
+  const _ms5=getAct(a,'onsite_conversion.messaging_conversation_started_7d');
+  const _mf5=getAct(a,'onsite_conversion.messaging_first_reply');
+  const msg=_ms5>0?_ms5:_mf5;
   const sessions=getAct(a,'landing_page_view');
-  const rev=getAct(v,'offsite_conversion.fb_pixel_purchase');
+  const _rv5=getAct(v,'offsite_conversion.fb_pixel_purchase');
+  const _ro5=getAct(v,'onsite_conversion.fb_pixel_purchase');
+  const rev=_rv5>0?_rv5:_ro5;
   const roas=spend>0?rev/spend:0;
   const connectRate=clicks>0?(sessions/clicks)*100:0;
   return{spend,impr,clicks,ctr,freq,purchases,leads,msg,sessions,rev,roas,connectRate,running:spend>0&&ad.status==='ACTIVE'};
@@ -1354,7 +1660,7 @@ function drawLine(id,labels,data,color){
 
 // VIEWS
 function showView(v){
-  const views=['overview','analysis','campaigns','creatives','breakdown','notes','report','history','trend','plan'];
+  const views=['overview','analysis','campaigns','creatives','breakdown','notes','report','content','google','history','trend','plan'];
   views.forEach(id=>{
     const el=document.getElementById('view-'+id);
     if(el) el.style.display=id===v?'block':'none';
@@ -1368,6 +1674,8 @@ function showView(v){
   if(v==='report')renderReport();
   if(v==='breakdown')loadBreakdown();
   if(v==='notes')loadNotes();
+  if(v==='content')initContentTab();
+  if(v==='google')initGoogleTab();
 }
 
 // ALERT
@@ -1623,6 +1931,389 @@ function detectFatigue(rows){
   return alerts;
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONTEUDO INSTAGRAM
+// ═══════════════════════════════════════════════════════════════════════════
+let igAccounts=[], currentIgAcc=null, igMedia=[], contentPlan=null, contentViewMode='calendar';
+
+async function initContentTab(){
+  if(!igAccounts.length) await loadIgAccounts();
+}
+
+async function loadIgAccounts(){
+  try{
+    showLoad('Buscando contas Instagram...');
+    const r=await fetch('/api/instagram/accounts').then(r=>r.json());
+    igAccounts=r.data||[];
+    const sel=document.getElementById('igAccSel');
+    if(!igAccounts.length){
+      sel.innerHTML='<option value="">Nenhuma conta Instagram Business encontrada</option>';
+      hideLoad();return;
+    }
+    sel.innerHTML='<option value="">Selecione a conta Instagram...</option>'+igAccounts.map(a=>`<option value="${a.id}">${a.name||a.username} (@${a.username})</option>`).join('');
+  }catch(e){
+    const sel=document.getElementById('igAccSel');
+    sel.innerHTML=`<option value="">Erro: ${e.message}</option>`;
+  }finally{hideLoad();}
+}
+
+async function onIgAccChange(){
+  const id=document.getElementById('igAccSel').value;
+  if(!id)return;
+  currentIgAcc=igAccounts.find(a=>a.id===id);
+  if(!currentIgAcc)return;
+  // Show profile
+  const prof=document.getElementById('igProfile');
+  prof.style.display='block';
+  document.getElementById('igName').textContent=currentIgAcc.name||'';
+  document.getElementById('igUser').textContent='@'+(currentIgAcc.username||'');
+  document.getElementById('igFollowers').textContent=fmtN(currentIgAcc.followers_count||0);
+  document.getElementById('igMediaCount').textContent=fmtN(currentIgAcc.media_count||0);
+  if(currentIgAcc.profile_picture_url) document.getElementById('igAvatar').src=currentIgAcc.profile_picture_url;
+  // Pre-fill business name
+  if(!document.getElementById('igBusiness').value) document.getElementById('igBusiness').value=currentIgAcc.name||'';
+  // Load media in background
+  await loadIgMedia(id);
+}
+
+async function loadIgMedia(igId){
+  try{
+    const r=await fetch(`/api/instagram/${igId}/media`).then(r=>r.json());
+    igMedia=r.data||[];
+    // Calculate avg engagement rate
+    let totalEng=0,count=0;
+    igMedia.forEach(p=>{
+      if(p.reach>0){totalEng+=((p.like_count||0)+(p.comments_count||0))/p.reach*100;count++;}
+    });
+    const avgEng=count>0?(totalEng/count).toFixed(2):'N/A';
+    document.getElementById('igEngRate').textContent=avgEng+(avgEng!=='N/A'?'%':'');
+  }catch(e){console.warn('Media load error:',e.message);}
+}
+
+async function generateContentPlan(){
+  const niche=document.getElementById('igNiche').value.trim();
+  if(!niche){alert('Informe o nicho da empresa!');document.getElementById('igNiche').focus();return;}
+  const btn=document.getElementById('btnGenPlan');
+  btn.disabled=true;
+  document.getElementById('genIcon').textContent='⏳';
+  showLoad('IA analisando seus posts e tendencias do nicho...');
+  try{
+    const payload={
+      niche,
+      igUsername:currentIgAcc?.username||'',
+      businessName:document.getElementById('igBusiness').value,
+      audience:document.getElementById('igAudience').value,
+      tone:document.getElementById('igTone').value,
+      recentPosts:igMedia,
+      accountMetrics:currentIgAcc
+    };
+    const r=await fetch('/api/content-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json());
+    if(r.error)throw new Error(r.error);
+    contentPlan=r.plan;
+    renderContentAnalysis(r.plan);
+    renderContentCalendar(r.plan, contentViewMode);
+  }catch(e){alert('Erro ao gerar planejamento: '+e.message);}
+  finally{hideLoad();btn.disabled=false;document.getElementById('genIcon').textContent='✨';}
+}
+
+function renderContentAnalysis(plan){
+  const a=plan.analise||{};
+  // Show analysis
+  document.getElementById('contentAnalysis').style.display='block';
+  document.getElementById('cpPontosFortes').innerHTML=(a.pontos_fortes||[]).map(p=>`<div style="display:flex;gap:5px"><span style="color:var(--green)">&#10003;</span>${p}</div>`).join('');
+  document.getElementById('cpPontosMelhoria').innerHTML=(a.pontos_melhoria||[]).map(p=>`<div style="display:flex;gap:5px"><span style="color:var(--orange)">&#9656;</span>${p}</div>`).join('');
+  document.getElementById('cpFormato').textContent=a.melhor_formato||'-';
+  document.getElementById('cpHorario').textContent=a.melhor_horario||'-';
+  document.getElementById('cpEngMedio').textContent=a.taxa_engajamento_media||'-';
+  document.getElementById('cpTendencias').innerHTML=(plan.tendencias||[]).map(t=>`<span style="font-size:10px;padding:3px 8px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:12px;color:var(--cyan)">#${t}</span>`).join('');
+  document.getElementById('contentCalendar').style.display='block';
+}
+
+function setContentView(mode){
+  contentViewMode=mode;
+  ['calendar','list','post','carrossel','reel'].forEach(v=>{
+    const b=document.getElementById('cv_'+v);
+    if(b)b.classList.toggle('active',v===mode);
+  });
+  if(contentPlan)renderContentCalendar(contentPlan,mode);
+}
+
+const typeColor={POST:'var(--blue)',CARROSSEL:'var(--purple)',REEL:'var(--red)'};
+const typeIcon={POST:'&#128247;',CARROSSEL:'&#128211;',REEL:'&#127909;'};
+const objColor={engajamento:'var(--cyan)',alcance:'var(--green)',conversao:'var(--orange)',educacao:'var(--yellow)',relacionamento:'var(--purple)'};
+
+function renderContentCalendar(plan, mode){
+  const el=document.getElementById('contentPlanOutput');
+  let posts=plan.plano||[];
+  if(mode==='post') posts=posts.filter(p=>p.tipo==='POST');
+  else if(mode==='carrossel') posts=posts.filter(p=>p.tipo==='CARROSSEL');
+  else if(mode==='reel') posts=posts.filter(p=>p.tipo==='REEL');
+
+  if(mode==='calendar'){
+    // Build 30-day calendar grid
+    const byDay={};
+    posts.forEach(p=>byDay[p.dia]=p);
+    let html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px">';
+    ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'].forEach(d=>html+=`<div style="text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:4px">${d}</div>`);
+    html+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">';
+    // Start from Monday offset (approximate)
+    for(let d=1;d<=30;d++){
+      const p=byDay[d];
+      if(p){
+        html+=`<div onclick="showPostModal(${d})" style="min-height:64px;padding:6px;background:var(--s1);border:1px solid ${typeColor[p.tipo]||'var(--b1)'};border-radius:6px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background='var(--s1)'">
+          <div style="font-size:9px;font-weight:700;color:var(--muted)">${d}</div>
+          <div style="font-size:10px;margin:2px 0">${typeIcon[p.tipo]||''} <span style="font-size:9px;color:${typeColor[p.tipo]};font-weight:700">${p.tipo}</span></div>
+          <div style="font-size:9px;color:var(--dim);line-height:1.3;overflow:hidden;max-height:28px">${(p.titulo||'').slice(0,30)}</div>
+        </div>`;
+      } else {
+        html+=`<div style="min-height:64px;padding:6px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;opacity:.4"><div style="font-size:9px;font-weight:700;color:var(--muted)">${d}</div></div>`;
+      }
+    }
+    html+='</div>';
+    el.innerHTML=html;
+    return;
+  }
+
+  // List/filter view
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px">
+    ${posts.sort((a,b)=>a.dia-b.dia).map(p=>`
+    <div style="background:var(--s1);border:1px solid var(--b1);border-left:3px solid ${typeColor[p.tipo]||'var(--blue)'};border-radius:8px;padding:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:${typeColor[p.tipo]};background:${typeColor[p.tipo]}18;padding:2px 8px;border-radius:4px">${typeIcon[p.tipo]} ${p.tipo}</span>
+        <span style="font-size:11px;color:var(--muted);font-weight:700">Dia ${p.dia}</span>
+        <span style="font-size:9px;padding:2px 6px;border-radius:3px;background:${objColor[p.objetivo]||'var(--s3)'}18;color:${objColor[p.objetivo]||'var(--muted)'}"> ${p.objetivo||''}</span>
+        <span style="font-size:10px;color:var(--muted);margin-left:auto">&#128336; ${p.melhor_horario||''}</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)">${p.titulo}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--cyan);margin-bottom:6px;padding:5px 8px;background:rgba(0,212,255,.06);border-radius:4px;border-left:2px solid var(--cyan)">"${p.gancho||''}"</div>
+      <div style="font-size:11px;color:var(--dim);line-height:1.6;margin-bottom:8px;white-space:pre-wrap">${p.copy||''}</div>
+      ${p.dica_visual?`<div style="font-size:10px;color:var(--muted);padding:5px 8px;background:var(--s2);border-radius:4px;margin-bottom:8px">&#128247; ${p.dica_visual}</div>`:''}
+      <div style="display:flex;flex-wrap:wrap;gap:3px">${(p.hashtags||[]).map(h=>`<span style="font-size:9px;color:var(--blue)">#${h.replace('#','')}</span>`).join(' ')}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function showPostModal(dia){
+  if(!contentPlan)return;
+  const p=(contentPlan.plano||[]).find(x=>x.dia===dia);
+  if(!p)return;
+  // Create a quick popup
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  overlay.innerHTML=`<div style="background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:${typeColor[p.tipo]}">${typeIcon[p.tipo]} ${p.tipo} — Dia ${p.dia}</div>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">&#x2715;</button>
+    </div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">${p.titulo}</div>
+    <div style="font-size:12px;color:var(--cyan);padding:8px;background:rgba(0,212,255,.06);border-radius:6px;margin-bottom:10px;font-weight:700">"${p.gancho}"</div>
+    <div style="font-size:12px;color:var(--dim);line-height:1.7;white-space:pre-wrap;margin-bottom:10px">${p.copy}</div>
+    ${p.dica_visual?`<div style="font-size:11px;color:var(--muted);padding:8px;background:var(--s2);border-radius:6px;margin-bottom:10px">&#128247; Visual: ${p.dica_visual}</div>`:''}
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:8px">
+      <span>&#128336; ${p.melhor_horario}</span><span>Objetivo: ${p.objetivo}</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">${(p.hashtags||[]).map(h=>`<span style="font-size:10px;color:var(--blue)">#${h.replace('#','')}</span>`).join(' ')}</div>
+    <button onclick="copyPost(${dia})" style="margin-top:12px;width:100%" class="btn btn-primary">&#128203; Copiar copy completo</button>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function copyPost(dia){
+  const p=(contentPlan?.plano||[]).find(x=>x.dia===dia);
+  if(!p)return;
+  const text=`${p.gancho}
+
+${p.copy}
+
+${(p.hashtags||[]).map(h=>'#'+h.replace('#','')).join(' ')}`;
+  navigator.clipboard.writeText(text).then(()=>alert('Copy copiado para a area de transferencia!'));
+}
+
+function exportContentPlan(){
+  if(!contentPlan){alert('Gere o planejamento primeiro.');return;}
+  let html='<html><head><meta charset="UTF-8"><style>body{font-family:Arial;font-size:12px;padding:20px} .card{border:1px solid #ddd;padding:12px;margin:8px 0;border-radius:6px;page-break-inside:avoid} .tag{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;margin:2px} h1{font-size:18px} h2{font-size:14px;margin-top:20px} .post{border-left:3px solid #1877F2} .carrossel{border-left:3px solid #b388ff} .reel{border-left:3px solid #ff3860}</style></head><body>';
+  html+=`<h1>Planejamento de Conteudo — ${document.getElementById('igBusiness').value||'Instagram'}</h1>`;
+  html+=`<p>Gerado em ${new Date().toLocaleDateString('pt-BR')}</p>`;
+  (contentPlan.plano||[]).sort((a,b)=>a.dia-b.dia).forEach(p=>{
+    html+=`<div class="card ${p.tipo.toLowerCase()}"><b>Dia ${p.dia} — ${p.tipo}</b> | ${p.objetivo} | ${p.melhor_horario}<br><br><b>${p.titulo}</b><br><i>"${p.gancho}"</i><br><br>${p.copy.replace(/
+/g,'<br>')}<br><br>${p.dica_visual?'Visual: '+p.dica_visual+'<br>':''}<small>${(p.hashtags||[]).map(h=>'#'+h).join(' ')}</small></div>`;
+  });
+  html+='</body></html>';
+  const w=window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(),500);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GOOGLE ADS
+// ═══════════════════════════════════════════════════════════════════════════
+let gConnected=false, gCustomers=[], selGCustomer=null, gCampaigns=[];
+
+async function initGoogleTab(){
+  try{
+    const r=await fetch('/api/google/status').then(r=>r.json());
+    gConnected=r.connected;
+    if(gConnected){
+      document.getElementById('gConnectArea').style.display='none';
+      document.getElementById('gConnectedArea').style.display='flex';
+      document.getElementById('gSetupGuide').style.display='none';
+      await loadGCustomers();
+    }
+    // Check URL params
+    const p=new URLSearchParams(window.location.search);
+    if(p.get('google')==='connected'){
+      gConnected=true;
+      history.replaceState({},'','/dashboard');
+      document.getElementById('gConnectArea').style.display='none';
+      document.getElementById('gConnectedArea').style.display='flex';
+      document.getElementById('gSetupGuide').style.display='none';
+      await loadGCustomers();
+    }
+    if(p.get('google_error')) alert('Erro ao conectar Google Ads: '+p.get('google_error'));
+  }catch(e){console.warn('Google status error:',e.message);}
+}
+
+function connectGoogle(){ location.href='/auth/google'; }
+
+async function loadGCustomers(){
+  try{
+    showLoad('Carregando contas Google Ads...');
+    const r=await fetch('/api/google/customers').then(r=>r.json());
+    if(r.error)throw new Error(r.error);
+    gCustomers=r.customers||[];
+    const sel=document.getElementById('gCustSel');
+    if(!gCustomers.length){sel.innerHTML='<option value="">Nenhuma conta encontrada</option>';hideLoad();return;}
+    sel.innerHTML='<option value="">Selecione a conta...</option>'+gCustomers.map(c=>`<option value="${c.id}">${c.name} (${c.id})</option>`).join('');
+  }catch(e){alert('Erro: '+e.message);}
+  finally{hideLoad();}
+}
+
+async function onGCustChange(){
+  const id=document.getElementById('gCustSel').value;
+  if(!id)return;
+  selGCustomer=id;
+  await loadGoogleMetrics();
+}
+
+async function loadGoogleMetrics(){
+  if(!selGCustomer)return;
+  const dr=document.getElementById('gDateSel').value;
+  showLoad('Carregando dados Google Ads...');
+  try{
+    const [mRes,cRes]=await Promise.all([
+      fetch(`/api/google/customers/${selGCustomer}/metrics?date_range=${dr}`).then(r=>r.json()),
+      fetch(`/api/google/customers/${selGCustomer}/campaigns?date_range=${dr}`).then(r=>r.json())
+    ]);
+    if(mRes.error)throw new Error(mRes.error);
+    gCampaigns=cRes.data||[];
+    renderGoogleMetrics(mRes);
+    renderGoogleCampaigns(gCampaigns);
+    renderGoogleAiAnalysis(mRes,gCampaigns);
+    document.getElementById('gMetricsArea').style.display='block';
+  }catch(e){alert('Erro: '+e.message);}
+  finally{hideLoad();}
+}
+
+function renderGoogleMetrics(m){
+  const spend=parseFloat(m.spend||0);
+  const cust=gCustomers.find(c=>c.id===selGCustomer);
+  const S=cust?.currency==='BRL'?'R$':'$';
+  const roas=parseFloat(m.roas||0);
+  document.getElementById('gMetricsGrid').innerHTML=`
+    <div class="mcard"><div class="mlabel">GASTO TOTAL</div><div class="mval c-blue">${S} ${spend.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">IMPRESSOES</div><div class="mval c-cyan">${fmtN(m.impressions||0)}</div></div>
+    <div class="mcard"><div class="mlabel">CLIQUES</div><div class="mval">${fmtN(m.clicks||0)}</div></div>
+    <div class="mcard"><div class="mlabel">CTR MEDIO</div><div class="mval ${parseFloat(m.ctr||0)>=3?'c-green':parseFloat(m.ctr||0)>=1?'c-orange':'c-red'}">${parseFloat(m.ctr||0).toFixed(2)}%</div><div class="msub">bench Search: 3-5%</div></div>
+    <div class="mcard"><div class="mlabel">CPC MEDIO</div><div class="mval">${S} ${parseFloat(m.avgCpc||0).toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">CPM MEDIO</div><div class="mval c-orange">${S} ${parseFloat(m.avgCpm||0).toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">CONVERSOES</div><div class="mval c-purple">${parseFloat(m.conversions||0).toFixed(0)}</div></div>
+    <div class="mcard"><div class="mlabel">VAL. CONVERSOES</div><div class="mval c-green">${S} ${parseFloat(m.conversionsValue||0).toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">ROAS</div><div class="mval ${roas>=4?'c-green':roas>=2?'c-orange':'c-red'}">${roas.toFixed(2)}x</div><div class="msub">bench Google: 4-8x</div></div>`;
+}
+
+function renderGoogleCampaigns(camps){
+  document.getElementById('gCampCount').textContent=camps.length+' campanhas';
+  const S='R$';
+  const tbody=document.getElementById('gCampTbody');
+  if(!camps.length){tbody.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">Sem campanhas no periodo</td></tr>';return;}
+  tbody.innerHTML=camps.map(row=>{
+    const c=row.campaign||{};
+    const m=row.metrics||{};
+    const budget=row.campaignBudget||{};
+    const spend=parseInt(m.costMicros||0)/1e6;
+    const impr=parseInt(m.impressions||0);
+    const clicks=parseInt(m.clicks||0);
+    const ctr=parseFloat(m.ctr||0)*100;
+    const cpc=parseInt(m.averageCpc||0)/1e6;
+    const conv=parseFloat(m.conversions||0);
+    const convVal=parseFloat(m.conversionsValue||0);
+    const roas=spend>0?convVal/spend:0;
+    const impShare=m.searchImpressionShare?parseFloat(m.searchImpressionShare)*100:null;
+    const statusMap={'ENABLED':'<span style="color:var(--green)">Ativa</span>','PAUSED':'<span style="color:var(--orange)">Pausada</span>','REMOVED':'<span style="color:var(--red)">Removida</span>'};
+    const typeMap={'SEARCH':'Search','DISPLAY':'Display','VIDEO':'Video','SHOPPING':'Shopping','PERFORMANCE_MAX':'PMax','SMART':'Smart'};
+    const rc=roas>=4?'var(--green)':roas>=2?'var(--cyan)':roas>0?'var(--orange)':'var(--dim)';
+    return`<tr>
+      <td style="font-weight:700;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c.name||''}">${c.name||'—'}</td>
+      <td><span style="font-size:10px;padding:2px 5px;background:var(--s2);border:1px solid var(--b1);border-radius:3px">${typeMap[c.advertisingChannelType]||c.advertisingChannelType||'—'}</span></td>
+      <td>${statusMap[c.status]||c.status||'—'}</td>
+      <td style="font-weight:700">${S} ${spend.toFixed(2)}</td>
+      <td>${fmtN(impr)}</td>
+      <td>${fmtN(clicks)}</td>
+      <td style="color:${ctr>=3?'var(--green)':ctr>=1?'var(--orange)':'var(--red)'}">${ctr.toFixed(2)}%</td>
+      <td>${S} ${cpc.toFixed(2)}</td>
+      <td style="color:var(--purple);font-weight:700">${conv>0?conv.toFixed(0):'-'}</td>
+      <td style="color:var(--green);font-weight:700">${convVal>0?S+' '+convVal.toFixed(2):'-'}</td>
+      <td style="font-weight:700;color:${rc}">${roas>0?roas.toFixed(2)+'x':'-'}</td>
+      <td>${impShare!==null?impShare.toFixed(1)+'%':'-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderGoogleAiAnalysis(metrics, camps){
+  const el=document.getElementById('gAiAnalysis');
+  const content=document.getElementById('gAiContent');
+  el.style.display='block';
+  const spend=parseFloat(metrics.spend||0);
+  const roas=parseFloat(metrics.roas||0);
+  const ctr=parseFloat(metrics.ctr||0);
+  const conv=parseFloat(metrics.conversions||0);
+  const S='R$';
+  const insights=[];
+  const actions=[];
+
+  if(ctr<1) { insights.push({t:'CTR abaixo do benchmark de Search (1-5%)',c:'red'}); actions.push('Revise os anuncios de texto — headline e descricao. Adicione extensoes de anuncio (sitelinks, callout, estruturados).'); }
+  else if(ctr>=3) { insights.push({t:`CTR de ${ctr.toFixed(2)}% — acima do benchmark`,c:'green'}); }
+
+  if(roas>0&&roas<2) { insights.push({t:`ROAS de ${roas.toFixed(2)}x abaixo do ideal para Google (4-8x)`,c:'orange'}); actions.push('Revise palavras-chave de baixo desempenho. Adicione palavras-chave negativas. Considere aumentar lances em conversoes de maior valor.'); }
+  else if(roas>=4) { insights.push({t:`ROAS de ${roas.toFixed(2)}x — excelente performance`,c:'green'}); }
+
+  // Impression share
+  const hasLowImpShare=camps.some(row=>{const s=row.metrics?.searchImpressionShare;return s&&parseFloat(s)<0.5;});
+  if(hasLowImpShare){ insights.push({t:'Algumas campanhas com Impression Share baixo (<50%)',c:'orange'}); actions.push('Aumente o orcamento ou melhore o Quality Score dos anuncios para ganhar mais impressoes.'); }
+
+  const pausedWithSpend=camps.filter(row=>row.campaign?.status==='PAUSED'&&parseInt(row.metrics?.costMicros||0)>0);
+  if(pausedWithSpend.length) insights.push({t:`${pausedWithSpend.length} campanhas pausadas tiveram gasto no periodo`,c:'yellow'});
+
+  if(!insights.length) insights.push({t:'Nenhum problema critico detectado — conta saudavel',c:'green'});
+
+  content.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--cyan);margin-bottom:8px">DIAGNOSTICO RAPIDO</div>
+        ${insights.map(i=>{const c=i.c==='green'?'var(--green)':i.c==='red'?'var(--red)':i.c==='orange'?'var(--orange)':'var(--yellow)';return`<div style="display:flex;gap:6px;margin-bottom:6px;font-size:11px"><span style="color:${c};flex-shrink:0">&#9679;</span><span style="color:var(--dim)">${i.t}</span></div>`;}).join('')}
+      </div>
+      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:8px">ACOES RECOMENDADAS</div>
+        ${actions.length?actions.map((a,i)=>`<div style="display:flex;gap:6px;margin-bottom:7px;font-size:11px"><span style="color:var(--orange);font-weight:700;flex-shrink:0">${i+1}.</span><span style="color:var(--dim)">${a}</span></div>`).join(''):'<div style="font-size:11px;color:var(--green)">Nenhuma acao urgente necessaria.</div>'}
+      </div>
+    </div>
+    <div style="margin-top:10px;padding:10px 12px;background:rgba(24,119,242,.06);border:1px solid rgba(24,119,242,.15);border-radius:8px;font-size:11px;color:var(--dim)">
+      <strong style="color:var(--blue)">Diferenca Meta vs Google:</strong> Google Search tem CTR benchmark de 3-5% (intencao de compra ativa). Meta tem CTR 0.9-1.5% (interrupcao). Compare ROAS separadamente — Google converte mais rapido mas CPC e mais alto.
+    </div>`;
+}
 
 init();
 </script>
