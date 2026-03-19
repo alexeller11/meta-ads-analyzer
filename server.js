@@ -280,234 +280,281 @@ app.post('/api/analyze', auth, async (req, res) => {
   }
 });
 
-// ─── MOTOR DE ANÁLISE POR REGRAS ─────────────────────────────────────────────
+// ─── MOTOR ESTRATÉGICO DE ANÁLISE (v3 — Estrategista Expert) ─────────────────
 
 function runAnalysisEngine(accountData, campaigns, metrics, previousRun, dateRange) {
-  const { avgCtr, avgCpc, avgCpm, avgFrequency, totalSpend, totalImpressions, totalClicks, totalReach, activeCampaigns, totalCampaigns } = metrics;
-  const currency = accountData.currency === 'BRL' ? 'R$' : accountData.currency === 'USD' ? '$' : (accountData.currency || 'R$');
+  const {
+    avgCtr, avgCpc, avgCpm, avgFrequency,
+    totalSpend, totalImpressions, totalClicks, totalReach,
+    activeCampaigns, totalCampaigns
+  } = metrics;
 
-  // ── Score de saúde ────────────────────────────────────────────────────────
+  const S = accountData.currency === 'BRL' ? 'R$' : accountData.currency === 'USD' ? '$' : (accountData.currency || 'R$');
+  const isBRL = accountData.currency === 'BRL';
+
+  // ── Benchmarks contextuais por moeda ────────────────────────────────────
+  // BRL: mercado BR é mais competitivo — CPCs e CPMs maiores
+  const bench = isBRL
+    ? { ctrBom: 1.0, ctrExc: 2.0, cpcBom: 3.0, cpcAlto: 7.0, cpmBom: 20, cpmAlto: 45, freqMax: 3.5, freqCrit: 5.0, roasBom: 2.0, roasExc: 4.0 }
+    : { ctrBom: 0.9, ctrExc: 1.5, cpcBom: 1.5, cpcAlto: 4.0, cpmBom: 10, cpmAlto: 25, freqMax: 3.5, freqCrit: 5.0, roasBom: 2.0, roasExc: 4.0 };
+
+  // ── Score de saúde — multidimensional ────────────────────────────────────
   let score = 100;
-  const problemas = [];
+  const issues = []; // {metric, severity, msg}
 
-  // CTR
-  if (avgCtr < 0.3)       { score -= 25; problemas.push('CTR crítico (abaixo de 0,3%)'); }
-  else if (avgCtr < 0.8)  { score -= 15; problemas.push('CTR abaixo do ideal'); }
-  else if (avgCtr < 1.0)  { score -= 8; }
+  // CTR (peso 25) — eficiência do criativo
+  if      (avgCtr >= bench.ctrExc) { /* ótimo */ }
+  else if (avgCtr >= bench.ctrBom) { score -= 5; }
+  else if (avgCtr >= 0.5)          { score -= 15; issues.push({metric:'CTR', severity:'media', msg:`CTR de ${avgCtr.toFixed(2)}% abaixo do benchmark de ${bench.ctrBom}%`}); }
+  else if (avgCtr >= 0.3)          { score -= 22; issues.push({metric:'CTR', severity:'alta', msg:`CTR crítico: ${avgCtr.toFixed(2)}% — criativo não está engajando`}); }
+  else                              { score -= 28; issues.push({metric:'CTR', severity:'critica', msg:`CTR gravíssimo: ${avgCtr.toFixed(2)}% — trocar criativos é urgente`}); }
 
-  // Frequência
-  if (avgFrequency > 5)   { score -= 20; problemas.push('Frequência muito alta — saturação de audiência'); }
-  else if (avgFrequency > 3.5) { score -= 12; problemas.push('Frequência elevada — risco de saturação'); }
-  else if (avgFrequency > 2.5) { score -= 5; }
+  // Frequência (peso 20) — saturação
+  if      (avgFrequency > bench.freqCrit) { score -= 20; issues.push({metric:'Freq', severity:'critica', msg:`Frequência ${avgFrequency.toFixed(1)}x — público saturado`}); }
+  else if (avgFrequency > bench.freqMax)  { score -= 12; issues.push({metric:'Freq', severity:'alta', msg:`Frequência ${avgFrequency.toFixed(1)}x — início de saturação`}); }
+  else if (avgFrequency > 2.5)            { score -= 4; }
+  else if (avgFrequency < 1.2 && totalSpend > 100) { score -= 6; issues.push({metric:'Freq', severity:'baixa', msg:`Frequência ${avgFrequency.toFixed(1)}x muito baixa — público muito amplo ou verba insuficiente`}); }
 
-  // CPC
-  if (avgCpc > 10)        { score -= 15; problemas.push('CPC muito alto'); }
-  else if (avgCpc > 5)    { score -= 8; }
+  // CPC (peso 15) — eficiência de custo
+  if      (avgCpc > bench.cpcAlto * 1.5) { score -= 15; issues.push({metric:'CPC', severity:'alta', msg:`CPC ${S} ${avgCpc.toFixed(2)} — muito acima do ideal`}); }
+  else if (avgCpc > bench.cpcAlto)        { score -= 8; issues.push({metric:'CPC', severity:'media', msg:`CPC ${S} ${avgCpc.toFixed(2)} elevado`}); }
+  else if (avgCpc > bench.cpcBom)         { score -= 3; }
 
-  // CPM
-  if (avgCpm > 60)        { score -= 12; problemas.push('CPM elevado — audiência muito disputada'); }
-  else if (avgCpm > 35)   { score -= 6; }
+  // CPM (peso 10) — custo de alcance
+  if      (avgCpm > bench.cpmAlto * 1.5) { score -= 10; issues.push({metric:'CPM', severity:'media', msg:`CPM ${S} ${avgCpm.toFixed(2)} — leilão muito disputado`}); }
+  else if (avgCpm > bench.cpmAlto)        { score -= 5; }
 
-  // Campanhas ativas vs total
-  const pctAtivas = totalCampaigns > 0 ? activeCampaigns / totalCampaigns : 1;
-  if (pctAtivas < 0.3 && totalCampaigns > 2) { score -= 10; problemas.push('Maioria das campanhas pausadas'); }
+  // Ativação (peso 10) — conta parada
+  if (totalSpend === 0)                                { score -= 30; issues.push({metric:'Ativação', severity:'critica', msg:'Sem gasto no período — conta sem veiculação'}); }
+  else if (activeCampaigns === 0 && totalCampaigns > 0){ score -= 20; issues.push({metric:'Ativação', severity:'critica', msg:'Todas as campanhas pausadas'}); }
+  else if (activeCampaigns / Math.max(totalCampaigns,1) < 0.15) { score -= 8; issues.push({metric:'Ativação', severity:'media', msg:'Menos de 15% das campanhas ativas'}); }
 
-  // Sem gasto
-  if (totalSpend === 0)   { score -= 30; problemas.push('Sem investimento no período'); }
+  // Alcance (peso 5) — diversificação
+  const ctr_real = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+  if (Math.abs(ctr_real - avgCtr) > 0.5 && totalImpressions > 10000) {
+    score -= 3; // pequena penalidade por inconsistência de dados
+  }
 
   score = Math.max(0, Math.min(100, score));
 
-  let nivel_saude, tendencia = 'sem_historico', variacao_score = null, resumo_historico = 'Primeira análise registrada.';
+  // ── Nível e tendência ────────────────────────────────────────────────────
+  const nivel_saude = score >= 80 ? 'Excelente' : score >= 65 ? 'Bom' : score >= 45 ? 'Atenção' : score >= 25 ? 'Crítico' : 'Emergência';
+  let tendencia = 'sem_historico', variacao_score = null;
+  let resumo_historico = 'Primeira análise registrada. A partir de agora o sistema acompanha a evolução da conta.';
 
-  if (score >= 80)      nivel_saude = 'Excelente';
-  else if (score >= 60) nivel_saude = 'Bom';
-  else if (score >= 40) nivel_saude = 'Atenção';
-  else                  nivel_saude = 'Crítico';
-
-  // Comparação histórica
-  if (previousRun && previousRun.health_score != null) {
+  if (previousRun?.health_score != null) {
     variacao_score = score - previousRun.health_score;
-    tendencia = variacao_score > 3 ? 'melhora' : variacao_score < -3 ? 'piora' : 'estavel';
-    const diff = variacao_score > 0 ? `subiu ${variacao_score} pontos` : variacao_score < 0 ? `caiu ${Math.abs(variacao_score)} pontos` : 'manteve estável';
-    const dataAnterior = new Date(previousRun.created_at).toLocaleDateString('pt-BR');
-    resumo_historico = `Score ${diff} em relação à análise de ${dataAnterior} (era ${previousRun.health_score}pts).`;
+    tendencia = variacao_score > 5 ? 'melhora' : variacao_score < -5 ? 'piora' : 'estavel';
+    const dt = new Date(previousRun.created_at).toLocaleDateString('pt-BR');
+    const diff = variacao_score > 0 ? `subiu ${variacao_score} pts` : variacao_score < 0 ? `caiu ${Math.abs(variacao_score)} pts` : 'estável';
+    resumo_historico = `Score ${diff} vs análise de ${dt} (era ${previousRun.health_score} pts). ${
+      tendencia === 'melhora' ? 'As otimizações estão surtindo efeito.' :
+      tendencia === 'piora'   ? 'Atenção: a conta está piorando — revise as ações tomadas.' :
+      'Conta estável. Hora de testar novas abordagens para crescer.'
+    }`;
   }
 
-  const pontos_principais = problemas.length > 0
-    ? problemas.slice(0, 3)
+  const pontos_principais = issues.length > 0
+    ? issues.filter(i => i.severity !== 'baixa').slice(0, 3).map(i => i.msg)
     : score >= 80
-      ? ['Conta com boa performance geral', 'Métricas dentro dos benchmarks', 'Continue monitorando tendências']
-      : ['Verifique as otimizações sugeridas', 'Acompanhe as métricas semanalmente'];
+    ? ['Performance sólida — métricas dentro ou acima dos benchmarks', 'Foco em escalar o que está funcionando', 'Continue testando novos públicos e criativos']
+    : ['Verifique as otimizações prioritárias abaixo', 'Execute as ações críticas antes de aumentar verba'];
 
-  // ── Métricas comparativas ─────────────────────────────────────────────────
-  const metricas_comparativas = [
-    {
-      nome: 'CTR Médio',
-      valor_atual: `${avgCtr.toFixed(2)}%`,
-      valor_anterior: previousRun ? `${Number(previousRun.avg_ctr).toFixed(2)}%` : null,
-      variacao_pct: previousRun && previousRun.avg_ctr > 0 ? (((avgCtr - previousRun.avg_ctr) / previousRun.avg_ctr) * 100).toFixed(1) : null,
-      benchmark: '1–3%',
-      status: avgCtr >= 1 ? 'acima' : avgCtr >= 0.5 ? 'dentro' : 'abaixo',
-      interpretacao: avgCtr >= 1 ? 'Bom engajamento do criativo com o público.' : avgCtr >= 0.5 ? 'CTR aceitável, mas há espaço para melhorar criativos.' : 'CTR baixo — o criativo ou segmentação precisa de revisão urgente.'
-    },
-    {
-      nome: 'CPC Médio',
-      valor_atual: `${currency} ${avgCpc.toFixed(2)}`,
-      valor_anterior: previousRun ? `${currency} ${Number(previousRun.avg_cpc).toFixed(2)}` : null,
-      variacao_pct: previousRun && previousRun.avg_cpc > 0 ? (((avgCpc - previousRun.avg_cpc) / previousRun.avg_cpc) * 100).toFixed(1) : null,
-      benchmark: `${currency} 1,00 – 4,00`,
-      status: avgCpc <= 4 ? 'dentro' : avgCpc <= 8 ? 'abaixo' : 'abaixo',
-      interpretacao: avgCpc <= 4 ? 'Custo por clique eficiente.' : avgCpc <= 8 ? 'CPC moderado, monitore.' : 'CPC elevado — revise lances e segmentação.'
-    },
-    {
-      nome: 'CPM Médio',
-      valor_atual: `${currency} ${metrics.avgCpm.toFixed(2)}`,
-      valor_anterior: previousRun ? `${currency} ${Number(previousRun.avg_cpm).toFixed(2)}` : null,
-      variacao_pct: previousRun && previousRun.avg_cpm > 0 ? (((metrics.avgCpm - previousRun.avg_cpm) / previousRun.avg_cpm) * 100).toFixed(1) : null,
-      benchmark: `${currency} 10 – 35`,
-      status: metrics.avgCpm <= 35 ? 'dentro' : 'abaixo',
-      interpretacao: metrics.avgCpm <= 35 ? 'Custo de alcance adequado.' : metrics.avgCpm <= 60 ? 'CPM acima do ideal — audiência competitiva.' : 'CPM muito alto — segmentação pode estar muito restrita.'
-    },
-    {
-      nome: 'Frequência Média',
-      valor_atual: `${avgFrequency.toFixed(2)}x`,
-      valor_anterior: previousRun ? `${Number(previousRun.avg_frequency).toFixed(2)}x` : null,
-      variacao_pct: previousRun && previousRun.avg_frequency > 0 ? (((avgFrequency - previousRun.avg_frequency) / previousRun.avg_frequency) * 100).toFixed(1) : null,
-      benchmark: '1,5 – 3,0x',
-      status: avgFrequency <= 3 ? 'dentro' : 'abaixo',
-      interpretacao: avgFrequency <= 1.5 ? 'Frequência baixa — público amplo ou verba reduzida.' : avgFrequency <= 3 ? 'Frequência ideal.' : avgFrequency <= 5 ? 'Frequência alta — risco de saturação do público.' : 'Frequência crítica — público saturado, troque criativo ou expanda audiência.'
-    }
-  ];
-
-  // ── Análise por campanha ──────────────────────────────────────────────────
+  // ── Análise por campanha — estratégica ───────────────────────────────────
   const campanhas_analise = campaigns
     .filter(c => c.impressions > 0 || c.status === 'ACTIVE')
     .map(c => {
       let campScore = 100;
-      let problema = '';
-      let acao = '';
+      let problema = '', acao = '', diagnostico_completo = '';
 
-      if (c.frequency > 5)      { campScore -= 30; problema = 'Frequência crítica — público esgotado'; acao = 'Pause esta campanha e crie um novo conjunto de anúncios com público diferente ou lookalike.'; }
-      else if (c.frequency > 3.5) { campScore -= 15; problema = 'Frequência elevada — início de saturação'; acao = 'Expanda o público ou adicione novos criativos para a campanha.'; }
+      // Saturação — maior risco operacional
+      if (c.frequency > bench.freqCrit) {
+        campScore -= 35;
+        problema = `Frequência crítica: ${c.frequency.toFixed(1)}x — público esgotado`;
+        acao = `PAUSAR imediatamente os conjuntos com frequência > ${bench.freqCrit}x. Criar novo conjunto com público Lookalike 2-3% baseado nos compradores. Aguardar 72h antes de reativar com público novo.`;
+        diagnostico_completo = `A frequência elevadíssima indica que cada pessoa do público vê o anúncio ${c.frequency.toFixed(0)} vezes. Isso causa "banner blindness" (o cérebro ignora automaticamente), queda de CTR e aumento de CPM. O algoritmo penaliza anúncios que as pessoas ocultam.`;
+      } else if (c.frequency > bench.freqMax) {
+        campScore -= 18;
+        problema = `Frequência elevada: ${c.frequency.toFixed(1)}x — início de saturação`;
+        acao = `Expandir público em 30-50% (ampliar faixa etária, adicionar interesses similares ou ativar Advantage+ Audience). Alternar criativos — inserir 2-3 variações novas no mesmo conjunto.`;
+        diagnostico_completo = `Frequência acima de ${bench.freqMax}x começa a gerar fadiga. CTR tende a cair nas próximas semanas se não houver ação. Prioridade: renovação de criativo antes de expandir público.`;
+      }
 
-      if (c.ctr < 0.3 && c.impressions > 1000) { campScore -= 25; problema = problema || 'CTR muito baixo'; acao = acao || 'Teste novos criativos — imagens diferentes, copy mais direto ou oferta mais clara.'; }
-      else if (c.ctr < 0.8 && c.impressions > 1000) { campScore -= 10; problema = problema || 'CTR abaixo do benchmark'; acao = acao || 'Teste variações do criativo — headline e imagem principais.'; }
+      // CTR — qualidade do criativo vs público
+      if (c.ctr < 0.3 && c.impressions > 5000) {
+        campScore -= 30;
+        problema = problema || `CTR gravíssimo: ${c.ctr.toFixed(2)}% (bench: ${bench.ctrBom}%)`;
+        acao = acao || `Pausar os anúncios atuais. Criar 3 variações totalmente diferentes: 1) vídeo de 6-15s mostrando o produto/serviço em uso, 2) imagem com depoimento de cliente real, 3) oferta direta com preço ou benefício em destaque. Testar A/B por 5-7 dias.`;
+        diagnostico_completo = diagnostico_completo || `CTR abaixo de 0,3% com volume significativo indica desalinhamento criativo x público. O anúncio pode não estar chamando atenção no feed, ou o público não reconhece relevância. Solução: testar ângulos completamente novos.`;
+      } else if (c.ctr < bench.ctrBom && c.impressions > 2000) {
+        campScore -= 12;
+        problema = problema || `CTR de ${c.ctr.toFixed(2)}% abaixo do benchmark de ${bench.ctrBom}%`;
+        acao = acao || `Testar headline diferente — usar pergunta direta ou número específico (ex: "Economize R$X" ou "3 motivos para..."). Testar thumbnail/imagem inicial diferente. Revisar o hook dos primeiros 3 segundos se for vídeo.`;
+      }
 
-      if (c.cpc > 10) { campScore -= 20; problema = problema || 'CPC muito alto'; acao = acao || 'Reduza o lance máximo ou mude para estratégia de lance automático.'; }
+      // CPC — eficiência de custo
+      if (c.cpc > bench.cpcAlto) {
+        campScore -= 15;
+        problema = problema || `CPC alto: ${S} ${c.cpc.toFixed(2)}`;
+        acao = acao || `Verificar se a estratégia de lance é automática (Menor Custo). Se sim: ampliar o público — públicos pequenos (<100k) leilão mais competitivo = CPC maior. Ativar Advantage+ Placements para o algoritmo encontrar inventário mais barato.`;
+        diagnostico_completo = diagnostico_completo || `CPC alto pode ter 3 causas: 1) público muito pequeno e disputado, 2) criativo com baixo relevance score (o Meta cobra mais de quem o público ignora), 3) objetivo de campanha não alinhado com a ação esperada.`;
+      }
 
-      if (c.status === 'PAUSED' && c.spend > 0) { problema = problema || 'Campanha pausada com histórico de gasto'; acao = acao || 'Avalie se vale reativar com orçamento ajustado.'; }
+      // ROAS (se disponível nas campanhas)
+      const campActions = c.actions || [];
+      const getAct = (arr, type) => { const f = (arr||[]).find(a => a.action_type === type); return f ? parseFloat(f.value || 0) : 0; };
+      const campRev = getAct(c.action_values, 'offsite_conversion.fb_pixel_purchase');
+      const campRoas = c.spend > 0 ? campRev / c.spend : 0;
+      if (campRoas > 0 && campRoas < bench.roasBom && c.spend > 50) {
+        campScore -= 10;
+        problema = problema || `ROAS baixo: ${campRoas.toFixed(2)}x (mín. ideal: ${bench.roasBom}x)`;
+        acao = acao || `Revisar funil de conversão — a campanha gera cliques mas perde na conversão. Verificar: landing page mobile, tempo de carregamento, clareza da oferta e processo de checkout. Testar anúncio com preço/oferta mais explícita.`;
+      }
 
-      if (!problema) { problema = 'Sem problemas críticos identificados'; acao = 'Monitore as métricas e teste novos criativos para escalar.'; }
+      // Campanha pausada com histórico de gasto
+      if (c.status === 'PAUSED' && c.spend > 0) {
+        problema = problema || 'Campanha pausada com histórico de gasto no período';
+        acao = acao || `Analisar o motivo da pausa: foi por baixo desempenho ou proposital? Se tinha boa performance antes, considerar reativar com criativo atualizado. Se foi por frequência alta, renovar público antes de reativar.`;
+      }
 
-      campScore = Math.max(0, campScore);
-      let status_performance = campScore >= 80 ? 'Excelente' : campScore >= 60 ? 'Bom' : campScore >= 40 ? 'Atenção' : 'Crítico';
+      if (!problema) {
+        problema = 'Performance dentro dos parâmetros — sem problemas críticos';
+        acao = `Documentar o que está funcionando (criativo, público, oferta) e testar escalar o orçamento em +20-30% a cada 3-5 dias enquanto o ROAS/CPL se mantiver estável.`;
+      }
+
+      campScore = Math.max(0, Math.min(100, campScore));
+      const status_performance = campScore >= 80 ? 'Excelente' : campScore >= 65 ? 'Bom' : campScore >= 45 ? 'Atenção' : 'Crítico';
 
       return {
         nome: c.name,
         status_performance,
-        gasto: `${currency} ${c.spend.toFixed(2)}`,
+        gasto: `${S} ${c.spend.toFixed(2)}`,
         ctr: `${c.ctr.toFixed(2)}%`,
-        cpc: `${currency} ${c.cpc.toFixed(2)}`,
+        cpc: `${S} ${c.cpc.toFixed(2)}`,
         frequencia: c.frequency.toFixed(2),
         problema_principal: problema,
-        acao_imediata: acao
+        acao_imediata: acao,
+        diagnostico: diagnostico_completo || null
       };
     });
 
-  // ── Otimizações prioritárias ──────────────────────────────────────────────
+  // ── Otimizações estratégicas priorizadas ─────────────────────────────────
   const otimizacoes = [];
   let pri = 1;
 
-  if (avgFrequency > 3.5) {
+  // 1. Criativo (causa raiz mais comum de baixa performance)
+  if (avgCtr < bench.ctrBom && totalImpressions > 5000) {
+    const potencial = avgCtr > 0 ? ((bench.ctrBom / avgCtr - 1) * 100).toFixed(0) : 100;
     otimizacoes.push({
       prioridade: pri++,
-      titulo: 'Combater saturação de audiência',
-      categoria: 'Audiência',
-      impacto_esperado: 'Alto',
-      descricao: `Frequência média de ${avgFrequency.toFixed(1)}x indica que o mesmo público está vendo o anúncio repetidas vezes, causando queda no CTR e aumento no CPC.`,
-      acao: '1. Acesse o Gerenciador de Anúncios. 2. Nos conjuntos de anúncios afetados, clique em Editar. 3. Em Público, expanda a faixa etária ou interesses. 4. Ou crie um Público Semelhante (Lookalike) baseado nos compradores/leads existentes. 5. Salve e monitore a frequência por 5 dias.',
-      prazo: 'Imediato'
-    });
-  }
-
-  if (avgCtr < 0.8 && totalImpressions > 5000) {
-    otimizacoes.push({
-      prioridade: pri++,
-      titulo: 'Melhorar CTR com novos criativos',
+      titulo: 'Renovar criativos — causa raiz do CTR baixo',
       categoria: 'Criativo',
       impacto_esperado: 'Alto',
-      descricao: `CTR médio de ${avgCtr.toFixed(2)}% está abaixo do benchmark de 1%. Isso significa que o criativo atual não está chamando atenção suficiente no feed.`,
-      acao: '1. Crie pelo menos 3 variações de imagem/vídeo para a campanha principal. 2. Teste headlines diferentes — uma com pergunta, uma com número, uma com benefício direto. 3. Ative o Teste A/B nativo do Meta para medir qual performa melhor. 4. Após 7 dias, pause os criativos com CTR mais baixo.',
+      descricao: `CTR de ${avgCtr.toFixed(2)}% vs benchmark de ${bench.ctrBom}%. Aumentar CTR para ${bench.ctrBom}% pode reduzir CPM efetivo em até ${potencial}% sem mudar verba. Cada 0,1pp de melhora no CTR = algoritmo entrega para público mais qualificado e mais barato.`,
+      acao: `1. Identificar os 2-3 anúncios com maior gasto e CTR mais baixo — esses são os que mais drenam verba desnecessariamente.\n2. Para cada um, criar 3 variações: (a) vídeo UGC/depoimento real de cliente, (b) imagem com copy focada no problema que resolve, (c) antes/depois ou resultado concreto.\n3. Ativar Teste A/B nativo do Meta (Ferramentas > Teste A/B) com orçamento dividido igualmente.\n4. Após 7 dias com mínimo de 2.000 impressões por variação, pausar os perdedores.\n5. Sempre ter pelo menos 3 criativos ativos por conjunto para o algoritmo otimizar.`,
       prazo: 'Esta semana'
     });
   }
 
-  if (avgCpc > 6) {
+  // 2. Saturação — urgência operacional
+  if (avgFrequency > bench.freqMax) {
+    const diasEstimados = avgFrequency > bench.freqCrit ? 3 : 7;
     otimizacoes.push({
       prioridade: pri++,
-      titulo: 'Reduzir custo por clique',
-      categoria: 'Lance',
+      titulo: `Combater saturação — ${avgFrequency.toFixed(1)}x de frequência`,
+      categoria: 'Audiência',
       impacto_esperado: 'Alto',
-      descricao: `CPC médio de ${currency} ${avgCpc.toFixed(2)} está acima do ideal. Pode ser causado por lances muito altos ou segmentação muito específica aumentando a competição.`,
-      acao: '1. Nos conjuntos com CPC alto, mude a estratégia de lance para "Menor custo" (automático). 2. Se já estiver automático, amplie o público removendo restrições de interesse desnecessárias. 3. Ative a opção "Expansão de público detalhado" nas configurações do conjunto.',
-      prazo: 'Esta semana'
-    });
-  }
-
-  if (campaigns.filter(c => c.status === 'ACTIVE').length === 0 && campaigns.length > 0) {
-    otimizacoes.push({
-      prioridade: pri++,
-      titulo: 'Reativar campanhas ou criar novas',
-      categoria: 'Estrutura',
-      impacto_esperado: 'Alto',
-      descricao: 'Nenhuma campanha está ativa no período analisado. A conta está sem veicular anúncios.',
-      acao: '1. Acesse o Gerenciador de Anúncios. 2. Revise as campanhas pausadas e identifique as que tiveram melhor histórico. 3. Ajuste o orçamento e reative. 4. Se necessário, crie uma nova campanha do zero com objetivo de Conversão ou Tráfego.',
+      descricao: `Frequência de ${avgFrequency.toFixed(1)}x significa que cada pessoa do público viu os anúncios ~${Math.round(avgFrequency)} vezes no período. Acima de ${bench.freqMax}x o CTR começa a cair exponencialmente e o CPM sobe — o algoritmo percebe que o público está cansado. Sem ação em ${diasEstimados} dias, o CPL vai subir 30-60%.`,
+      acao: `1. IMEDIATO: Criar novo conjunto de anúncios com público Lookalike 2% baseado nos compradores (ou engajadores se não houver compras).\n2. Usar Advantage+ Audience nos novos conjuntos — deixar o algoritmo encontrar o público sozinho com orientação mínima.\n3. Activar Audience Network como posicionamento adicional para dividir a frequência entre mais inventários.\n4. Nos conjuntos existentes saturados: rodar por mais 3 dias para o algoritmo otimizar os novos e então pausar os antigos.\n5. Meta: manter frequência entre 1,5x e 3,0x por semana para campanhas de awareness, e < 2x para conversão.`,
       prazo: 'Imediato'
     });
   }
 
-  if (avgCpm > 40) {
+  // 3. ROAS / Funil de conversão
+  const temGasto = totalSpend > 0;
+  if (temGasto && avgCpc > bench.cpcBom) {
     otimizacoes.push({
       prioridade: pri++,
-      titulo: 'Reduzir CPM com ajustes de segmentação',
-      categoria: 'Segmentação',
-      impacto_esperado: 'Médio',
-      descricao: `CPM de ${currency} ${metrics.avgCpm.toFixed(2)} indica alta competição no leilão. O público pode estar muito restrito ou em horário/posicionamento caro.`,
-      acao: '1. No Gerenciador de Anúncios, vá em Conjunto de Anúncios > Editar. 2. Em Posicionamentos, mude de "Manual" para "Advantage+ Placements" (automático). 3. Revise a faixa etária e amplie se possível. 4. Evite segmentar interesses muito específicos — prefira públicos de 500 mil+ pessoas.',
+      titulo: 'Otimizar custo por resultado — CPC/CPL acima do ideal',
+      categoria: 'Funil',
+      impacto_esperado: 'Alto',
+      descricao: `CPC de ${S} ${avgCpc.toFixed(2)} pode estar escondendo um problema maior: anúncio gera cliques mas o site/landing page não converte. Antes de mexer nos anúncios, é essencial medir onde o usuário abandona o funil.`,
+      acao: `1. Verificar se o Pixel do Meta está instalado e registrando os eventos corretos (ViewContent, AddToCart, Purchase/Lead).\n2. No Gerenciador de Eventos (pixel), confirmar que os eventos disparam corretamente acessando a página de vendas/contato.\n3. Testar a landing page no celular (85%+ do tráfego Meta vem de mobile): velocidade < 3s, formulário funcionando, botão visível sem scroll.\n4. Criar um conjunto com objetivo de Conversão (não de tráfego) — o Meta consegue encontrar pessoas mais propensas a converter.\n5. Se CPC é alto mas conversão é boa: o problema é só custo — testar público mais amplo (Advantage+ Shopping ou Broad sem interesse).`,
       prazo: 'Esta semana'
     });
   }
 
-  // Sempre adicionar otimização de retargeting como oportunidade base
+  // 4. Estrutura de campanhas
+  const pctAtivas = totalCampaigns > 0 ? activeCampaigns / totalCampaigns : 1;
+  if (pctAtivas < 0.5 && totalCampaigns > 3) {
+    otimizacoes.push({
+      prioridade: pri++,
+      titulo: 'Auditar e reorganizar estrutura de campanhas',
+      categoria: 'Estrutura',
+      impacto_esperado: 'Médio',
+      descricao: `Apenas ${(pctAtivas * 100).toFixed(0)}% das ${totalCampaigns} campanhas está ativa. Muitas campanhas paradas fragmentam o histórico de aprendizado do algoritmo e dificultam a análise. A Meta favorece contas com estrutura limpa.`,
+      acao: `1. Auditar as ${totalCampaigns - activeCampaigns} campanhas pausadas: identificar quais tiveram melhor histórico de ROAS/CPL.\n2. Arquivar (não pausar) campanhas sem resultados relevantes — limpeza da interface e do histórico.\n3. Consolidar campanhas similares: em vez de 5 campanhas pequenas, ter 2-3 maiores com mais verba por conjunto (mínimo R$30-50/dia por conjunto para o algoritmo aprender).\n4. Estrutura recomendada: 1 campanha de Conversão + 1 de Retargeting + 1 de Topo de Funil/Reconhecimento.`,
+      prazo: 'Este mês'
+    });
+  }
+
+  // 5. Retargeting — quase sempre faltando
   otimizacoes.push({
     prioridade: pri++,
-    titulo: 'Estruturar campanha de retargeting',
-    categoria: 'Estrutura',
+    titulo: 'Implementar / otimizar campanha de Retargeting',
+    categoria: 'Funil',
     impacto_esperado: 'Alto',
-    descricao: 'Pessoas que já visitaram seu site ou interagiram com seus anúncios convertem em média 3x mais. Se não há campanha de retargeting ativa, este é um gap importante.',
-    acao: '1. No Gerenciador de Anúncios, vá em Públicos > Criar Público > Público Personalizado. 2. Selecione "Site" como fonte e configure para visitantes dos últimos 30 dias. 3. Crie uma campanha separada segmentando apenas esse público. 4. Use criativos com prova social (depoimentos, avaliações) ou oferta especial.',
-    prazo: 'Este mês'
+    descricao: `Visitantes do site que viram um anúncio mas não converteram têm 3-5x mais chance de comprar do que público frio. Uma campanha de retargeting bem estruturada normalmente tem ROAS 2-4x maior que campanhas de aquisição, com CPL 40-60% menor.`,
+    acao: `1. Criar Público Personalizado: Públicos > Criar Público > Site > Todos os visitantes dos últimos 30 dias.\n2. Criar audiences mais específicas: Visitantes da página de produto (últimos 14 dias) e Adicionou ao carrinho mas não comprou (últimos 7 dias).\n3. Campanha separada só para esses públicos — orçamento menor (20-30% do budget total de aquisição).\n4. Criativos diferentes: usar prova social (avaliações, depoimentos), oferta especial ou urgência (frete grátis, desconto limitado).\n5. Excluir compradores recentes para não desperdiçar verba em quem já converteu.`,
+    prazo: 'Esta semana'
   });
 
+  // 6. Escala inteligente (se performance boa)
+  if (avgCtr >= bench.ctrBom && avgCpc <= bench.cpcBom) {
+    otimizacoes.push({
+      prioridade: pri++,
+      titulo: 'Escalar budget de forma inteligente',
+      categoria: 'Crescimento',
+      impacto_esperado: 'Alto',
+      descricao: `Conta com boa performance é oportunidade de escalar. Aumentar budget de forma incorreta pode destruir o aprendizado do algoritmo (fase de aprendizado reinicia). A regra de ouro: nunca mais de 20-30% de aumento por vez.`,
+      acao: `1. Regra dos 20%: aumentar budget em no máximo 20-30% a cada 3-5 dias nos conjuntos com melhor ROAS.\n2. Para escalas maiores: duplicar o conjunto de anúncios (não aumentar o budget do original) — o algoritmo começa uma nova fase de aprendizado sem destruir o histórico do conjunto original.\n3. Horizontal scaling: criar novos conjuntos com públicos diferentes (Lookalike 3%, 5%, interesses não testados) usando os mesmos criativos campeões.\n4. Monitorar o CPL/ROAS a cada 24h durante a escala — se piorar mais de 20%, voltar ao budget anterior.`,
+      prazo: 'Esta semana'
+    });
+  }
+
+  // 7. CPM alto — leilão / posicionamento
+  if (avgCpm > bench.cpmAlto) {
+    otimizacoes.push({
+      prioridade: pri++,
+      titulo: `Reduzir CPM — ${S} ${avgCpm.toFixed(2)} está acima do ideal`,
+      categoria: 'Lances',
+      impacto_esperado: 'Médio',
+      descricao: `CPM alto significa que você está pagando mais para cada 1.000 pessoas alcançadas. Pode ser causado por: público muito restrito e disputado, posicionamentos caros (Stories, Feed principal) ou baixo relevance score do criativo.`,
+      acao: `1. Ativar Advantage+ Placements — o algoritmo automaticamente prioriza posicionamentos com menor CPM.\n2. Adicionar Audience Network e Instagram Explore como posicionamentos — CPM historicamente 30-50% menor.\n3. Se CPM continuar alto com público amplo: o problema é o relevance score — o algoritmo está cobrando mais porque o público está ignorando o anúncio (resolver pelo criativo).\n4. Testar horários de menor competição: entre 13h e 17h no Brasil o CPM tende a ser 10-20% menor que no período noturno.`,
+      prazo: 'Esta semana'
+    });
+  }
+
+  // 8. Teste A/B sistemático — sempre
   otimizacoes.push({
     prioridade: pri++,
-    titulo: 'Ativar testes A/B sistemáticos',
-    categoria: 'Criativo',
+    titulo: 'Sistema contínuo de testes A/B',
+    categoria: 'Metodologia',
     impacto_esperado: 'Médio',
-    descricao: 'Sem testes A/B contínuos, é impossível saber o que realmente funciona. A Meta oferece ferramenta nativa de teste sem custo adicional.',
-    acao: '1. No Gerenciador de Anúncios, clique em "Teste A/B" no menu superior. 2. Escolha a variável a testar: criativo, público ou posicionamento. 3. Configure o orçamento dividido igualmente. 4. Duração mínima de 7 dias para resultado estatisticamente válido. 5. Pause o perdedor e escale o vencedor.',
+    descricao: `Contas que crescem de forma consistente têm uma coisa em comum: testam constantemente. Sem metodologia de teste, é impossível saber o que realmente está causando melhora ou piora — você fica gerenciando por feeling.`,
+    acao: `1. Definir uma variável por teste: criativo OU público OU landing page — nunca mais de uma ao mesmo tempo.\n2. Usar o Teste A/B nativo do Meta (Ferramentas > Teste A/B) — statistically significant.\n3. Mínimo de 7 dias e 50 eventos de conversão por variação para resultado confiável.\n4. Calendário de testes: Semana 1-2 = testar criativo, Semana 3-4 = testar público, Mês 2 = testar landing page/oferta.\n5. Documentar os resultados no sistema de Notas — criar histórico de aprendizados da conta.`,
     prazo: 'Este mês'
   });
 
-  // ── Alertas críticos ──────────────────────────────────────────────────────
+  // ── Alertas críticos ─────────────────────────────────────────────────────
   const alertas = [];
 
-  if (avgFrequency > 5) {
+  if (avgFrequency > bench.freqCrit) {
     alertas.push({
       tipo: 'Saturação',
       severidade: 'Alta',
-      mensagem: `Frequência média de ${avgFrequency.toFixed(1)}x — público completamente saturado. Performance vai cair rapidamente.`,
-      acao_requerida: 'Pause os conjuntos com frequência mais alta hoje mesmo e troque o público.'
+      mensagem: `Frequência de ${avgFrequency.toFixed(1)}x — EMERGÊNCIA: público completamente saturado. CTR vai despencar e CPM vai subir nas próximas 48-72h se não houver ação.`,
+      acao_requerida: 'Criar novo conjunto de anúncios com público diferente HOJE. Pausar os conjuntos com frequência mais alta.'
     });
   }
 
@@ -515,8 +562,8 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun, dateRan
     alertas.push({
       tipo: 'Orçamento',
       severidade: 'Alta',
-      mensagem: 'Nenhum investimento registrado no período selecionado.',
-      acao_requerida: 'Verifique se há campanhas ativas e se o método de pagamento está em dia.'
+      mensagem: 'Conta sem nenhum gasto no período selecionado — possível problema de pagamento, limite atingido ou todas as campanhas pausadas.',
+      acao_requerida: 'Verificar em Configurações > Faturamento se há falha de pagamento. Verificar se limite de gasto da conta foi atingido.'
     });
   }
 
@@ -524,164 +571,187 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun, dateRan
     alertas.push({
       tipo: 'Performance',
       severidade: 'Alta',
-      mensagem: 'Todas as campanhas estão pausadas — conta sem veiculação.',
-      acao_requerida: 'Reative as campanhas de melhor histórico ou crie novas.'
+      mensagem: `${totalCampaigns} campanhas existem mas nenhuma está ativa — conta completamente parada.`,
+      acao_requerida: 'Reativar as campanhas com melhor histórico ou criar uma nova campanha de emergência.'
     });
   }
 
   if (avgCtr < 0.3 && totalImpressions > 10000) {
     alertas.push({
-      tipo: 'Performance',
+      tipo: 'Criativo',
       severidade: 'Alta',
-      mensagem: `CTR de ${avgCtr.toFixed(2)}% com ${(metrics.totalImpressions/1000).toFixed(0)}K impressões — criativo não está engajando.`,
-      acao_requerida: 'Troque os criativos principais com urgência.'
+      mensagem: `CTR de ${avgCtr.toFixed(2)}% com ${(totalImpressions/1000).toFixed(0)}K impressões — o algoritmo vai começar a entregar para público progressivamente pior (penalidade de relevância).`,
+      acao_requerida: 'Pausar ou substituir os criativos principais imediatamente. CPM vai subir se o CTR continuar abaixo de 0,3%.'
     });
   }
 
-  if (avgCpc > 15) {
+  if (avgCpc > bench.cpcAlto * 2) {
     alertas.push({
-      tipo: 'Orçamento',
+      tipo: 'Custo',
       severidade: 'Alta',
-      mensagem: `CPC de ${currency} ${avgCpc.toFixed(2)} — cada clique está custando muito acima do normal.`,
-      acao_requerida: 'Revise a estratégia de lances e segmentação imediatamente.'
+      mensagem: `CPC de ${S} ${avgCpc.toFixed(2)} está ${((avgCpc / bench.cpcAlto - 1) * 100).toFixed(0)}% acima do limite aceitável.`,
+      acao_requerida: 'Revisar estratégia de lances, tamanho de público e relevância dos criativos com urgência.'
     });
   }
 
-  // ── Insights históricos ───────────────────────────────────────────────────
+  // ── Insights históricos — comparativo inteligente ─────────────────────────
   const insights_historicos = [];
 
   if (previousRun) {
-    const ctrAnterior = Number(previousRun.avg_ctr);
-    const cpcAnterior = Number(previousRun.avg_cpc);
-    const freqAnterior = Number(previousRun.avg_frequency);
+    const prev = {
+      ctr: Number(previousRun.avg_ctr),
+      cpc: Number(previousRun.avg_cpc),
+      cpm: Number(previousRun.avg_cpm),
+      freq: Number(previousRun.avg_frequency),
+      spend: Number(previousRun.total_spend)
+    };
 
-    if (Math.abs(avgCtr - ctrAnterior) > 0.1) {
-      const dir = avgCtr > ctrAnterior ? 'subiu' : 'caiu';
-      const diff = Math.abs(avgCtr - ctrAnterior).toFixed(2);
+    const varPct = (cur, old) => old > 0 ? (((cur - old) / old) * 100).toFixed(1) : null;
+
+    if (Math.abs(avgCtr - prev.ctr) > 0.08) {
+      const pct = varPct(avgCtr, prev.ctr);
+      const up = avgCtr > prev.ctr;
       insights_historicos.push({
-        titulo: `CTR ${dir} ${diff} pontos percentuais`,
-        observacao: `CTR foi de ${ctrAnterior.toFixed(2)}% para ${avgCtr.toFixed(2)}% — variação de ${(((avgCtr - ctrAnterior) / (ctrAnterior || 1)) * 100).toFixed(0)}%.`,
-        implicacao: avgCtr > ctrAnterior ? 'Os criativos ou público estão mais alinhados. Continue com a estratégia atual.' : 'Possível saturação de criativo ou público. Revise e teste novas peças.'
+        titulo: `CTR ${up ? 'melhorou' : 'piorou'} ${Math.abs(pct)}%`,
+        observacao: `De ${prev.ctr.toFixed(2)}% para ${avgCtr.toFixed(2)}%.`,
+        implicacao: up
+          ? `Boa notícia: o criativo ou público está mais alinhado. Identifique o que mudou e documente — é o que está funcionando.`
+          : `Sinal de alerta: criativo pode estar saturando. ${avgCtr < bench.ctrBom ? 'Prioridade: renovar criativos.' : 'Monitore nos próximos 7 dias.'}`
       });
     }
 
-    if (Math.abs(avgCpc - cpcAnterior) > 0.5) {
-      const dir = avgCpc > cpcAnterior ? 'aumentou' : 'diminuiu';
+    if (Math.abs(avgCpc - prev.cpc) > 0.3) {
+      const up = avgCpc > prev.cpc;
       insights_historicos.push({
-        titulo: `CPC ${dir} desde a última análise`,
-        observacao: `CPC foi de ${currency} ${cpcAnterior.toFixed(2)} para ${currency} ${avgCpc.toFixed(2)}.`,
-        implicacao: avgCpc < cpcAnterior ? 'Otimizações de lance ou segmentação surtiram efeito.' : 'Aumento de competição no leilão ou queda de relevância do anúncio.'
+        titulo: `CPC ${up ? 'aumentou' : 'caiu'} — ${S} ${prev.cpc.toFixed(2)} → ${S} ${avgCpc.toFixed(2)}`,
+        observacao: `Variação de ${varPct(avgCpc, prev.cpc)}% em relação à análise anterior.`,
+        implicacao: up
+          ? `Causas prováveis: aumento de competição no leilão, queda de relevance score ou público ficando mais restrito. Verificar frequência.`
+          : `Ótimo sinal: otimizações de lance ou melhora de relevance score estão funcionando. Oportunidade de escalar.`
       });
     }
 
-    if (freqAnterior > 0 && Math.abs(avgFrequency - freqAnterior) > 0.3) {
-      const dir = avgFrequency > freqAnterior ? 'cresceu' : 'diminuiu';
+    if (prev.freq > 0 && Math.abs(avgFrequency - prev.freq) > 0.2) {
+      const up = avgFrequency > prev.freq;
       insights_historicos.push({
-        titulo: `Frequência ${dir}`,
-        observacao: `Frequência foi de ${freqAnterior.toFixed(1)}x para ${avgFrequency.toFixed(1)}x.`,
-        implicacao: avgFrequency > freqAnterior ? 'O público está vendo mais vezes — monitore CTR para detectar saturação.' : 'Frequência controlada — público mais fresco.'
+        titulo: `Frequência ${up ? 'cresceu' : 'caiu'}: ${prev.freq.toFixed(1)}x → ${avgFrequency.toFixed(1)}x`,
+        observacao: `Variação de ${varPct(avgFrequency, prev.freq)}%.`,
+        implicacao: up
+          ? avgFrequency > bench.freqMax
+            ? `ATENÇÃO: já passou do limite seguro. Agir antes de nova análise.`
+            : `Tendência de crescimento — monitorar. Se superar ${bench.freqMax}x, será necessário expandir público.`
+          : `Frequência se normalizando — pode ser resultado de expansão de público ou criativo novo. Boa tendência.`
+      });
+    }
+
+    const spendVar = varPct(totalSpend, prev.spend);
+    if (spendVar && Math.abs(parseFloat(spendVar)) > 15) {
+      const up = totalSpend > prev.spend;
+      insights_historicos.push({
+        titulo: `Gasto ${up ? 'aumentou' : 'diminuiu'} ${Math.abs(spendVar)}%`,
+        observacao: `De ${S} ${prev.spend.toFixed(2)} para ${S} ${totalSpend.toFixed(2)} no período.`,
+        implicacao: up
+          ? avgCtr >= bench.ctrBom ? `Escala com boa performance — continue monitorando o CPL/ROAS para garantir que a eficiência se mantém.` : `Mais verba com performance ruim = prejuízo maior. Prioridade: resolver a qualidade antes de escalar.`
+          : `Redução de gasto pode ser intencional (otimização) ou sinal de problema (limite de gasto, campanhas pausadas). Verificar o motivo.`
       });
     }
 
     if (insights_historicos.length === 0) {
       insights_historicos.push({
-        titulo: 'Conta estável em relação à análise anterior',
-        observacao: `Métricas principais sem variação significativa desde ${new Date(previousRun.created_at).toLocaleDateString('pt-BR')}.`,
-        implicacao: 'Estabilidade pode ser positiva. Se os resultados são bons, mantenha. Se são ruins, é hora de testar algo novo.'
+        titulo: 'Conta estável — sem variações significativas',
+        observacao: `Métricas principais com menos de 10% de variação desde ${new Date(previousRun.created_at).toLocaleDateString('pt-BR')}.`,
+        implicacao: `Estabilidade pode ser positiva (performance consistente) ou negativa (estagnação). Se os resultados são bons: manter e testar crescimento. Se são mediocres: é hora de mudança estratégica — mesmo resultado diferente exige abordagem diferente.`
       });
     }
   } else {
     insights_historicos.push({
       titulo: 'Primeira análise registrada',
-      observacao: 'Não há dados históricos anteriores para comparação.',
-      implicacao: 'A partir desta análise, o sistema vai registrar a evolução da conta. Execute análises regularmente para obter comparativos.'
+      observacao: 'Sem histórico anterior para comparação.',
+      implicacao: 'A partir de agora o sistema registra a evolução. Execute análises semanais para ter comparativos consistentes e detectar tendências antes que se tornem problemas.'
     });
   }
 
-  // ── Oportunidades ─────────────────────────────────────────────────────────
+  // ── Oportunidades estratégicas de crescimento ────────────────────────────
   const oportunidades = [
     {
-      titulo: 'Público Lookalike dos melhores clientes',
-      descricao: 'Se você tem uma lista de clientes ou compradores, criar um Lookalike 1-3% é uma das ações com maior retorno possível no Meta.',
-      potencial_impacto: 'Pode reduzir o CPC em até 40% e aumentar a taxa de conversão vs público frio.',
-      como_implementar: 'Gerenciador > Públicos > Criar Público > Público Semelhante > Suba uma lista de emails de clientes como fonte.'
+      titulo: 'Lookalike Audience dos melhores clientes',
+      descricao: 'Se você tem uma lista de compradores ou leads qualificados, o Lookalike 1-3% é consistentemente o público com melhor performance em contas maduras do Meta.',
+      potencial_impacto: `Redução típica de 25-45% no CPL e aumento de ROAS em 60-120% vs público frio de interesse. Resultado começa a aparecer em 3-7 dias após o algoritmo aprender.`,
+      como_implementar: 'Gerenciador > Públicos > Criar Público Personalizado > Lista de clientes (upload CSV de emails). Depois: Criar Público > Semelhante > selecionar a lista como fonte > escala 1-3%.'
     },
     {
-      titulo: 'Anúncios em vídeo curto (Reels)',
-      descricao: 'O inventário de Reels tem CPM historicamente mais baixo que o feed tradicional, com alcance maior.',
-      potencial_impacto: 'CPM até 30% menor com alcance orgânico adicional para quem assistir ao vídeo completo.',
-      como_implementar: 'Crie um vídeo de 15-30 segundos em formato vertical 9:16 e selecione o posicionamento Reels manualmente no conjunto de anúncios.'
+      titulo: 'Vídeos curtos (6-15s) para topo de funil',
+      descricao: 'Conteúdo em vídeo curto no Reels tem CPM 20-40% menor que feed de imagem. Além disso, quem assiste 75%+ do vídeo pode ser usado como público de retargeting — quente e barato.',
+      potencial_impacto: `Alcance orgânico adicional sem custo extra. Público de vídeo-viewers criado automaticamente para retargeting a custo muito baixo.`,
+      como_implementar: 'Criar vídeo de 6-15s em formato vertical 9:16 com gancho nos primeiros 2 segundos. Selecionar posicionamento Reels no conjunto. Criar Público de Videoviews (75%+) após 7 dias rodando.'
     },
     {
-      titulo: 'Campanha de engajamento para aquecer público',
-      descricao: 'Antes de pedir conversão, uma campanha de engajamento barata cria um público quente que converte muito mais.',
-      potencial_impacto: 'Público que engajou converte em média 2-4x mais que público frio com custo 50-70% menor.',
-      como_implementar: 'Crie uma campanha com objetivo Engajamento, orçamento baixo (R$15-30/dia), e use o público engajado como fonte de retargeting na campanha de conversão.'
+      titulo: 'Campanha de engajamento para aquecer audiência',
+      descricao: 'Estratégia de "warming": campanha de engajamento barata (R$15-25/dia) cria público quente que converte 2-4x mais na campanha de conversão. ROI total da conta melhora.',
+      potencial_impacto: `Redução de até 50% no CPL da campanha de conversão quando alimentada com público quente (engajadores dos últimos 30 dias).`,
+      como_implementar: 'Nova campanha com objetivo Engajamento > usar conteúdo educativo ou entretenimento relacionado ao produto > após 14 dias, criar Público Personalizado de "Pessoas que interagiram" > usar esse público na campanha de conversão.'
+    },
+    {
+      titulo: 'Advantage+ Shopping Campaigns (se ecommerce)',
+      descricao: 'A Meta consolidou o ASC como o tipo de campanha com melhor performance para ecommerce. O algoritmo tem total autonomia para testar criativos, públicos e posicionamentos.',
+      potencial_impacto: `Contas que migraram para ASC reportam ROAS 15-30% maior que campanhas manuais equivalentes, com menos tempo de gestão.`,
+      como_implementar: 'Criar campanha > tipo "Advantage+ Shopping" > fazer upload de catálogo de produtos > inserir 8-10 criativos variados > deixar o algoritmo otimizar por 14 dias antes de avaliar.'
     }
   ];
 
-  // ── Plano de ação 30 dias ─────────────────────────────────────────────────
+  // ── Plano de ação 30 dias — estratégico ──────────────────────────────────
   const plano_acao_30dias = [
     {
       semana: 1,
-      foco: 'Resolver problemas críticos',
+      foco: 'Correções críticas e baseline',
       acoes: [
-        avgFrequency > 3.5 ? 'Expandir público ou trocar criativo nas campanhas com frequência alta' : 'Auditar segmentação de todas as campanhas ativas',
-        avgCtr < 0.8 ? 'Criar 3 variações de criativo para teste nos anúncios com CTR baixo' : 'Documentar os criativos que estão performando bem',
-        'Verificar método de pagamento e limites de gasto da conta',
-        'Configurar pixel do Meta no site se ainda não estiver instalado'
+        issues.some(i => i.metric === 'Freq') ? `Resolver saturação: criar novos conjuntos com público Lookalike e pausar os com frequência > ${bench.freqMax}x` : 'Auditar todos os públicos e confirmar que não há sobreposição entre conjuntos',
+        issues.some(i => i.metric === 'CTR') ? 'Criar 3 variações de criativo para os anúncios com CTR mais baixo e ativar Teste A/B' : 'Documentar os criativos campeões e identificar o padrão de sucesso',
+        'Verificar e validar instalação do Pixel em todas as páginas importantes (produto, obrigado, checkout)',
+        `Confirmar que o objetivo de campanha está correto para o que você quer medir: se quer compras, use Conversão/Vendas de catálogo, não Tráfego`
       ]
     },
     {
       semana: 2,
-      foco: 'Otimização de lances e públicos',
+      foco: 'Otimização de funil e lances',
       acoes: [
-        'Revisar estratégia de lance em todos os conjuntos — preferir automático',
-        'Criar público Lookalike baseado em compradores ou leads',
-        'Ativar Advantage+ Placements nos conjuntos que ainda usam posicionamento manual',
-        avgCpc > 5 ? 'Testar redução de 20% no orçamento nos conjuntos com CPC mais alto' : 'Testar aumento de verba nos conjuntos com melhor CTR'
+        'Analisar resultados do Teste A/B da Semana 1 — pausar os criativos perdedores',
+        'Criar campanha de Retargeting para visitantes dos últimos 30 dias com criativo de prova social',
+        avgCpc > bench.cpcBom ? 'Mudar estratégia de lance para Custo por resultado ou Menor custo em conjuntos com CPC alto' : 'Testar aumento de 20% de budget nos conjuntos com melhor ROAS',
+        'Criar Lookalike Audience 1-3% baseado nos compradores ou leads mais recentes'
       ]
     },
     {
       semana: 3,
-      foco: 'Testes A/B e novos criativos',
+      foco: 'Expansão e novos públicos',
       acoes: [
-        'Iniciar teste A/B formal entre os 2 melhores criativos',
-        'Criar campanha de retargeting para visitantes do site (últimos 30 dias)',
-        'Testar anúncio em formato vídeo/Reels se ainda não tiver',
-        'Pausar os anúncios com menor CTR após 7+ dias de veiculação'
+        'Lançar o Lookalike criado na Semana 2 em campanha de aquisição nova',
+        'Testar 1 posicionamento novo: Reels ou Audience Network nos conjuntos atuais',
+        'Novo criativo baseado nas aprendizagens das 2 primeiras semanas: aplicar o ângulo vencedor do teste A/B',
+        'Revisar segmentação por dispositivo: se resultado vem mais de desktop ou mobile, concentrar verba'
       ]
     },
     {
       semana: 4,
-      foco: 'Escala e análise de resultados',
+      foco: 'Consolidação e escala',
       acoes: [
-        'Aumentar verba em 20% nos conjuntos vencedores do teste A/B',
-        'Pausar definitivamente os anúncios com performance abaixo da média',
-        'Analisar relatório de posicionamento e desativar os menos eficientes',
-        'Executar nova análise completa e comparar com esta para medir evolução'
+        'Avaliar o ROAS/CPL de todo o mês: quais campanhas superam benchmark e quais ficam abaixo?',
+        'Arquivar campanhas e conjuntos com performance abaixo do mínimo aceitável — limpeza da conta',
+        avgCtr >= bench.ctrBom && avgCpc <= bench.cpcBom ? 'Planejar escala: duplicar os conjuntos campeões com budget 50-100% maior' : 'Planejar nova rodada de testes para o próximo mês com foco no ponto mais fraco identificado',
+        'Registrar os aprendizados do mês nas Notas do sistema para referência futura'
       ]
     }
   ];
 
-  // ── Próximos passos ───────────────────────────────────────────────────────
   const proximos_passos = [
-    otimizacoes[0] ? `${otimizacoes[0].prazo === 'Imediato' ? 'AGORA' : 'Esta semana'}: ${otimizacoes[0].titulo}` : 'Revisar campanhas ativas',
-    avgFrequency > 3 ? 'Expandir ou trocar público das campanhas com frequência alta' : 'Testar novo criativo para melhorar CTR',
-    'Configurar campanha de retargeting se não existir',
-    'Criar Lookalike Audience baseado nos melhores clientes',
-    'Executar nova análise em 7 dias para acompanhar a evolução'
+    otimizacoes[0] ? `${otimizacoes[0].prazo === 'Imediato' ? 'URGENTE' : 'Esta semana'}: ${otimizacoes[0].titulo}` : 'Auditar criativos e públicos ativos',
+    otimizacoes[1] ? `Em seguida: ${otimizacoes[1].titulo}` : 'Criar campanha de retargeting',
+    'Executar nova análise em 7 dias para medir o impacto das otimizações',
+    'Documentar tudo nas Notas — criativo testado, público, resultado e aprendizado'
   ];
 
   return {
-    resumo_geral: {
-      score_saude: score,
-      nivel_saude,
-      variacao_score,
-      tendencia,
-      pontos_principais,
-      resumo_historico
-    },
+    resumo_geral: { score_saude: score, nivel_saude, variacao_score, tendencia, pontos_principais, resumo_historico },
     metricas_comparativas,
     campanhas_analise,
     otimizacoes_prioritarias: otimizacoes,
@@ -692,6 +762,7 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun, dateRan
     proximos_passos
   };
 }
+
 
 // ─── EMAIL SERVICE ────────────────────────────────────────────────────────────
 
