@@ -53,7 +53,6 @@ app.get('/auth/facebook/callback', async (req, res) => {
     req.session.accessToken = token;
     res.redirect('/dashboard');
   } catch (err) {
-    console.error('Auth Error:', err.response?.data?.error || err.message);
     res.redirect('/?error=auth_failed');
   }
 });
@@ -70,19 +69,19 @@ function auth(req, res, next) {
 app.get('/api/adaccounts', auth, async (req, res) => {
   try {
     const r = await axios.get('https://graph.facebook.com/v19.0/me/adaccounts', {
-      params: { fields: 'name,account_id,currency,account_status,business_name,timezone_name,amount_spent,balance,spend_cap', access_token: req.session.accessToken, limit: 100 }
+      params: { fields: 'name,account_id,currency,account_status', access_token: req.session.accessToken, limit: 100 }
     });
     res.json(r.data);
-  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/adaccounts/:id/campaigns', auth, async (req, res) => {
   try {
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/campaigns`, {
-      params: { fields: 'id,name,status,objective,daily_budget,lifetime_budget,budget_remaining', access_token: req.session.accessToken, limit: 100 }
+      params: { fields: 'id,name,status,objective', access_token: req.session.accessToken, limit: 100 }
     });
     res.json(r.data);
-  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
@@ -95,18 +94,7 @@ app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
     else params.date_preset = req.query.date_preset || 'last_30d';
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
     res.json(r.data);
-  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
-});
-
-app.get('/api/adaccounts/:id/creatives', auth, async (req, res) => {
-  try {
-    const params = {
-      fields: `id,name,status,campaign_id,campaign{name},creative{id,name,thumbnail_url,image_url,body,title},insights.date_preset(${req.query.date_preset || 'last_30d'}){impressions,clicks,spend,ctr,cpc,cpm,frequency,actions}`,
-      access_token: req.session.accessToken, limit: 100
-    };
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, { params });
-    res.json(r.data);
-  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
@@ -121,7 +109,7 @@ app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
     
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
     res.json(r.data);
-  } catch (e) { res.status(500).json({ error: e.response?.data?.error?.message || e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── MOTOR DE ANÁLISE ────────────────────────────────────────────────────────
@@ -129,16 +117,24 @@ app.post('/api/analyze', auth, async (req, res) => {
   const { accountData, campaigns, insights, dateRange } = req.body;
   try {
     const rows = insights?.data || [];
-    let totalSpend = 0, totalImpressions = 0, totalClicks = 0;
+    let totalSpend = 0, totalImpressions = 0, totalClicks = 0, totalReach = 0, freqSum = 0, freqCount = 0;
     const byId = {};
     rows.forEach(m => {
-      totalSpend += parseFloat(m.spend || 0); totalImpressions += parseInt(m.impressions || 0); totalClicks += parseInt(m.clicks || 0);
+      totalSpend += parseFloat(m.spend || 0); totalImpressions += parseInt(m.impressions || 0); totalClicks += parseInt(m.clicks || 0); totalReach += parseInt(m.reach || 0);
+      if(m.frequency) { freqSum += parseFloat(m.frequency); freqCount++; }
       byId[m.campaign_id] = m;
     });
-    const metrics = { totalSpend, totalImpressions, totalClicks, avgCtr: totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0, avgCpc: totalClicks > 0 ? totalSpend / totalClicks : 0 };
+    const metrics = { 
+      totalSpend, totalImpressions, totalClicks, totalReach,
+      avgCtr: totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0, 
+      avgCpc: totalClicks > 0 ? totalSpend / totalClicks : 0,
+      avgFrequency: freqCount > 0 ? freqSum / freqCount : 0,
+      activeCampaigns: campaigns.filter(c => c.status === 'ACTIVE').length,
+      totalCampaigns: campaigns.length
+    };
     const enriched = campaigns.map(c => {
       const m = byId[c.id] || {};
-      return { ...c, spend: parseFloat(m.spend || 0), ctr: parseFloat(m.ctr || 0), cpc: parseFloat(m.cpc || 0), frequency: parseFloat(m.frequency || 0), impressions: parseInt(m.impressions || 0), clicks: parseInt(m.clicks || 0) };
+      return { ...c, spend: parseFloat(m.spend || 0), ctr: parseFloat(m.ctr || 0), cpc: parseFloat(m.cpc || 0), frequency: parseFloat(m.frequency || 0), actions: m.actions||[], action_values: m.action_values||[] };
     });
     
     const previousRun = await db.getLastRun(accountData.account_id);
@@ -146,42 +142,50 @@ app.post('/api/analyze', auth, async (req, res) => {
     
     await db.saveRun({ fbAccountId: accountData.account_id, fbUserId: req.session.user.id, accountName: accountData.name, dateRange, metrics, campaigns: enriched, aiAnalysis });
     res.json({ success: true, analysis: aiAnalysis, metrics, previousRun });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error(err);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
+// PROTEÇÃO CONTRA O ERRO DE TOFIXED:
+const safeNum = (val) => Number(val) || 0;
+
 function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
-  const { avgCtr, avgCpc, totalSpend, totalImpressions } = metrics;
+  const { avgCtr, avgCpc, avgFrequency, totalSpend } = metrics;
   const S = accountData.currency === 'BRL' ? 'R$' : '$';
-  let score = totalSpend > 0 ? 85 : 0;
+  let score = totalSpend > 0 ? 95 : 0;
   const issues = [];
-  if (avgCtr < 1.0) { score -= 20; issues.push(`CTR de ${avgCtr.toFixed(2)}% abaixo do benchmark de 1%.`); }
-  if (avgCpc > 5.0) { score -= 15; issues.push(`CPC muito elevado: ${S} ${avgCpc.toFixed(2)}.`); }
+  
+  if (avgCtr < 1.0) { score -= 20; issues.push(`CTR de ${safeNum(avgCtr).toFixed(2)}% abaixo do benchmark.`); }
+  if (avgCpc > 5.0) { score -= 15; issues.push(`CPC elevado: ${S} ${safeNum(avgCpc).toFixed(2)}.`); }
+  if (avgFrequency > 4.0) { score -= 15; issues.push(`Frequência alta de ${safeNum(avgFrequency).toFixed(1)}x.`); }
   
   return {
-    resumo_geral: { score_saude: Math.max(0,score), nivel_saude: score >= 80 ? 'Excelente' : score >= 60 ? 'Bom' : 'Atenção', resumo_historico: previousRun ? `Score anterior: ${previousRun.health_score} pts.` : 'Sem histórico.', pontos_principais: issues },
-    campanhas_analise: campaigns.map(c => ({ nome: c.name, status_performance: c.ctr > 1 ? 'Bom' : 'Atenção', gasto: `${S} ${c.spend.toFixed(2)}`, ctr: `${c.ctr.toFixed(2)}%`, cpc: `${S} ${c.cpc.toFixed(2)}`, frequencia: c.frequency.toFixed(2) })),
-    otimizacoes_prioritarias: avgCtr < 1 ? [{ prioridade: 1, titulo: 'Melhorar Criativos', categoria: 'Criativo', descricao: 'O CTR da conta está muito baixo. Troque os criativos atuais por novos formatos em vídeo.' }] : [],
-    alertas_criticos: totalSpend === 0 ? [{ mensagem: 'Conta sem gastos no período.', acao_requerida: 'Verificar pagamentos ou se campanhas estão ativas.' }] : []
+    resumo_geral: { score_saude: Math.max(0,score), nivel_saude: score >= 80 ? 'Excelente' : score >= 60 ? 'Bom' : 'Atenção', resumo_historico: previousRun ? `Score anterior: ${previousRun.health_score} pts.` : 'Sem histórico.', pontos_principais: issues.length ? issues : ['Métricas saudáveis'] },
+    campanhas_analise: campaigns.map(c => ({ 
+      nome: c.name || 'Desconhecida', 
+      status_performance: safeNum(c.ctr) > 1 ? 'Bom' : 'Atenção', 
+      gasto: `${S} ${safeNum(c.spend).toFixed(2)}`, 
+      ctr: `${safeNum(c.ctr).toFixed(2)}%`, 
+      cpc: `${S} ${safeNum(c.cpc).toFixed(2)}`, 
+      frequencia: `${safeNum(c.frequency).toFixed(2)}x`,
+      problema_principal: safeNum(c.ctr) < 1 ? 'Baixo engajamento' : '-',
+      campStatus: c.status
+    })),
+    otimizacoes_prioritarias: safeNum(avgCtr) < 1 ? [{ prioridade: 1, titulo: 'Melhorar Criativos', categoria: 'Criativo', impacto_esperado: 'Alto', descricao: 'O CTR da conta está muito baixo. Troque os criativos atuais por novos formatos em vídeo.', acao: 'Crie variações novas.' }] : [{ prioridade: 1, titulo: 'Escalar orçamento', categoria: 'Escala', impacto_esperado: 'Médio', descricao: 'Conta com performance estável.', acao: 'Aumente o budget em 20%.' }],
+    alertas_criticos: totalSpend === 0 ? [{ mensagem: 'Conta sem gastos no período.', acao_requerida: 'Verificar pagamentos' }] : [],
+    insights_historicos: [], oportunidades: [], plano_acao_30dias: [], proximos_passos: []
   };
 }
 
-// ─── OUTRAS ROTAS (HISTORY, NOTES, IG, GOOGLE) ───────────────────────────────
-app.get('/api/history/:accountId', auth, async (req, res) => { try { res.json({ runs: await db.getRunHistory(req.params.accountId) }); } catch (e) { res.status(500).json({ error: e.message }); } });
-app.get('/api/trend/:accountId', auth, async (req, res) => { try { res.json({ trend: await db.getAccountTrend(req.params.accountId) }); } catch (e) { res.status(500).json({ error: e.message }); } });
-app.get('/api/notes/:accountId', auth, async (req, res) => { try { res.json({ notes: await db.getNotes(req.params.accountId, req.session.user.id) }); } catch (e) { res.status(500).json({ error: e.message }); } });
-app.post('/api/notes', auth, async (req, res) => { const { accountId, campaignId, campaignName, note, type } = req.body; try { res.json({ success: true, note: await db.saveNote({ fbUserId: req.session.user.id, fbAccountId: accountId, fbCampaignId: campaignId, campaignName, note, type }) }); } catch (e) { res.status(500).json({ error: e.message }); } });
-
+// ─── INSTAGRAM E OUTRAS ROTAS ────────────────────────────────────────────────────────
 app.get('/api/instagram/accounts', auth, async (req, res) => {
   try {
     const pages = await axios.get('https://graph.facebook.com/v19.0/me/accounts', { params: { fields: 'instagram_business_account{id,name,username,profile_picture_url,followers_count}', access_token: req.session.accessToken } });
     const igAccounts = []; (pages.data.data || []).forEach(p => { if (p.instagram_business_account) igAccounts.push(p.instagram_business_account); });
     res.json({ data: igAccounts });
   } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/instagram/:igId/media', auth, async (req, res) => {
-  try { const r = await axios.get(`https://graph.facebook.com/v19.0/${req.params.igId}/media`, { params: { fields: 'id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count,reach,impressions,engagement', access_token: req.session.accessToken, limit: 24 } }); res.json(r.data); }
-  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 const { generateContentPlanEngine } = require('./content_engine');
@@ -198,39 +202,10 @@ app.get('/auth/google/callback', async (req, res) => {
   if (req.query.error) return res.redirect('/dashboard?google_error=denied');
   try { const { tokens } = await googleOAuth2.getToken(req.query.code); req.session.googleTokens = tokens; res.redirect('/dashboard?google=connected'); } catch (e) { res.redirect('/dashboard?google_error=failed'); }
 });
-
 app.get('/api/google/status', auth, (req, res) => res.json({ connected: !!req.session.googleTokens }));
-
-app.get('/api/google/customers', auth, async (req, res) => {
-  if (!req.session.googleTokens || !process.env.GOOGLE_DEVELOPER_TOKEN) return res.status(401).json({ error: 'Configuração Google ausente.' });
-  try {
-    googleOAuth2.setCredentials(req.session.googleTokens); const token = await googleOAuth2.getAccessToken();
-    const r = await axios.get('https://googleads.googleapis.com/v17/customers:listAccessibleCustomers', { headers: { 'Authorization': `Bearer ${token.token}`, 'developer-token': process.env.GOOGLE_DEVELOPER_TOKEN } });
-    const customers = [];
-    for (const name of (r.data.resourceNames || []).slice(0,10)) {
-      const custId = name.replace('customers/','');
-      try {
-        const detail = await axios.post(`https://googleads.googleapis.com/v17/customers/${custId}/googleAds:search`, { query: "SELECT customer.id, customer.descriptive_name, customer.currency_code FROM customer LIMIT 1" }, { headers: { 'Authorization': `Bearer ${token.token}`, 'developer-token': process.env.GOOGLE_DEVELOPER_TOKEN, 'login-customer-id': custId } });
-        if (detail.data.results?.[0]) { const c = detail.data.results[0].customer; customers.push({ id: c.id, name: c.descriptiveName, currency: c.currencyCode }); }
-      } catch(err) { customers.push({ id: custId, name: custId }); }
-    }
-    res.json({ customers });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/google/customers/:custId/metrics', auth, async (req, res) => {
-  if (!req.session.googleTokens) return res.status(401).json({ error: 'Google nao conectado' });
-  try {
-    googleOAuth2.setCredentials(req.session.googleTokens); const token = await googleOAuth2.getAccessToken();
-    const r = await axios.post(`https://googleads.googleapis.com/v17/customers/${req.params.custId}/googleAds:search`, { query: `SELECT metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.conversions FROM customer WHERE segments.date DURING ${req.query.date_range || 'LAST_30_DAYS'}` }, { headers: { 'Authorization': `Bearer ${token.token}`, 'developer-token': process.env.GOOGLE_DEVELOPER_TOKEN, 'login-customer-id': req.params.custId } });
-    let spend=0, impr=0, clicks=0, conv=0;
-    (r.data.results||[]).forEach(row=>{ const m=row.metrics||{}; spend+=parseInt(m.costMicros||0)/1e6; impr+=parseInt(m.impressions||0); clicks+=parseInt(m.clicks||0); conv+=parseFloat(m.conversions||0); });
-    res.json({ spend, impressions: impr, clicks, ctr: impr>0?(clicks/impr)*100:0, avgCpc: clicks>0?spend/clicks:0, conversions: conv });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
 
 app.get('/dashboard', (req, res) => { if (!req.session.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => { console.log(`🚀 API on port ${PORT}`); if (process.env.DATABASE_URL) await db.initDB(); });
+app.listen(PORT, async () => { console.log(`🚀 Meta Ads Analyzer on port ${PORT}`); if (process.env.DATABASE_URL) await db.initDB(); });
