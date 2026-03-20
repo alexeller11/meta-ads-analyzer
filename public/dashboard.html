@@ -3,170 +3,344 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meta Ads Analyzer - Full Suite</title>
+  <title>Meta Ads Analyzer</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
       --bg:#08090d;--s1:#0f1118;--s2:#161923;--b1:#1e2433;
-      --blue:#1877F2;--cyan:#00d4ff;--green:#00e676;--text:#e8eaf0;--dim:#8892a4;
+      --blue:#1877F2;--cyan:#00d4ff;--green:#00e676;--orange:#ff9800;--red:#ff3860;
+      --text:#e8eaf0;--dim:#8892a4;--muted:#3d4456;
     }
     body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column}
     .topbar{height:52px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 16px;gap:12px;position:sticky;top:0;z-index:100}
-    .logo{font-weight:800;font-size:14px} .logo span{color:var(--cyan)}
-    .sel, .btn{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
-    .btn-primary{background:var(--blue);color:#fff;border:none}
+    .logo{font-weight:800;font-size:14px;color:var(--text)} .logo span{color:var(--cyan)}
+    .sel{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
+    .btn{padding:7px 15px;border-radius:8px;font-weight:700;cursor:pointer;border:none;font-size:12px;transition:0.2s}
+    .btn-primary{background:var(--blue);color:#fff} .btn-ghost{background:transparent;color:var(--dim)}
     .app-body{display:flex;flex:1;min-height:0}
-    .sidebar{width:210px;background:var(--s1);border-right:1px solid var(--b1);padding:10px;overflow-y:auto}
+    .sidebar{width:220px;background:var(--s1);border-right:1px solid var(--b1);padding:15px;overflow-y:auto}
     .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:var(--dim);cursor:pointer;width:100%;text-align:left;background:none;border:none;margin-bottom:4px}
     .nav-item:hover, .nav-item.active{background:rgba(24,119,242,0.15);color:var(--blue)}
-    .main{flex:1;padding:20px;overflow-y:auto}
-    .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:20px}
-    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:15px}
+    .main{flex:1;padding:25px;overflow-y:auto}
+    .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px;margin-bottom:25px}
+    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:18px}
     .mval{font-size:24px;font-weight:800;margin-top:5px} .mlabel{font-size:10px;color:var(--dim);text-transform:uppercase;font-weight:700}
+    table{width:100%;border-collapse:collapse;background:var(--s1);border-radius:12px;overflow:hidden;font-size:12px} 
+    th,td{padding:12px 15px;text-align:left;border-bottom:1px solid var(--b1)}
+    th{color:var(--dim);text-transform:uppercase;font-size:10px;font-weight:800}
     .loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,9,13,0.9);z-index:2000;flex-direction:column;align-items:center;justify-content:center}
     .loading-overlay.show{display:flex}
     .spinner{width:40px;height:40px;border:3px solid var(--b1);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
-    table{width:100%;border-collapse:collapse} th,td{padding:12px;text-align:left;border-bottom:1px solid var(--b1)}
   </style>
 </head>
 <body>
 
 <header class="topbar">
   <div class="logo">⚡ Meta Ads <span>Analyzer</span></div>
-  <select class="sel" id="accountSel" style="max-width:230px"><option value="">A carregar...</option></select>
+  <select class="sel" id="accountSel" style="max-width:230px"><option value="">Carregando contas...</option></select>
   <select class="sel" id="dateSel" onchange="onDateSelChange()">
-    <option value="last_7d">7 dias</option><option value="last_30d" selected>30 dias</option>
-    <option value="this_month">Este mês</option><option value="last_month">Mês passado</option>
+    <option value="last_7d">7 dias</option>
+    <option value="last_30d" selected>30 dias</option>
+    <option value="this_month">Este mês</option>
+    <option value="last_month">Mês passado</option>
     <option value="custom">Personalizado...</option>
   </select>
   <div id="customDateWrap" style="display:none;align-items:center;gap:4px">
-    <input type="date" id="customSince" class="sel"><input type="date" id="customUntil" class="sel">
+    <input type="date" id="customSince" class="sel">
+    <span style="color:var(--dim)">até</span>
+    <input type="date" id="customUntil" class="sel">
   </div>
   <button class="btn btn-primary" onclick="runAnalysis()">Analisar</button>
-  <div style="margin-left:auto; display:flex; align-items:center; gap:10px">
-    <span id="uName">Alex</span>
-    <img id="uAvatar" style="width:28px; border-radius:50%">
-    <a href="/auth/logout" style="color:var(--dim); font-size:11px; text-decoration:none">Sair</a>
+  <div style="margin-left:auto; display:flex; align-items:center; gap:12px">
+    <span id="uName" style="font-weight:700">...</span>
+    <a href="/auth/logout" class="btn btn-ghost">Sair</a>
   </div>
 </header>
 
 <div class="app-body">
   <aside class="sidebar">
-    <div style="padding:10px; font-weight:800; color:var(--dim)">MENU</div>
+    <div style="font-size:10px;font-weight:800;color:var(--dim);margin-bottom:10px">MENU</div>
     <button class="nav-item active" onclick="showView('overview')">📊 Visão Geral</button>
     <button class="nav-item" onclick="showView('analysis')">🧠 Análise IA</button>
-    <button class="nav-item" onclick="showView('campaigns')">📋 Campanhas</button>
+    <button class="nav-item" onclick="showView('creatives')">🖼️ Criativos</button>
     <button class="nav-item" onclick="showView('breakdown')">📉 Breakdown</button>
+    <button class="nav-item" onclick="showView('notes')">📝 Notas</button>
     <button class="nav-item" onclick="showView('content')">📸 Conteúdo IG</button>
     <button class="nav-item" onclick="showView('google')">🔍 Google Ads</button>
     <button class="nav-item" onclick="showView('trend')">📈 Tendências</button>
   </aside>
 
-  <main class="main" id="mainContent">
+  <main class="main">
     <div id="stateEmpty" style="text-align:center; padding-top:100px; opacity:0.6">
-      <h2>Selecione uma conta para começar</h2>
+      <h2>Escolha uma conta e clique em Analisar</h2>
     </div>
 
     <div id="contentWrap" style="display:none">
+      
       <div id="view-overview">
-        <div id="analysisSummary" style="background:var(--s1); padding:20px; border-radius:12px; margin-bottom:15px"></div>
+        <div id="analysisSummary" style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1); margin-bottom:20px"></div>
         <div class="mgrid" id="metricsGrid"></div>
-        <table style="background:var(--s1); border-radius:12px; overflow:hidden">
-          <thead><tr><th>Campanha</th><th>Status</th><th>Gasto</th><th>CTR</th><th>CPC</th><th>Freq.</th></tr></thead>
-          <tbody id="campTbody"></tbody>
-        </table>
-      </div>
-      <div id="view-analysis" style="display:none"><div id="optimList"></div></div>
-      <div id="view-breakdown" style="display:none"><div id="bdContent"></div></div>
-      <div id="view-content" style="display:none">
-        <div style="background:var(--s1); padding:20px; border-radius:12px">
-          <h3>Planejamento de Conteúdo</h3>
-          <select id="igAccSel" class="sel"><option value="">Carregar IG...</option></select>
-          <input type="text" id="igNiche" placeholder="Nicho" class="sel" style="margin-top:10px; width:100%">
-          <button class="btn btn-primary" onclick="generateContentPlan()" style="margin-top:10px">Gerar com IA</button>
-          <div id="contentPlanOutput" style="margin-top:15px"></div>
+        <div style="border-radius:12px; border:1px solid var(--b1); overflow:hidden">
+          <table>
+            <thead><tr><th>Campanha</th><th>Status</th><th>Gasto</th><th>CTR</th><th>CPC</th><th>Freq.</th></tr></thead>
+            <tbody id="campTbody"></tbody>
+          </table>
         </div>
       </div>
+
+      <div id="view-analysis" style="display:none">
+        <h2 style="margin-bottom:15px">Diagnóstico IA</h2>
+        <div id="optimList"></div>
+        <div id="alertList" style="margin-top:20px"></div>
+      </div>
+
+      <div id="view-creatives" style="display:none">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px">
+          <h2>Análise de Criativos</h2>
+          <button class="btn btn-primary" onclick="loadCreatives()">Atualizar Criativos</button>
+        </div>
+        <div id="crGrid" class="mgrid">Clique em Atualizar para buscar as imagens...</div>
+      </div>
+
+      <div id="view-breakdown" style="display:none">
+        <div style="display:flex; gap:10px; margin-bottom:15px">
+          <button class="btn btn-primary" onclick="loadBreakdown('device')">Dispositivo</button>
+          <button class="btn btn-primary" onclick="loadBreakdown('placement')">Posicionamento</button>
+          <button class="btn btn-primary" onclick="loadBreakdown('daily')">Diário</button>
+        </div>
+        <div id="bdContent" style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1)">Selecione um filtro acima.</div>
+      </div>
+
+      <div id="view-notes" style="display:none">
+        <h2 style="margin-bottom:15px">Notas da Conta</h2>
+        <textarea id="noteText" class="sel" style="width:100%; height:80px; margin-bottom:10px; resize:vertical" placeholder="Escreva uma observação..."></textarea>
+        <button class="btn btn-primary" onclick="saveNote()">Salvar Nota</button>
+        <div id="notesList" style="margin-top:20px; display:flex; flex-direction:column; gap:10px"></div>
+      </div>
+
+      <div id="view-content" style="display:none">
+        <div style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1)">
+          <h3>Planejamento de Conteúdo IA</h3>
+          <select id="igAccSel" class="sel" onchange="onIgAccChange()"><option value="">Carregar contas IG...</option></select>
+          <input type="text" id="igNiche" placeholder="Nicho da Empresa" class="sel" style="width:100%; margin:10px 0">
+          <button class="btn btn-primary" onclick="generateContentPlan()" style="margin-top:10px">✨ Gerar com IA</button>
+          <button class="btn btn-ghost" onclick="exportContentPlan()" style="margin-top:10px">Exportar HTML</button>
+          <div id="contentPlanOutput" style="margin-top:20px"></div>
+        </div>
+      </div>
+
+      <div id="view-google" style="display:none">
+        <div style="display:flex; gap:15px; margin-bottom:15px; align-items:center">
+          <button class="btn btn-primary" onclick="location.href='/auth/google'">🔗 Conectar Google Ads</button>
+          <select id="gCustSel" class="sel" onchange="loadGoogleMetrics()"><option value="">Selecione a conta...</option></select>
+        </div>
+        <div id="gMetricsArea" class="mgrid"></div>
+        <div style="border-radius:12px; border:1px solid var(--b1); overflow:hidden; margin-top:20px">
+          <table>
+            <thead><tr><th>Campanha</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>Conv.</th></tr></thead>
+            <tbody id="gCampTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="view-trend" style="display:none">
+        <h2 style="margin-bottom:15px">Evolução do Score (90 Dias)</h2>
+        <div style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1)">
+           <canvas id="cHealth" height="100"></canvas>
+        </div>
+      </div>
+
     </div>
   </main>
 </div>
 
-<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div id="loadText">A processar...</div></div>
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div id="loadText" style="margin-top:15px; font-weight:700">A processar...</div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null, contentPlan=null;
+let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null;
+let igAccounts=[], igMedia=[], contentPlan=null, notesData=[], trendData=[];
 
 function showLoad(t){ document.getElementById('loadingOverlay').classList.add('show'); document.getElementById('loadText').textContent=t; }
 function hideLoad(){ document.getElementById('loadingOverlay').classList.remove('show'); }
+function sym(){ return accounts.find(a=>a.account_id===selAccountId)?.currency==='USD'?'$':'R$'; }
 
 async function init(){
   try {
     const me = await fetch('/api/me').then(r=>r.json());
     if(!me.authenticated) return location.href='/';
-    document.getElementById('uName').textContent = me.user.name;
+    document.getElementById('uName').textContent = me.user.name.split(' ')[0];
     if(me.user.picture) document.getElementById('uAvatar').src = me.user.picture.data?.url || me.user.picture;
     await loadAccounts();
-  } catch(e) { console.error(e); }
+    checkGoogleStatus();
+  } catch(e) { console.error("Init Error", e); }
 }
 
 async function loadAccounts(){
-  const d = await fetch('/api/adaccounts').then(r=>r.json());
-  accounts = d.data || [];
-  const sel = document.getElementById('accountSel');
-  sel.innerHTML = '<option value="">Escolha...</option>' + accounts.map(a => `<option value="${a.account_id}">${a.name}</option>`).join('');
-  sel.onchange = onAccChange;
+  const res = await fetch('/api/adaccounts').then(r=>r.json());
+  accounts = res.data || [];
+  document.getElementById('accountSel').innerHTML = '<option value="">Escolha a conta Meta...</option>' + accounts.map(a => `<option value="${a.account_id}">${a.name}</option>`).join('');
+  document.getElementById('accountSel').onchange = onAccChange;
 }
 
 async function onAccChange(){
-  selAccountId = document.getElementById('accountSel').value;
-  if(!selAccountId) return;
+  selAccountId = document.getElementById('accountSel').value; if(!selAccountId) return;
   showLoad('Carregando campanhas...');
   try {
-    const d = await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
-    campaigns = d.data || [];
+    const res = await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
+    campaigns = res.data || [];
   } finally { hideLoad(); }
 }
 
-function onDateSelChange(){ document.getElementById('customDateWrap').style.display = document.getElementById('dateSel').value === 'custom' ? 'flex' : 'none'; }
+function onDateSelChange(){
+  document.getElementById('customDateWrap').style.display = document.getElementById('dateSel').value === 'custom' ? 'flex' : 'none';
+}
 
 function showView(v){
-  const views = ['overview','analysis','campaigns','breakdown','content','google','trend'];
-  views.forEach(id => { const el = document.getElementById('view-'+id); if(el) el.style.display = id === v ? 'block' : 'none'; });
+  ['overview','analysis','creatives','breakdown','notes','content','google','trend'].forEach(id => {
+    const el = document.getElementById('view-'+id); if(el) el.style.display = id === v ? 'block' : 'none';
+  });
   document.querySelectorAll('.nav-item').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(v.replace('overview','visão'))));
+
+  if(v==='notes') loadNotes();
+  if(v==='trend') loadTrend();
+  if(v==='content' && igAccounts.length === 0) loadIgAccounts();
 }
 
 async function runAnalysis(){
-  if(!selAccountId) return alert('Escolha uma conta');
-  showLoad('Analisando...');
+  if(!selAccountId) return alert('Escolha uma conta Meta.');
+  showLoad('Analisando com IA...');
   const d = document.getElementById('dateSel').value;
   let params = `date_preset=${d}`;
   if(d==='custom') params = `since=${document.getElementById('customSince').value}&until=${document.getElementById('customUntil').value}`;
+
   try {
     const ins = await fetch(`/api/adaccounts/${selAccountId}/insights?${params}`).then(r=>r.json());
-    const res = await fetch('/api/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({accountData:accounts.find(a=>a.account_id===selAccountId),campaigns,insights:ins,dateRange:d}) }).then(r=>r.json());
+    const res = await fetch('/api/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({accountData:accounts.find(a=>a.account_id===selAccountId), campaigns, insights:ins, dateRange:d}) }).then(r=>r.json());
     metrics = res.metrics; analysis = res.analysis; renderAll();
-  } catch(e) { alert(e.message); }
+  } catch(e) { alert('Erro: ' + e.message); }
   finally { hideLoad(); }
 }
 
 function renderAll(){
   document.getElementById('stateEmpty').style.display='none'; document.getElementById('contentWrap').style.display='block';
-  const r = analysis.resumo_geral; const S = accounts.find(a=>a.account_id===selAccountId).currency==='BRL'?'R$':'$';
-  document.getElementById('analysisSummary').innerHTML = `<b>${r.nivel_saude} (${r.score_saude} pts)</b><p>${r.resumo_historico}</p>`;
-  document.getElementById('metricsGrid').innerHTML = `<div class="mcard"><div class="mlabel">Gasto</div><div class="mval">${S} ${metrics.totalSpend.toFixed(2)}</div></div><div class="mcard"><div class="mlabel">CTR</div><div class="mval">${metrics.avgCtr.toFixed(2)}%</div></div>`;
-  document.getElementById('campTbody').innerHTML = analysis.campanhas_analise.map(c=>`<tr><td>${c.nome}</td><td>${c.status_performance}</td><td>${c.gasto}</td><td>${c.ctr}</td><td>${c.cpc}</td><td>${c.frequencia}x</td></tr>`).join('');
+  const r = analysis.resumo_geral; const S = sym();
+  
+  document.getElementById('analysisSummary').innerHTML = `
+    <div style="display:flex; align-items:center; gap:20px">
+      <div style="font-size:36px; font-weight:900; color:var(--green)">${r.score_saude}</div>
+      <div><div style="font-size:18px; font-weight:800">${r.nivel_saude}</div><div style="color:var(--dim)">${r.resumo_historico}</div></div>
+    </div>`;
+  
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="mcard"><div class="mlabel">Investimento</div><div class="mval" style="color:var(--blue)">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">CTR Médio</div><div class="mval">${metrics.avgCtr.toFixed(2)}%</div></div>
+    <div class="mcard"><div class="mlabel">CPC Médio</div><div class="mval">${S} ${metrics.avgCpc.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">Impressões</div><div class="mval">${metrics.totalImpressions.toLocaleString()}</div></div>`;
+  
+  document.getElementById('campTbody').innerHTML = analysis.campanhas_analise.map(c=>`<tr><td><b>${c.nome}</b></td><td>${c.status_performance}</td><td>${c.gasto}</td><td>${c.ctr}</td><td>${c.cpc}</td><td>${c.frequencia}x</td></tr>`).join('');
+  
+  document.getElementById('optimList').innerHTML = (analysis.otimizacoes_prioritarias||[]).map(o=>`<div style="background:var(--s2); padding:15px; border-radius:10px; border-left:4px solid var(--cyan); margin-bottom:10px"><b>#${o.prioridade} ${o.titulo}</b><br><small style="color:var(--dim)">${o.descricao}</small></div>`).join('');
+  
+  document.getElementById('alertList').innerHTML = (analysis.alertas_criticos||[]).map(a=>`<div style="background:rgba(255,56,96,0.1); padding:10px; border-radius:8px; color:var(--red); margin-bottom:10px">⚠️ ${a.mensagem}</div>`).join('');
 }
 
-async function exportContentPlan(){
-  if(!contentPlan){alert('Gere o plano.');return;}
-  let html='<html><body><h1>Planeamento</h1>';
-  (contentPlan.plano||[]).forEach(p=>{
-    html+=`<div><b>Dia ${p.dia}</b>: ${p.titulo}<br>${p.copy.replace(/\n/g,'<br>')}</div><hr>`;
+// Sub-funções restauradas
+async function loadBreakdown(type){
+  if(!selAccountId) return; showLoad('A carregar...');
+  try {
+    const res = await fetch(`/api/adaccounts/${selAccountId}/breakdown/${type}`).then(r=>r.json());
+    document.getElementById('bdContent').innerHTML = `<pre style="font-size:11px; color:var(--cyan)">${JSON.stringify(res.data.slice(0,10), null, 2)}</pre>`;
+  } catch(e){} finally { hideLoad(); }
+}
+
+async function loadCreatives(){
+  if(!selAccountId) return; showLoad('A carregar imagens...');
+  try {
+    const res = await fetch(`/api/adaccounts/${selAccountId}/creatives`).then(r=>r.json());
+    document.getElementById('crGrid').innerHTML = (res.data||[]).slice(0,12).map(c=>`<div class="mcard" style="text-align:center"><img src="${c.creative?.thumbnail_url || ''}" style="width:100%; border-radius:8px; margin-bottom:10px" alt="Sem imagem"><br><b style="font-size:10px">${c.name}</b></div>`).join('');
+  } catch(e){} finally { hideLoad(); }
+}
+
+async function loadNotes(){
+  if(!selAccountId) return;
+  const res = await fetch(`/api/notes/${selAccountId}`).then(r=>r.json());
+  document.getElementById('notesList').innerHTML = (res.notes||[]).map(n=>`<div style="background:var(--s2); padding:10px; border-radius:8px; border-left:3px solid var(--orange)">${n.note} <br><small style="color:var(--dim)">${new Date(n.created_at).toLocaleDateString()}</small></div>`).join('');
+}
+
+async function saveNote(){
+  const text = document.getElementById('noteText').value; if(!text) return;
+  await fetch('/api/notes', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({accountId:selAccountId, note:text})});
+  document.getElementById('noteText').value=''; loadNotes();
+}
+
+async function loadTrend(){
+  if(!selAccountId) return;
+  const res = await fetch(`/api/trend/${selAccountId}`).then(r=>r.json());
+  const data = res.trend || [];
+  if(data.length === 0) return document.getElementById('cHealth').parentElement.innerHTML = 'Sem histórico.';
+  new Chart(document.getElementById('cHealth'), {
+    type: 'line', data: { labels: data.map(d=>new Date(d.date).toLocaleDateString()), datasets: [{ label: 'Score', data: data.map(d=>d.avg_health), borderColor: '#00e676', tension: 0.4 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { suggestedMin: 0, suggestedMax: 100 } } }
   });
-  html+='</body></html>';
-  const w=window.open('','_blank'); w.document.write(html); w.document.close();
+}
+
+// Integração Instagram (Sem erro \n)
+async function loadIgAccounts(){
+  const res = await fetch('/api/instagram/accounts').then(r=>r.json());
+  igAccounts = res.data || [];
+  document.getElementById('igAccSel').innerHTML = '<option value="">Escolha...</option>' + igAccounts.map(a=>`<option value="${a.id}">${a.username}</option>`).join('');
+}
+
+async function onIgAccChange(){
+  const id = document.getElementById('igAccSel').value; if(!id) return;
+  const res = await fetch(`/api/instagram/${id}/media`).then(r=>r.json()); igMedia = res.data || [];
+}
+
+async function generateContentPlan(){
+  showLoad('IA a gerar plano...');
+  const res = await fetch('/api/content-plan', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({niche:document.getElementById('igNiche').value, recentPosts:igMedia})}).then(r=>r.json());
+  contentPlan = res.plan;
+  document.getElementById('contentPlanOutput').innerHTML = '<span style="color:var(--green)">Plano gerado com sucesso! Clique em Exportar HTML.</span>';
+  hideLoad();
+}
+
+function exportContentPlan(){
+  if(!contentPlan) return alert('Gere o plano!');
+  let html = '<html><body style="font-family:Arial; padding:20px">';
+  contentPlan.plano.forEach(p => {
+    // Escape de quebra de linha corrigido e seguro
+    let copyFormatado = (p.copy || '').replace(/\n/g, '<br>');
+    html += `<div style="border:1px solid #ccc; padding:15px; border-radius:8px; margin-bottom:15px"><h3>Dia ${p.dia}: ${p.titulo}</h3><p><i>${p.gancho}</i></p><p>${copyFormatado}</p></div>`;
+  });
+  html += '</body></html>';
+  const win = window.open('','_blank'); win.document.write(html); win.document.close();
+}
+
+// Integração Google Ads
+async function checkGoogleStatus(){
+  const res = await fetch('/api/google/status').then(r=>r.json());
+  if(res.connected) loadGCustomers();
+}
+
+async function loadGCustomers(){
+  const res = await fetch('/api/google/customers').then(r=>r.json());
+  const sel = document.getElementById('gCustSel');
+  sel.innerHTML = '<option value="">Contas Google Ads...</option>' + (res.customers||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+async function loadGoogleMetrics(){
+  const id = document.getElementById('gCustSel').value; if(!id) return; showLoad('A carregar Google...');
+  const res = await fetch(`/api/google/customers/${id}/metrics`).then(r=>r.json());
+  document.getElementById('gMetricsArea').innerHTML = `
+    <div class="mcard"><div class="mlabel">Gasto</div><div class="mval">R$ ${res.spend.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">Cliques</div><div class="mval">${res.clicks}</div></div>
+    <div class="mcard"><div class="mlabel">Conversões</div><div class="mval" style="color:var(--purple)">${res.conversions}</div></div>
+  `;
+  const camps = await fetch(`/api/google/customers/${id}/campaigns`).then(r=>r.json());
+  document.getElementById('gCampTbody').innerHTML = (camps.data||[]).map(c=>`<tr><td>${c.campaign?.name}</td><td>R$ ${(c.metrics?.costMicros/1e6).toFixed(2)}</td><td>${c.metrics?.impressions}</td><td>${c.metrics?.clicks}</td><td>${c.metrics?.conversions}</td></tr>`).join('');
+  hideLoad();
 }
 
 init();
