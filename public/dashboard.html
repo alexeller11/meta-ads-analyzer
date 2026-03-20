@@ -23,9 +23,8 @@
     .nav-item:hover, .nav-item.active{background:rgba(24,119,242,0.15);color:var(--blue)}
     .main{flex:1;padding:25px;overflow-y:auto;background:var(--bg)}
     .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px;margin-bottom:25px}
-    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:18px; position:relative}
-    .mval{font-size:24px;font-weight:800;margin-top:5px; display:flex; align-items:baseline} 
-    .mlabel{font-size:10px;color:var(--dim);text-transform:uppercase;font-weight:700}
+    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:18px}
+    .mval{font-size:24px;font-weight:800;margin-top:5px} .mlabel{font-size:10px;color:var(--dim);text-transform:uppercase;font-weight:700}
     table{width:100%;border-collapse:collapse;background:var(--s1);border-radius:12px;font-size:12px} 
     th,td{padding:12px 15px;text-align:left;border-bottom:1px solid var(--b1); white-space:nowrap}
     th{color:var(--dim);text-transform:uppercase;font-size:10px;font-weight:800}
@@ -34,12 +33,13 @@
     .spinner{width:40px;height:40px;border:3px solid var(--b1);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
     .stitle{font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.05em}
-    .cfrow{display:flex;gap:5px;margin-bottom:15px}
-    .cfbtn{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--b1);background:var(--s2);color:var(--muted)}
+    .cfrow{display:flex;gap:5px;margin-bottom:15px; flex-wrap:wrap}
+    .cfbtn{padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--b1);background:var(--s2);color:var(--dim); transition:0.2s}
+    .cfbtn:hover{color:var(--text)}
     .cfbtn.active{background:rgba(24,119,242,.15);border-color:var(--blue);color:var(--blue)}
     .score-ring{width:60px;height:60px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:4px solid var(--green);color:var(--green)}
     .c-green{color:var(--green)} .c-blue{color:var(--blue)} .c-orange{color:var(--orange)} .c-red{color:var(--red)} .c-purple{color:var(--purple)} .c-cyan{color:var(--cyan)} .c-yellow{color:var(--yellow)}
-    .budget-chip{background:rgba(0,230,118,0.1); border:1px solid rgba(0,230,118,0.2); color:var(--green); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800; display:flex; align-items:center; gap:5px}
+    .budget-chip{background:rgba(0,230,118,0.1); border:1px solid rgba(0,230,118,0.2); color:var(--green); padding:5px 12px; border-radius:6px; font-size:11px; font-weight:800; display:flex; align-items:center; gap:5px}
   </style>
 </head>
 <body>
@@ -76,6 +76,7 @@
     <button class="nav-item" onclick="showView('creatives')">🖼️ Criativos</button>
     <button class="nav-item" onclick="showView('breakdown')">📉 Breakdown</button>
     <button class="nav-item" onclick="showView('trend')">📈 Tendências</button>
+    <button class="nav-item" onclick="showView('competitors')">🕵️ Radar Concorrência</button>
     
     <div style="margin-top:30px; font-size:10px;font-weight:800;color:var(--dim);margin-bottom:10px">CAMPANHAS ATIVAS</div>
     <div id="campSidebar" style="font-size:11px; padding:0 12px; color:var(--dim); line-height:1.6">Escolha uma conta...</div>
@@ -145,6 +146,19 @@
       <div id="view-trend" style="display:none">
         <div class="chart-wrap"><div class="chart-title">Evolução do Score de Saúde da Conta</div><canvas id="cHealth" height="100"></canvas></div>
       </div>
+      
+      <div id="view-competitors" style="display:none">
+        <div class="stitle">RADAR DE CONCORRÊNCIA (META AD LIBRARY)</div>
+        <div style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1)">
+           <p style="color:var(--dim); font-size:13px; margin-bottom:15px; line-height:1.5">
+               A API da Meta bloqueia a extração direta de dados de terceiros por privacidade. No entanto, como Gestor Sénior, você deve usar a <b>Biblioteca de Anúncios Oficial</b> para espionar o tráfego dos seus concorrentes.
+           </p>
+           <div style="display:flex; gap:10px">
+              <input type="text" id="compName" class="sel" style="flex:1" placeholder="Digite o nome do concorrente (ex: Coca Cola, Nike)">
+              <button class="btn btn-primary" onclick="searchCompetitor()">🕵️ Espionar Anúncios</button>
+           </div>
+        </div>
+      </div>
 
     </div>
   </main>
@@ -156,9 +170,8 @@
 <script>
 // --- STATE ---
 let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null;
-let insData=null, prevMetricsData=null, allCreatives=[];
+let insData=null, allCreatives=[];
 
-// --- UTILS ---
 function showLoad(t){ document.getElementById('loadingOverlay').classList.add('show'); document.getElementById('loadText').textContent=t; }
 function hideLoad(){ document.getElementById('loadingOverlay').classList.remove('show'); }
 function sym(){ return accounts.find(a=>a.account_id===selAccountId)?.currency==='USD'?'$':'R$'; }
@@ -207,19 +220,15 @@ async function loadBalance(id) {
       const S = accounts.find(a=>a.account_id===id)?.currency==='USD'?'$':'R$';
       
       let txt = '';
-      if (bal > 0) {
-        txt = `Pós-pago (Fatura Atual): ${S} ${bal.toFixed(2)}`;
-      } else if (bal === 0 && cap > 0) {
-        txt = `Pré-pago | Gasto: ${S} ${spent.toFixed(2)} (Limite: ${S} ${cap.toFixed(2)})`;
-      } else if (bal === 0 && spent > 0) {
-        txt = `Conta Pré-paga | Gasto da Campanha: ${S} ${spent.toFixed(2)}`;
-      } else {
-        txt = `Saldo/Fatura Limpo: ${S} 0.00`;
-      }
+      if (bal > 0) txt = `Fatura a pagar: ${S} ${bal.toFixed(2)}`;
+      else if (bal === 0 && cap > 0) txt = `Conta Pré-paga | Gasto: ${S} ${spent.toFixed(2)} / Limite: ${S} ${cap.toFixed(2)}`;
+      else if (bal === 0 && spent > 0) txt = `Conta Pré-paga | Saldo Consumido: ${S} ${spent.toFixed(2)}`;
+      else txt = `Conta Regular | Saldo Zerado`;
+      
       chip.innerHTML = `💳 ${txt}`;
       chip.style.display = 'flex';
     }
-  } catch(e) {}
+  } catch(e) { console.error('Erro de saldo', e); }
 }
 
 function onDateSelChange(){
@@ -227,98 +236,64 @@ function onDateSelChange(){
 }
 
 function showView(v){
-  ['overview','analysis','campaigns','creatives','breakdown','trend'].forEach(id => { 
+  ['overview','analysis','campaigns','creatives','breakdown','trend','competitors'].forEach(id => { 
       const el = document.getElementById('view-'+id); if(el) el.style.display = id === v ? 'block' : 'none'; 
   });
-  document.querySelectorAll('.nav-item').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(v.replace('overview','visão').replace('campaigns','campanhas'))));
+  document.querySelectorAll('.nav-item').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(v.replace('overview','visão').replace('campaigns','campanhas').replace('competitors','radar'))));
   
   if(v==='breakdown') loadBreakdown('device');
   if(v==='trend') loadTrend();
   if(v==='creatives' && allCreatives.length===0) loadCreatives();
 }
 
-function getPrevDates(preset, since, until) {
-  let s, u;
-  if (preset === 'custom') {
-    s = new Date(since); u = new Date(until);
-    s = new Date(s.getTime() + Math.abs(s.getTimezoneOffset()*60000));
-    u = new Date(u.getTime() + Math.abs(u.getTimezoneOffset()*60000));
-  } else {
-    u = new Date();
-    const map = {last_7d:7, last_14d:14, last_30d:30, last_90d:90};
-    if(map[preset]) {
-      u.setDate(u.getDate() - 1);
-      s = new Date(u); s.setDate(s.getDate() - map[preset] + 1);
-    } else if (preset === 'this_month') {
-      s = new Date(u.getFullYear(), u.getMonth(), 1);
-    } else if (preset === 'last_month') {
-      s = new Date(u.getFullYear(), u.getMonth() - 1, 1);
-      u = new Date(u.getFullYear(), u.getMonth(), 0);
-    } else return null;
-  }
-  const diffMs = u - s;
-  const diffDays = Math.round(diffMs / 86400000) + 1;
-  
-  const prevU = new Date(s); prevU.setDate(prevU.getDate() - 1);
-  const prevS = new Date(prevU); prevS.setDate(prevS.getDate() - diffDays + 1);
-  
-  const fmt = d => d.toISOString().split('T')[0];
-  return { since: fmt(prevS), until: fmt(prevU) };
+function searchCompetitor(){
+   const name = document.getElementById('compName').value;
+   if(!name) return alert('Digite o nome do concorrente!');
+   window.open(`https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=BR&q=${encodeURIComponent(name)}`, '_blank');
 }
 
-function calcMetrics(rows){
-  let spend=0, impr=0, clicks=0, pur=0, leads=0, msg=0, sess=0, rev=0;
+function convMetrics(rows){
+  let purchases=0, leads=0, msg=0, rev=0, sp=0, cl=0, sessions=0;
   (rows||[]).forEach(m => {
-    spend += parseFloat(m.spend||0);
-    impr += parseInt(m.impressions||0);
-    clicks += parseInt(m.clicks||0);
     const a = m.actions || []; const v = m.action_values || [];
     const getAct = (arr, type) => { const f = arr.find(x=>x.action_type===type); return f ? parseFloat(f.value||0) : 0; };
     
-    pur += getAct(a,'offsite_conversion.fb_pixel_purchase') || getAct(a,'purchase');
+    purchases += getAct(a,'offsite_conversion.fb_pixel_purchase') || getAct(a,'purchase');
     leads += getAct(a,'offsite_conversion.fb_pixel_lead') || getAct(a,'lead');
     msg += getAct(a,'onsite_conversion.messaging_conversation_started_7d') || getAct(a,'onsite_conversion.messaging_first_reply');
-    sess += getAct(a,'landing_page_view');
+    sessions += getAct(a,'landing_page_view');
     rev += getAct(v,'offsite_conversion.fb_pixel_purchase');
+    sp += parseFloat(m.spend||0);
+    cl += parseInt(m.clicks||0);
   });
-  return { spend, impr, clicks, pur, leads, msg, sess, rev, ctr: impr>0?(clicks/impr)*100:0, cpc: clicks>0?spend/clicks:0, cpm: impr>0?(spend/impr)*1000:0, roas: spend>0?rev/spend:0, roi: spend>0?((rev-spend)/spend)*100:0, connectRate: clicks>0?(sess/clicks)*100:0 };
-}
-
-function makeDelta(cur, prev, reverseGood = false) {
-  if(prev === undefined || prev === null || prev === 0) return '';
-  const diff = ((cur - prev) / prev) * 100;
-  const isPos = diff > 0;
-  const isGood = reverseGood ? !isPos : isPos;
-  const color = Math.abs(diff) < 1 ? 'var(--dim)' : (isGood ? 'var(--green)' : 'var(--red)');
-  return `<span style="font-size:11px; font-weight:900; color:${color}; margin-left:8px; display:inline-block; padding:2px 6px; border-radius:4px; background:${color}15" title="vs período anterior equivalente">${isPos?'▲':'▼'} ${Math.abs(diff).toFixed(1)}%</span>`;
+  return { purchases, leads, msg, sessions, rev, sp, cl, roas: sp>0 ? rev/sp : 0, roi: sp>0 ? ((rev-sp)/sp)*100 : 0, connectRate: cl>0 ? (sessions/cl)*100 : 0 };
 }
 
 async function runAnalysis(){
   if(!selAccountId) return alert('Escolha uma conta Meta no topo.');
-  showLoad('IA Sénior a processar funil de vendas e período comparativo...');
+  showLoad('IA Sénior a vasculhar anúncios e métricas...');
   const d = document.getElementById('dateSel').value;
   let params = `date_preset=${d}`;
-  let since = null, until = null;
   if(d === 'custom') {
-    since = document.getElementById('customSince').value;
-    until = document.getElementById('customUntil').value;
-    if(!since || !until) { hideLoad(); return alert('Preencha as datas.'); }
-    params = `since=${since}&until=${until}`;
+    const s = document.getElementById('customSince').value;
+    const u = document.getElementById('customUntil').value;
+    if(!s || !u) { hideLoad(); return alert('Preencha as datas.'); }
+    params = `since=${s}&until=${u}`;
   }
 
   try {
-    const prevD = getPrevDates(d, since, until);
-    const [ins, prevInsRes] = await Promise.all([
+    // Busca Insights Normais E Criativos de uma só vez
+    const [ins, crRes] = await Promise.all([
       fetch(`/api/adaccounts/${selAccountId}/insights?${params}`).then(r=>r.json()),
-      prevD ? fetch(`/api/adaccounts/${selAccountId}/insights?since=${prevD.since}&until=${prevD.until}`).then(r=>r.json()) : Promise.resolve({data:[]})
+      fetch(`/api/adaccounts/${selAccountId}/creatives?${params}`).then(r=>r.json())
     ]);
-
-    insData = ins; 
-    prevMetricsData = calcMetrics(prevInsRes.data || []);
+    
+    insData = ins;
+    allCreatives = crRes.data || [];
 
     const res = await fetch('/api/analyze', { 
         method: 'POST', headers: {'Content-Type':'application/json'}, 
-        body: JSON.stringify({ accountData: accounts.find(a=>a.account_id===selAccountId), campaigns, insights: ins, dateRange: d }) 
+        body: JSON.stringify({ accountData: accounts.find(a=>a.account_id===selAccountId), campaigns, insights: ins, creatives: allCreatives, dateRange: d }) 
     }).then(r=>r.json());
     
     if(res.error) throw new Error(res.error);
@@ -331,26 +306,26 @@ async function runAnalysis(){
 function renderAll(){
   document.getElementById('stateEmpty').style.display='none'; document.getElementById('contentWrap').style.display='block';
   const r = analysis.resumo_geral; const S = sym();
-  const conv = calcMetrics(insData?.data || []);
+  const conv = convMetrics(insData?.data || []);
   
   document.getElementById('analysisSummary').innerHTML = `<div class="score-ring"><div class="score-num">${r.score_saude}</div><div style="font-size:8px;color:var(--dim)">SCORE</div></div><div><div style="font-size:22px; font-weight:800; color:var(--green)">${r.nivel_saude}</div><div style="color:var(--dim); font-size:12px; margin-top:3px">${r.resumo_historico}</div></div>`;
   
   document.getElementById('metricsGrid').innerHTML = `
-    <div class="mcard"><div class="mlabel">Investimento Realizado</div><div class="mval c-blue">${S} ${metrics.totalSpend.toFixed(2)}${makeDelta(metrics.totalSpend, prevMetricsData?.spend, false)}</div></div>
-    <div class="mcard"><div class="mlabel">Impressões</div><div class="mval">${fmtN(metrics.totalImpressions)}${makeDelta(metrics.totalImpressions, prevMetricsData?.impr, false)}</div></div>
-    <div class="mcard"><div class="mlabel">Cliques Totais</div><div class="mval c-cyan">${fmtN(metrics.totalClicks)}${makeDelta(metrics.totalClicks, prevMetricsData?.clicks, false)}</div></div>
-    <div class="mcard"><div class="mlabel">CPM Médio</div><div class="mval">${S} ${metrics.avgCpm.toFixed(2)}${makeDelta(metrics.avgCpm, prevMetricsData?.cpm, true)}</div></div>
-    <div class="mcard"><div class="mlabel">CPC Médio</div><div class="mval">${S} ${metrics.avgCpc.toFixed(2)}${makeDelta(metrics.avgCpc, prevMetricsData?.cpc, true)}</div></div>
+    <div class="mcard"><div class="mlabel">Investimento Realizado</div><div class="mval c-blue">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">Impressões</div><div class="mval">${fmtN(metrics.totalImpressions)}</div></div>
+    <div class="mcard"><div class="mlabel">Cliques Totais</div><div class="mval c-cyan">${fmtN(metrics.totalClicks)}</div></div>
+    <div class="mcard"><div class="mlabel">CPM Médio</div><div class="mval">${S} ${metrics.avgCpm.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">CPC Médio</div><div class="mval">${S} ${metrics.avgCpc.toFixed(2)}</div></div>
   `;
 
   document.getElementById('convGrid').innerHTML = `
-    <div class="mcard"><div class="mlabel">CTR Médio</div><div class="mval ${metrics.avgCtr>=1?'c-green':'c-orange'}">${metrics.avgCtr.toFixed(2)}%${makeDelta(metrics.avgCtr, prevMetricsData?.ctr, false)}</div></div>
-    <div class="mcard"><div class="mlabel">Connect Rate</div><div class="mval ${metrics.connectRate>=60?'c-green':'c-orange'}">${metrics.connectRate.toFixed(1)}%${makeDelta(metrics.connectRate, prevMetricsData?.connectRate, false)}</div><div class="msub">sessoes / cliques</div></div>
-    <div class="mcard"><div class="mlabel">Mensagens</div><div class="mval c-cyan">${metrics.totalMsg}${makeDelta(metrics.totalMsg, prevMetricsData?.msg, false)}</div></div>
-    <div class="mcard"><div class="mlabel">Leads</div><div class="mval c-yellow">${metrics.totalLeads}${makeDelta(metrics.totalLeads, prevMetricsData?.leads, false)}</div></div>
-    <div class="mcard"><div class="mlabel">Compras</div><div class="mval c-purple">${metrics.totalPurchases}${makeDelta(metrics.totalPurchases, prevMetricsData?.pur, false)}</div></div>
-    <div class="mcard"><div class="mlabel">Receita (Valor)</div><div class="mval c-green">${S} ${metrics.totalRev.toFixed(2)}${makeDelta(metrics.totalRev, prevMetricsData?.rev, false)}</div></div>
-    <div class="mcard"><div class="mlabel">ROAS Total</div><div class="mval ${metrics.roas>=2?'c-green':metrics.roas>0?'c-orange':'c-red'}">${metrics.roas.toFixed(2)}x${makeDelta(metrics.roas, prevMetricsData?.roas, false)}</div></div>
+    <div class="mcard"><div class="mlabel">CTR Médio</div><div class="mval ${metrics.avgCtr>=1?'c-green':'c-orange'}">${metrics.avgCtr.toFixed(2)}%</div></div>
+    <div class="mcard"><div class="mlabel">Connect Rate</div><div class="mval ${metrics.connectRate>=60?'c-green':'c-orange'}">${metrics.connectRate.toFixed(1)}%</div><div class="msub">sessoes / cliques</div></div>
+    <div class="mcard"><div class="mlabel">Mensagens</div><div class="mval c-cyan">${metrics.totalMsg}</div></div>
+    <div class="mcard"><div class="mlabel">Leads</div><div class="mval c-yellow">${metrics.totalLeads}</div></div>
+    <div class="mcard"><div class="mlabel">Compras</div><div class="mval c-purple">${metrics.totalPurchases}</div></div>
+    <div class="mcard"><div class="mlabel">Receita (Valor)</div><div class="mval c-green">${S} ${metrics.totalRev.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">ROAS Total</div><div class="mval ${metrics.roas>=2?'c-green':metrics.roas>0?'c-orange':'c-red'}">${metrics.roas.toFixed(2)}x</div></div>
   `;
   
   filterCampTable('all');
@@ -397,17 +372,18 @@ function filterCampTable(mode) {
 // ─── CRIATIVOS ───
 async function loadCreatives() {
   if(!selAccountId) return;
-  showLoad('A analisar criativos...');
-  try {
-    const d = document.getElementById('dateSel').value;
-    let params = `date_preset=${d}`;
-    if(d === 'custom') params = `since=${document.getElementById('customSince').value}&until=${document.getElementById('customUntil').value}`;
+  if(allCreatives.length === 0) {
+      showLoad('A analisar criativos...');
+      try {
+        const d = document.getElementById('dateSel').value;
+        let params = `date_preset=${d}`;
+        if(d === 'custom') params = `since=${document.getElementById('customSince').value}&until=${document.getElementById('customUntil').value}`;
 
-    const res = await fetch(`/api/adaccounts/${selAccountId}/creatives?${params}`).then(r=>r.json());
-    allCreatives = res.data || [];
-    filterCreatives('all');
-  } catch(e) { console.error(e); } 
-  finally { hideLoad(); }
+        const res = await fetch(`/api/adaccounts/${selAccountId}/creatives?${params}`).then(r=>r.json());
+        allCreatives = res.data || [];
+      } catch(e) {} finally { hideLoad(); }
+  }
+  filterCreatives('all');
 }
 
 function filterCreatives(mode) {
@@ -457,7 +433,7 @@ function filterCreatives(mode) {
               <span style="color:var(--green)" title="ROAS">💰 ${c.roas.toFixed(2)}x</span>
           </div>
       </div>`;
-  }).join('') || '<div style="color:var(--dim); padding:20px; grid-column: 1 / -1; text-align:center">Nenhum criativo atende ao filtro. Tente alterar o período.</div>';
+  }).join('') || '<div style="color:var(--dim); padding:20px; grid-column: 1 / -1; text-align:center">Nenhum criativo atende ao filtro escolhido.</div>';
 }
 
 async function loadBreakdown(type){
