@@ -25,8 +25,8 @@
     .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px;margin-bottom:25px}
     .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:18px}
     .mval{font-size:24px;font-weight:800;margin-top:5px} .mlabel{font-size:10px;color:var(--dim);text-transform:uppercase;font-weight:700}
-    table{width:100%;border-collapse:collapse;background:var(--s1);border-radius:12px;overflow:hidden;font-size:12px} 
-    th,td{padding:12px 15px;text-align:left;border-bottom:1px solid var(--b1)}
+    table{width:100%;border-collapse:collapse;background:var(--s1);border-radius:12px;font-size:12px} 
+    th,td{padding:12px 15px;text-align:left;border-bottom:1px solid var(--b1); white-space:nowrap}
     th{color:var(--dim);text-transform:uppercase;font-size:10px;font-weight:800}
     .loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,9,13,0.9);z-index:2000;flex-direction:column;align-items:center;justify-content:center}
     .loading-overlay.show{display:flex}
@@ -44,7 +44,7 @@
 
 <header class="topbar">
   <div class="logo">⚡ Meta Ads <span>Analyzer</span></div>
-  <select class="sel" id="accountSel" style="max-width:230px"><option value="">A carregar...</option></select>
+  <select class="sel" id="accountSel" style="max-width:230px"><option value="">Carregando...</option></select>
   <select class="sel" id="dateSel" onchange="onDateSelChange()">
     <option value="last_7d">7 dias</option>
     <option value="last_30d" selected>30 dias</option>
@@ -53,7 +53,9 @@
     <option value="custom">Personalizado...</option>
   </select>
   <div id="customDateWrap" style="display:none;align-items:center;gap:4px">
-    <input type="date" id="customSince" class="sel"><span style="color:var(--dim)">até</span><input type="date" id="customUntil" class="sel">
+    <input type="date" id="customSince" class="sel">
+    <span style="color:var(--dim)">até</span>
+    <input type="date" id="customUntil" class="sel">
   </div>
   <button class="btn btn-primary" onclick="runAnalysis()">Analisar Dados</button>
   <div style="margin-left:auto; display:flex; align-items:center; gap:10px">
@@ -68,10 +70,10 @@
     <button class="nav-item" onclick="showView('analysis')">🧠 Análise IA Senior</button>
     <button class="nav-item" onclick="showView('campaigns')">📋 Campanhas</button>
     <button class="nav-item" onclick="showView('breakdown')">📉 Breakdown</button>
-    <button class="nav-item" onclick="showView('content')">📸 Conteúdo IG</button>
     <button class="nav-item" onclick="showView('trend')">📈 Tendências</button>
-    <div style="margin-top:20px; font-size:10px;font-weight:800;color:var(--dim);margin-bottom:10px">CAMPANHAS ATIVAS</div>
-    <div id="campSidebar" style="font-size:11px; padding:0 12px; color:var(--dim)">Escolha conta...</div>
+    
+    <div style="margin-top:30px; font-size:10px;font-weight:800;color:var(--dim);margin-bottom:10px">CAMPANHAS ATIVAS</div>
+    <div id="campSidebar" style="font-size:11px; padding:0 12px; color:var(--dim); line-height:1.6">Escolha uma conta...</div>
   </aside>
 
   <main class="main" id="mainContent">
@@ -83,31 +85,41 @@
       
       <div id="view-overview">
         <div id="analysisSummary" style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1); margin-bottom:20px; display:flex; align-items:center; gap:20px"></div>
-        <div class="stitle">MÉTRICAS DE AQUISIÇÃO</div>
+        <div class="stitle">MÉTRICAS DE ATENÇÃO E TRÁFEGO (TOPO DO FUNIL)</div>
         <div class="mgrid" id="metricsGrid"></div>
-        <div class="stitle">CONVERSÕES E PERFORMANCE FINAL</div>
+        <div class="stitle">CONVERSÕES E PERFORMANCE FINAL (FUNDO DO FUNIL)</div>
         <div class="mgrid" id="convGrid"></div>
       </div>
 
       <div id="view-analysis" style="display:none">
-        <div class="stitle">DIAGNÓSTICO E PLANO DE AÇÃO DO GESTOR IA</div>
-        <div id="optimList" style="display:flex; flex-direction:column; gap:10px"></div>
-        <div class="stitle" style="margin-top:20px">ALERTAS CRÍTICOS</div>
+        <div class="stitle">PLANO DE AÇÃO E ESTRATÉGIA DO GESTOR IA</div>
+        <div id="optimList" style="display:flex; flex-direction:column; gap:12px"></div>
+        <div class="stitle" style="margin-top:30px">ALERTAS CRÍTICOS (SANGRIA DE CAIXA)</div>
         <div id="alertList"></div>
       </div>
 
       <div id="view-campaigns" style="display:none">
-        <div class="stitle">DESEMPENHO DETALHADO POR CAMPANHA</div>
+        <div class="stitle">DESEMPENHO PROFUNDO POR CAMPANHA</div>
         <div class="cfrow">
           <button class="cfbtn active" id="tf_all" onclick="filterCampTable('all')">Todas</button>
           <button class="cfbtn" id="tf_active" onclick="filterCampTable('active')">Ativas</button>
-          <button class="cfbtn" id="tf_running" onclick="filterCampTable('running')">Rodando no período</button>
-          <button class="cfbtn" id="tf_paused" onclick="filterCampTable('paused')">Pausadas</button>
+          <button class="cfbtn" id="tf_running" onclick="filterCampTable('running')">Rodando no Período</button>
         </div>
         <div style="overflow-x:auto; background:var(--s1); border-radius:12px; border:1px solid var(--b1)">
           <table>
             <thead><tr>
-              <th>Campanha</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>CTR</th><th>CPC</th><th>ROAS</th><th>Diagnóstico</th>
+              <th>Campanha</th>
+              <th>Gasto</th>
+              <th>Impr.</th>
+              <th>Cliques</th>
+              <th>CTR</th>
+              <th>CPC</th>
+              <th>Msgs</th>
+              <th>Leads</th>
+              <th>Compras</th>
+              <th>Connect Rate</th>
+              <th>ROAS</th>
+              <th>Diagnóstico da IA</th>
             </tr></thead>
             <tbody id="campTbody"></tbody>
           </table>
@@ -115,7 +127,7 @@
       </div>
 
       <div id="view-breakdown" style="display:none">
-        <div class="stitle">ANÁLISE POR DISPOSITIVO E POSICIONAMENTO</div>
+        <div class="stitle">ANÁLISE DE DISTRIBUIÇÃO DA VERBA</div>
         <div class="cfrow">
           <button class="cfbtn active" id="bd_device" onclick="loadBreakdown('device')">Por Dispositivo</button>
           <button class="cfbtn" id="bd_placement" onclick="loadBreakdown('placement')">Por Posicionamento</button>
@@ -123,20 +135,8 @@
         <div id="bdContent" style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1)">Aguardando seleção...</div>
       </div>
 
-      <div id="view-content" style="display:none">
-        <div style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1)">
-          <h3>Planejamento de Conteúdo IA</h3>
-          <p style="font-size:11px; color:var(--dim); margin-bottom:15px">Gere calendário focado em conversão e engajamento orgânico.</p>
-          <select id="igAccSel" class="sel" style="width:100%; max-width:300px; margin-bottom:10px"><option value="">Carregar contas IG...</option></select>
-          <input type="text" id="igNiche" placeholder="Qual o nicho do negócio? (Ex: Dentista, Loja de Roupas)" class="sel" style="width:100%; margin-bottom:10px">
-          <button class="btn btn-primary" onclick="generateContentPlan()">✨ Gerar Planejamento de 30 Dias</button>
-          <button class="btn btn-ghost" onclick="exportContentPlan()" style="margin-left:10px">📥 Exportar HTML</button>
-          <div id="contentPlanOutput" style="margin-top:20px"></div>
-        </div>
-      </div>
-
       <div id="view-trend" style="display:none">
-        <div class="chart-wrap"><div class="chart-title">Evolução do Score de Saúde</div><canvas id="cHealth" height="100"></canvas></div>
+        <div class="chart-wrap"><div class="chart-title">Evolução do Score de Saúde da Conta</div><canvas id="cHealth" height="100"></canvas></div>
       </div>
 
     </div>
@@ -149,9 +149,8 @@
 <script>
 // --- STATE ---
 let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null;
-let igAccounts=[], igMedia=[], contentPlan=null, insData=null;
+let currentTableFilter = 'all';
 
-// --- UTILS ---
 function showLoad(t){ document.getElementById('loadingOverlay').classList.add('show'); document.getElementById('loadText').textContent=t; }
 function hideLoad(){ document.getElementById('loadingOverlay').classList.remove('show'); }
 function sym(){ return accounts.find(a=>a.account_id===selAccountId)?.currency==='USD'?'$':'R$'; }
@@ -179,11 +178,11 @@ async function loadAccounts(){
 
 async function onAccChange(){
   selAccountId = document.getElementById('accountSel').value; if(!selAccountId) return;
-  showLoad('A carregar campanhas...');
+  showLoad('A carregar campanhas ativas...');
   try {
     const res = await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
     campaigns = res.data || [];
-    document.getElementById('campSidebar').innerHTML = campaigns.slice(0,10).map(c=>`<div style="margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis" title="${c.name}">• ${c.name}</div>`).join('');
+    document.getElementById('campSidebar').innerHTML = campaigns.filter(c=>c.status==='ACTIVE').map(c=>`<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis" title="${c.name}">🟢 ${c.name}</div>`).join('');
   } finally { hideLoad(); }
 }
 
@@ -192,36 +191,17 @@ function onDateSelChange(){
 }
 
 function showView(v){
-  ['overview','analysis','campaigns','breakdown','content','trend'].forEach(id => { 
+  ['overview','analysis','campaigns','breakdown','trend'].forEach(id => { 
       const el = document.getElementById('view-'+id); if(el) el.style.display = id === v ? 'block' : 'none'; 
   });
   document.querySelectorAll('.nav-item').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(v.replace('overview','visão').replace('campaigns','campanhas'))));
-  
-  if(v==='content' && igAccounts.length===0) loadIgAccounts();
   if(v==='breakdown') loadBreakdown('device');
   if(v==='trend') loadTrend();
 }
 
-function convMetrics(rows){
-  let purchases=0, leads=0, msg=0, rev=0, sp=0, cl=0, sessions=0;
-  (rows||[]).forEach(m => {
-    const a = m.actions || []; const v = m.action_values || [];
-    const getAct = (arr, type) => { const f = arr.find(x=>x.action_type===type); return f ? parseFloat(f.value||0) : 0; };
-    
-    purchases += getAct(a,'offsite_conversion.fb_pixel_purchase') || getAct(a,'purchase');
-    leads += getAct(a,'offsite_conversion.fb_pixel_lead') || getAct(a,'lead');
-    msg += getAct(a,'onsite_conversion.messaging_conversation_started_7d') || getAct(a,'onsite_conversion.messaging_first_reply');
-    sessions += getAct(a,'landing_page_view');
-    rev += getAct(v,'offsite_conversion.fb_pixel_purchase');
-    sp += parseFloat(m.spend||0);
-    cl += parseInt(m.clicks||0);
-  });
-  return { purchases, leads, msg, sessions, rev, sp, cl, roas: sp>0 ? rev/sp : 0, roi: sp>0 ? ((rev-sp)/sp)*100 : 0, connectRate: cl>0 ? (sessions/cl)*100 : 0 };
-}
-
 async function runAnalysis(){
-  if(!selAccountId) return alert('Escolha uma conta Meta.');
-  showLoad('IA Especialista a analisar...');
+  if(!selAccountId) return alert('Escolha uma conta Meta no topo.');
+  showLoad('IA Sénior a processar funil de vendas...');
   const d = document.getElementById('dateSel').value;
   let params = `date_preset=${d}`;
   if(d === 'custom') {
@@ -233,84 +213,87 @@ async function runAnalysis(){
 
   try {
     const ins = await fetch(`/api/adaccounts/${selAccountId}/insights?${params}`).then(r=>r.json());
-    insData = ins; 
-    const res = await fetch('/api/analyze', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ accountData: accounts.find(a=>a.account_id===selAccountId), campaigns, insights: ins, dateRange: d }) }).then(r=>r.json());
+    const res = await fetch('/api/analyze', { 
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({ accountData: accounts.find(a=>a.account_id===selAccountId), campaigns, insights: ins, dateRange: d }) 
+    }).then(r=>r.json());
+    
     if(res.error) throw new Error(res.error);
-    metrics = res.metrics; analysis = res.analysis; 
+    
+    metrics = res.metrics; 
+    analysis = res.analysis; 
     renderAll();
-  } catch(e) { alert('Erro: ' + e.message); } 
-  finally { hideLoad(); }
+  } catch(e) { 
+      alert('Erro na Análise: ' + e.message); 
+  } finally { hideLoad(); }
 }
 
 function renderAll(){
   document.getElementById('stateEmpty').style.display='none'; document.getElementById('contentWrap').style.display='block';
   const r = analysis.resumo_geral; const S = sym();
-  const conv = convMetrics(insData?.data || []);
   
   document.getElementById('analysisSummary').innerHTML = `<div class="score-ring"><div class="score-num">${r.score_saude}</div><div style="font-size:8px;color:var(--dim)">SCORE</div></div><div><div style="font-size:22px; font-weight:800; color:var(--green)">${r.nivel_saude}</div><div style="color:var(--dim); font-size:12px; margin-top:3px">${r.resumo_historico}</div></div>`;
   
+  // GRELHA 1 (TOPO FUNIL)
   document.getElementById('metricsGrid').innerHTML = `
-    <div class="mcard"><div class="mlabel">Investimento</div><div class="mval c-blue">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">Investimento Realizado</div><div class="mval c-blue">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
     <div class="mcard"><div class="mlabel">Impressões</div><div class="mval">${fmtN(metrics.totalImpressions)}</div></div>
     <div class="mcard"><div class="mlabel">Cliques Totais</div><div class="mval c-cyan">${fmtN(metrics.totalClicks)}</div></div>
-    <div class="mcard"><div class="mlabel">Sessões (LPV)</div><div class="mval">${fmtN(conv.sessions)}</div></div>
-    <div class="mcard"><div class="mlabel">Connect Rate</div><div class="mval ${conv.connectRate>=5?'c-green':'c-orange'}">${conv.connectRate.toFixed(1)}%</div><div class="msub">sessões / cliques</div></div>
+    <div class="mcard"><div class="mlabel">CPM Médio</div><div class="mval">${S} ${metrics.avgCpm.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">CPC Médio</div><div class="mval">${S} ${metrics.avgCpc.toFixed(2)}</div></div>
   `;
 
+  // GRELHA 2 (FUNDO FUNIL)
   document.getElementById('convGrid').innerHTML = `
     <div class="mcard"><div class="mlabel">CTR Médio</div><div class="mval ${metrics.avgCtr>=1?'c-green':'c-orange'}">${metrics.avgCtr.toFixed(2)}%</div></div>
-    <div class="mcard"><div class="mlabel">CPC Médio</div><div class="mval">${S} ${metrics.avgCpc.toFixed(2)}</div></div>
-    <div class="mcard"><div class="mlabel">Compras</div><div class="mval c-purple">${conv.purchases}</div></div>
-    <div class="mcard"><div class="mlabel">Leads</div><div class="mval c-yellow">${conv.leads}</div></div>
-    <div class="mcard"><div class="mlabel">Mensagens</div><div class="mval c-cyan">${conv.msg}</div></div>
-    <div class="mcard"><div class="mlabel">Receita Total</div><div class="mval c-green">${S} ${conv.rev.toFixed(2)}</div></div>
-    <div class="mcard"><div class="mlabel">ROAS</div><div class="mval ${conv.roas>=2?'c-green':conv.roas>0?'c-orange':'c-red'}">${conv.roas.toFixed(2)}x</div></div>
-    <div class="mcard"><div class="mlabel">ROI</div><div class="mval ${conv.roi>=0?'c-green':'c-red'}">${conv.roi.toFixed(0)}%</div></div>
+    <div class="mcard"><div class="mlabel">Connect Rate</div><div class="mval ${metrics.connectRate>=60?'c-green':'c-orange'}">${metrics.connectRate.toFixed(1)}%</div><div class="msub">sessoes / cliques</div></div>
+    <div class="mcard"><div class="mlabel">Mensagens</div><div class="mval c-cyan">${metrics.totalMsg}</div></div>
+    <div class="mcard"><div class="mlabel">Leads</div><div class="mval c-yellow">${metrics.totalLeads}</div></div>
+    <div class="mcard"><div class="mlabel">Compras</div><div class="mval c-purple">${metrics.totalPurchases}</div></div>
+    <div class="mcard"><div class="mlabel">ROAS Total</div><div class="mval ${metrics.roas>=2?'c-green':metrics.roas>0?'c-orange':'c-red'}">${metrics.roas.toFixed(2)}x</div></div>
   `;
   
   filterCampTable('all');
 
-  document.getElementById('optimList').innerHTML = (analysis.otimizacoes_prioritarias||[]).map(o => `<div style="background:var(--s2); padding:18px; border-radius:10px; border-left:4px solid var(--cyan)">
-      <strong style="color:var(--cyan); font-size:14px">#${o.prioridade} ${o.titulo}</strong>
-      <div style="color:var(--text); margin-top:6px; font-size:12px">${o.descricao}</div>
-      <div style="color:var(--orange); margin-top:10px; font-size:11px; font-weight:700; background:rgba(255,152,0,0.1); padding:8px; border-radius:6px">${o.acao}</div>
+  document.getElementById('optimList').innerHTML = (analysis.otimizacoes_prioritarias||[]).map(o => `<div style="background:var(--s2); padding:20px; border-radius:12px; border-left:4px solid var(--cyan)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+          <strong style="color:var(--cyan); font-size:16px">#${o.prioridade} ${o.titulo}</strong>
+          <span style="font-size:10px; background:var(--s1); padding:4px 8px; border-radius:4px; color:var(--dim)">${o.categoria}</span>
+      </div>
+      <div style="color:var(--text); font-size:13px; line-height:1.5">${o.descricao}</div>
+      <div style="color:var(--orange); margin-top:12px; font-size:12px; font-weight:700; background:rgba(255,152,0,0.1); padding:10px; border-radius:6px; border:1px solid rgba(255,152,0,0.2)">${o.acao}</div>
     </div>`).join('');
     
-  document.getElementById('alertList').innerHTML = (analysis.alertas_criticos||[]).map(a => `<div style="background:rgba(255,56,96,0.1); padding:12px; border-radius:8px; color:var(--red); margin-bottom:10px; font-weight:700">⚠️ ${a.mensagem}</div>`).join('') || '<div style="color:var(--green)">Nenhum alerta crítico encontrado.</div>';
+  document.getElementById('alertList').innerHTML = (analysis.alertas_criticos||[]).map(a => `<div style="background:rgba(255,56,96,0.1); padding:15px; border-radius:8px; color:var(--red); margin-bottom:10px; font-weight:700; border:1px solid rgba(255,56,96,0.3)">⚠️ ${a.mensagem} <br><span style="font-size:11px; font-weight:normal; margin-top:4px; display:block">Sugerido: ${a.acao_requerida}</span></div>`).join('') || '<div style="color:var(--green)">Nenhum vazamento grave detectado.</div>';
 }
 
 function filterCampTable(mode) {
-  ['all', 'active', 'running', 'paused'].forEach(id => {
+  ['all', 'active', 'running'].forEach(id => {
       const btn = document.getElementById('tf_'+id);
       if(btn) btn.classList.toggle('active', id===mode);
   });
   
   let list = analysis.campanhas_analise || [];
   if(mode === 'active') list = list.filter(c => c.campStatus === 'ACTIVE');
-  if(mode === 'paused') list = list.filter(c => c.campStatus === 'PAUSED');
   if(mode === 'running') list = list.filter(c => c.campStatus === 'ACTIVE' && c.spendRaw > 0);
 
   document.getElementById('campTbody').innerHTML = list.map(c => {
-    const campInsight = (insData?.data || []).find(x => x.campaign_id === c.campId);
-    let roas = 0;
-    if(campInsight) {
-      const getA = (arr, type) => { const f = (arr||[]).find(x=>x.action_type===type); return f ? parseFloat(f.value||0) : 0; };
-      const rev = getA(campInsight.action_values, 'offsite_conversion.fb_pixel_purchase');
-      const sp = parseFloat(campInsight.spend||0);
-      roas = sp > 0 ? rev/sp : 0;
-    }
-
     return `<tr>
-      <td style="font-weight:700">${c.nome}</td>
-      <td>${c.gasto}</td>
-      <td>${fmtN(c.impressions || 0)}</td>
-      <td>${fmtN(c.clicks || 0)}</td>
+      <td style="font-weight:700; max-width:250px; overflow:hidden; text-overflow:ellipsis" title="${c.nome}">${c.nome}</td>
+      <td style="color:var(--blue); font-weight:700">${c.gasto}</td>
+      <td>${fmtN(c.impressoes)}</td>
+      <td>${fmtN(c.cliques)}</td>
       <td>${c.ctr}</td>
       <td>${c.cpc}</td>
-      <td style="color:${roas>=2?'var(--green)':roas>0?'var(--orange)':'var(--dim)'}; font-weight:700">${roas > 0 ? roas.toFixed(2)+'x' : '-'}</td>
-      <td style="color:var(--dim); font-size:11px">${c.problema_principal}</td>
+      <td style="color:var(--cyan); font-weight:700">${c.mensagens > 0 ? c.mensagens : '-'}</td>
+      <td style="color:var(--yellow); font-weight:700">${c.leads > 0 ? c.leads : '-'}</td>
+      <td style="color:var(--purple); font-weight:700">${c.compras > 0 ? c.compras : '-'}</td>
+      <td style="color:var(--orange)">${c.connectRate}</td>
+      <td style="color:var(--green); font-weight:700">${c.roas}</td>
+      <td style="color:var(--dim); font-size:11px">${c.diagnostico}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--dim)">Nenhuma campanha atende ao filtro.</td></tr>';
+  }).join('') || '<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--dim)">Nenhuma campanha atende ao filtro.</td></tr>';
 }
 
 async function loadBreakdown(type){
@@ -329,11 +312,11 @@ async function loadBreakdown(type){
     
     document.getElementById('bdContent').innerHTML = `
       <table style="background:transparent; font-size:12px">
-        <thead><tr><th>Segmento</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>CTR</th><th>CPC</th></tr></thead>
+        <thead><tr><th>Segmento Analisado</th><th>Investimento</th><th>Impressões</th><th>Cliques</th><th>CTR</th><th>CPC</th></tr></thead>
         <tbody>
           ${data.sort((a,b)=>parseFloat(b.spend||0)-parseFloat(a.spend||0)).map(r => `
             <tr>
-              <td style="font-weight:700; color:var(--cyan)">${r.device_platform || r.publisher_platform || 'Outro'}</td>
+              <td style="font-weight:700; color:var(--cyan)">${r.device_platform || r.publisher_platform || 'Outro'} ${r.platform_position ? ' - ' + r.platform_position : ''}</td>
               <td>${S} ${parseFloat(r.spend||0).toFixed(2)}</td>
               <td>${fmtN(r.impressions)}</td>
               <td>${fmtN(r.clicks)}</td>
@@ -351,61 +334,13 @@ async function loadTrend(){
   try {
     const res = await fetch(`/api/trend/${selAccountId}`).then(r=>r.json());
     const data = res.trend || [];
-    if(data.length === 0) return document.getElementById('cHealth').parentElement.innerHTML = '<div style="padding:20px; color:var(--dim)">Execute análises recorrentes para gerar o gráfico de evolução histórica do Score.</div>';
+    if(data.length === 0) return document.getElementById('cHealth').parentElement.innerHTML = '<div style="padding:20px; color:var(--dim)">Gere análises ao longo dos dias para visualizar o histórico de saúde.</div>';
     new Chart(document.getElementById('cHealth'), {
       type: 'line', 
       data: { labels: data.map(d=>new Date(d.date).toLocaleDateString()), datasets: [{ label: 'Score de Saúde', data: data.map(d=>d.avg_health), borderColor: '#00e676', backgroundColor: 'rgba(0,230,118,0.1)', tension: 0.4, fill:true }] },
       options: { plugins: { legend: { display: false } }, scales: { y: { suggestedMin: 0, suggestedMax: 100 } } }
     });
   } catch(e) {}
-}
-
-async function loadIgAccounts(){
-  showLoad('A buscar contas Instagram...');
-  try {
-    const res = await fetch('/api/instagram/accounts').then(r=>r.json());
-    igAccounts = res.data || [];
-    const sel = document.getElementById('igAccSel');
-    if(sel) {
-      if(igAccounts.length === 0) {
-         sel.innerHTML = '<option value="">Nenhuma conta IG Profissional encontrada no seu Facebook.</option>';
-      } else {
-         sel.innerHTML = '<option value="">Selecione Conta Instagram vinculada...</option>' + igAccounts.map(a => `<option value="${a.id}">${a.username}</option>`).join('');
-      }
-    }
-  } catch(e) {
-    document.getElementById('igAccSel').innerHTML = `<option value="">Erro ao carregar IG.</option>`;
-  } finally { hideLoad(); }
-}
-
-async function generateContentPlan(){
-  const niche = document.getElementById('igNiche').value;
-  if(!niche) return alert('Por favor, informe o nicho do negócio.');
-  showLoad('A IA a analisar nicho e gerar ideias...');
-  try {
-    const res = await fetch('/api/content-plan', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({niche}) }).then(r=>r.json());
-    contentPlan = res.plan;
-    document.getElementById('contentPlanOutput').innerHTML = '<div style="padding:15px; background:rgba(0,230,118,0.1); color:var(--green); border-radius:8px; font-weight:700">✨ Calendário mensal gerado com sucesso! Clique em "Exportar HTML" para ler os roteiros e copys magnéticos.</div>';
-  } catch(e) {
-    alert("Erro ao gerar plano. " + e.message);
-  } finally { hideLoad(); }
-}
-
-function exportContentPlan(){
-  if(!contentPlan) return alert('Gere o plano IA primeiro.');
-  let html = '<html><body style="font-family:Arial; padding:30px; color:#333; max-width:800px; margin:auto">';
-  html += '<h1 style="color:#1877F2">Calendário Editorial (Criado com Inteligência Artificial)</h1><hr>';
-  (contentPlan.plano || []).forEach(p => {
-    let copyFormatado = (p.copy || '').replace(/\n/g, '<br>');
-    html += `<div style="border:1px solid #ddd; padding:20px; border-radius:8px; margin-bottom:20px; background:#f9f9f9">
-                <h3 style="margin-top:0; color:#d81b60">Dia ${p.dia}: ${p.titulo}</h3>
-                <p><strong>Formato:</strong> ${p.tipo}</p>
-                <p><strong>Gancho (Headline):</strong> <i>${p.gancho}</i></p>
-                <div style="background:#fff; padding:15px; border-left:4px solid #1877F2; margin:15px 0">${copyFormatado}</div>
-             </div>`;
-  });
-  html += '</body></html>';
-  const win = window.open('','_blank'); win.document.write(html); win.document.close();
 }
 
 window.onload = init;
