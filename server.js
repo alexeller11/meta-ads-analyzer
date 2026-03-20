@@ -23,7 +23,7 @@ const REDIRECT_URI = `${BASE_URL}/auth/facebook/callback`;
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 app.get('/auth/facebook', (req, res) => {
-  const scopes = ['ads_read', 'ads_management', 'business_management', 'public_profile', 'pages_show_list', 'instagram_basic'].join(',');
+  const scopes = ['ads_read', 'ads_management', 'business_management', 'public_profile'].join(',');
   res.redirect(`https://www.facebook.com/v19.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${scopes}&response_type=code`);
 });
 
@@ -104,44 +104,75 @@ app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─── MOTOR DE ANÁLISE IA ESPECIALISTA ────────────────────────────────────────
+// ─── MOTOR DE ANÁLISE IA (SÉNIOR) ───────────────────────────────────────────
 app.post('/api/analyze', auth, async (req, res) => {
   const { accountData, campaigns, insights, dateRange } = req.body;
   try {
     const rows = insights?.data || [];
+    const getAct = (arr, type) => { const f = (arr||[]).find(x=>x.action_type===type); return f ? parseFloat(f.value||0) : 0; };
+    
     let totalSpend = 0, totalImpressions = 0, totalClicks = 0, totalReach = 0, freqSum = 0, freqCount = 0;
+    let totalPurchases = 0, totalLeads = 0, totalMsg = 0, totalSessions = 0, totalRev = 0;
     const byId = {};
     
     rows.forEach(m => {
-      totalSpend += parseFloat(m.spend || 0); 
-      totalImpressions += parseInt(m.impressions || 0); 
-      totalClicks += parseInt(m.clicks || 0); 
+      const sp = parseFloat(m.spend || 0);
+      const cl = parseInt(m.clicks || 0);
+      const a = m.actions || [];
+      const v = m.action_values || [];
+
+      totalSpend += sp;
+      totalImpressions += parseInt(m.impressions || 0);
+      totalClicks += cl;
       totalReach += parseInt(m.reach || 0);
       if(m.frequency) { freqSum += parseFloat(m.frequency); freqCount++; }
-      byId[m.campaign_id] = m;
+      
+      const pur = getAct(a,'offsite_conversion.fb_pixel_purchase') || getAct(a,'purchase');
+      const lds = getAct(a,'offsite_conversion.fb_pixel_lead') || getAct(a,'lead');
+      const msg = getAct(a,'onsite_conversion.messaging_conversation_started_7d') || getAct(a,'onsite_conversion.messaging_first_reply');
+      const sess = getAct(a,'landing_page_view');
+      const rev = getAct(v,'offsite_conversion.fb_pixel_purchase');
+
+      totalPurchases += pur;
+      totalLeads += lds;
+      totalMsg += msg;
+      totalSessions += sess;
+      totalRev += rev;
+
+      byId[m.campaign_id] = { ...m, pur, lds, msg, sess, rev, sp, cl };
     });
 
     const metrics = { 
       totalSpend, totalImpressions, totalClicks, totalReach,
+      totalPurchases, totalLeads, totalMsg, totalSessions, totalRev,
       avgCtr: totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0, 
       avgCpc: totalClicks > 0 ? totalSpend / totalClicks : 0,
       avgCpm: totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0,
       avgFrequency: freqCount > 0 ? freqSum / freqCount : 0,
+      connectRate: totalClicks > 0 ? (totalSessions / totalClicks) * 100 : 0,
+      roas: totalSpend > 0 ? totalRev / totalSpend : 0,
       activeCampaigns: campaigns.filter(c => c.status === 'ACTIVE').length,
       totalCampaigns: campaigns.length
     };
 
     const enriched = campaigns.map(c => {
-      const m = byId[c.id] || {};
+      const m = byId[c.id] || { pur:0, lds:0, msg:0, sess:0, rev:0, sp:0, cl:0 };
       return { 
         ...c, 
-        spend: parseFloat(m.spend || 0), 
+        spend: m.sp, 
         ctr: parseFloat(m.ctr || 0), 
         cpc: parseFloat(m.cpc || 0), 
         cpm: parseFloat(m.cpm || 0), 
         frequency: parseFloat(m.frequency || 0), 
         impressions: parseInt(m.impressions || 0), 
-        clicks: parseInt(m.clicks || 0) 
+        clicks: m.cl,
+        purchases: m.pur,
+        leads: m.lds,
+        messages: m.msg,
+        sessions: m.sess,
+        revenue: m.rev,
+        roas: m.sp > 0 ? m.rev / m.sp : 0,
+        connectRate: m.cl > 0 ? (m.sess / m.cl) * 100 : 0
       };
     });
     
@@ -151,6 +182,7 @@ app.post('/api/analyze', auth, async (req, res) => {
     await db.saveRun({ fbAccountId: accountData.account_id, fbUserId: req.session.user.id, accountName: accountData.name, dateRange, metrics, campaigns: enriched, aiAnalysis });
     res.json({ success: true, analysis: aiAnalysis, metrics, previousRun });
   } catch (err) { 
+    console.error(err);
     res.status(500).json({ error: err.message }); 
   }
 });
@@ -158,8 +190,7 @@ app.post('/api/analyze', auth, async (req, res) => {
 const safeNum = (val) => Number(val) || 0;
 
 function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
-  // Correção do erro de destruturação: todas as variáveis extraídas corretamente
-  const { avgCtr, avgCpc, avgCpm, avgFrequency, totalSpend, totalImpressions, activeCampaigns } = metrics;
+  const { avgCtr, avgCpc, avgCpm, avgFrequency, totalSpend, connectRate, roas, totalLeads, totalMsg, totalPurchases } = metrics;
   const S = accountData.currency === 'BRL' ? 'R$' : '$';
   
   let score = totalSpend > 0 ? 100 : 0;
@@ -168,105 +199,102 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
   const alertas = [];
   let pri = 1;
 
-  const benchCtr = 1.2;
-  const benchCpc = 3.5;
-  const benchFreq = 3.0;
-
-  // Lógica Especialista Senior: Cruzamento de Dados
+  // Análise de Funil Profunda
   if (totalSpend === 0) {
-    score -= 40;
-    alertas.push({ mensagem: 'Sem investimento. A conta não gastou nada no período selecionado.', acao_requerida: 'Verifique se há limite de gastos da conta atingido ou falha no cartão de crédito.' });
+    score -= 50;
+    alertas.push({ mensagem: 'Conta sem investimento no período.', acao_requerida: 'Verificar pagamentos ou campanhas pausadas.' });
   } else {
-    // Análise de CTR e Saturação (Funil Topo)
-    if (avgCtr < benchCtr) {
-      score -= 15;
-      if (avgFrequency > benchFreq) {
-        issues.push(`Fadiga de Criativo Severa: CTR baixo (${safeNum(avgCtr).toFixed(2)}%) com alta frequência (${safeNum(avgFrequency).toFixed(2)}x).`);
-        otimizacoes.push({ prioridade: pri++, titulo: 'Combater Saturação Urgente', categoria: 'Criativo e Público', impacto_esperado: 'Alto', descricao: `Seu público já viu o mesmo anúncio muitas vezes (${safeNum(avgFrequency).toFixed(1)}x em média) e parou de clicar (CTR de ${safeNum(avgCtr).toFixed(2)}%). Isso inflaciona o seu CPA.`, acao: 'Ação: Pause os anúncios antigos. Crie novos criativos com abordagens/ganchos diferentes e expanda seu público em 30%.' });
-      } else {
-        issues.push(`Desconexão de Oferta: CTR baixo (${safeNum(avgCtr).toFixed(2)}%) mesmo com público fresco.`);
-        otimizacoes.push({ prioridade: pri++, titulo: 'Melhorar Ganchos (Hooks)', categoria: 'Criativo', impacto_esperado: 'Alto', descricao: `O público é novo (Frequência ok), mas o anúncio não está chamando atenção (CTR ${safeNum(avgCtr).toFixed(2)}%). A oferta ou a imagem não estão conectando.`, acao: 'Ação: Teste os 3 primeiros segundos do vídeo ou crie títulos de imagem mais agressivos focados na dor do cliente.' });
-      }
-    }
-
-    // Análise de CPC e CPM (Leilão)
-    if (avgCpc > benchCpc) {
+    // 1. Atenção e Leilão (Topo do Funil)
+    if (avgCpm > 35) {
       score -= 10;
-      if (avgCpm > 30) {
-        issues.push(`Leilão Altamente Competitivo: CPM de ${S} ${safeNum(avgCpm).toFixed(2)} está gerando CPCs caros.`);
-        otimizacoes.push({ prioridade: pri++, titulo: 'Fugir de Leilões Caros', categoria: 'Lances e Estrutura', impacto_esperado: 'Médio', descricao: `O seu custo por clique está em ${S} ${safeNum(avgCpc).toFixed(2)} porque o CPM (custo para aparecer) está altíssimo. Você está brigando com tubarões pelo mesmo público restrito.`, acao: 'Ação: Abra a segmentação (use Advantage+ ou Broad) para permitir que a Meta encontre bolsões de inventário mais baratos.' });
-      } else {
-        issues.push(`Rejeição de Anúncio: CPM barato, mas CPC alto. As pessoas veem mas não clicam.`);
-      }
+      issues.push(`CPM Altíssimo (${S} ${safeNum(avgCpm).toFixed(2)}): O seu leilão está muito caro.`);
+      otimizacoes.push({ prioridade: pri++, titulo: 'Leilão Sufocado (Reduzir CPM)', categoria: 'Lances / Público', impacto_esperado: 'Alto', descricao: `Você está a pagar ${S} ${safeNum(avgCpm).toFixed(2)} por cada mil impressões. O público está muito pequeno ou a concorrência está a esmagar a sua conta.`, acao: 'Ação: Mude para públicos Advantage+ (Broad) ou adicione novos interesses para "destravar" o algoritmo e encontrar impressões mais baratas.' });
     }
 
-    // Escalabilidade
-    if (score >= 85 && activeCampaigns > 0) {
-      otimizacoes.push({ prioridade: pri++, titulo: 'Fase de Escala (Scale Up)', categoria: 'Estratégia', impacto_esperado: 'Alto', descricao: 'A conta apresenta indicadores muito saudáveis. É o momento exato para injetar mais orçamento sem quebrar o algoritmo.', acao: 'Ação: Aumente o orçamento das campanhas campeãs em 20% a cada 3 dias, ou duplique a campanha para públicos semelhantes (Lookalike 1% e 3%).' });
+    if (avgCtr < 1.0) {
+      score -= 15;
+      issues.push(`CTR Pobre (${safeNum(avgCtr).toFixed(2)}%): Os criativos não estão a reter a atenção.`);
+      otimizacoes.push({ prioridade: pri++, titulo: 'Fadiga Criativa ou Oferta Fraca', categoria: 'Criativos', impacto_esperado: 'Alto', descricao: `Apenas ${safeNum(avgCtr).toFixed(2)}% das pessoas que veem o anúncio clicam. Se o CTR subir para 1.5%, o seu custo por clique (CPC) cai drasticamente.`, acao: 'Ação: Pause os piores anúncios. Suba 3 criativos em vídeo (Reels/TikTok style) focados em resolver a dor primária do cliente nos 3 primeiros segundos.' });
+    }
+
+    // 2. Fuga de Cliques (Meio do Funil)
+    // Connect rate = (Landing Page Views / Clicks) * 100
+    // Só avalia se houver sessoes rastreadas.
+    if (metrics.totalSessions > 0 && connectRate < 60) {
+      score -= 15;
+      issues.push(`Fuga de Cliques: Connect Rate de apenas ${safeNum(connectRate).toFixed(1)}%.`);
+      otimizacoes.push({ prioridade: pri++, titulo: 'Vazamento no Site (Fuga de Tráfego)', categoria: 'Landing Page', impacto_esperado: 'Crítico', descricao: `Para cada 100 cliques que você paga, apenas ${safeNum(connectRate).toFixed(0)} chegam a carregar o site. Você está a perder dinheiro com cliques acidentais ou lentidão.`, acao: 'Ação: 1. Otimize a velocidade do site (Mobile). 2. Remova o posicionamento "Audience Network" (gera muitos cliques acidentais).' });
+    }
+
+    // 3. Conversão e ROAS (Fundo do Funil)
+    const hasConversions = (totalPurchases + totalLeads + totalMsg) > 0;
+    if (totalSpend > 100 && !hasConversions) {
+      score -= 20;
+      alertas.push({ mensagem: `Gastou ${S} ${totalSpend.toFixed(2)} e não gerou NENHUMA conversão rastreada.`, acao_requerida: 'Verifique se o Pixel está a disparar corretamente ou mude a oferta urgente.' });
+    }
+
+    if (totalPurchases > 0 && roas < 1.5) {
+      score -= 15;
+      issues.push(`Sangria de Caixa: ROAS negativo (${safeNum(roas).toFixed(2)}x).`);
+      otimizacoes.push({ prioridade: pri++, titulo: 'Cortar Campanhas Sangrentas', categoria: 'Orçamento', impacto_esperado: 'Crítico', descricao: `O retorno sobre investimento está em ${safeNum(roas).toFixed(2)}x. As campanhas não se estão a pagar.`, acao: 'Ação: Isole as campanhas com ROAS abaixo de 1. Pause conjuntos não lucrativos. Foque o orçamento restante numa campanha de Retargeting para aquecer o público.' });
+    } else if (roas > 3.0) {
+      otimizacoes.push({ prioridade: pri++, titulo: 'Escala de Lucro (Scale Up)', categoria: 'Estratégia', impacto_esperado: 'Alto', descricao: `O ROAS está saudável (${safeNum(roas).toFixed(2)}x). É hora de pisar no acelerador sem quebrar a aprendizagem da máquina.`, acao: 'Ação: Aumente o orçamento diário das campanhas campeãs em 20% a cada 48 horas. Monitore o CPA de perto.' });
+    }
+
+    if (avgFrequency > 4.0) {
+      score -= 10;
+      issues.push(`Saturação Elevada: Frequência de ${safeNum(avgFrequency).toFixed(1)}x.`);
     }
   }
 
   score = Math.max(0, Math.min(100, score));
-  const nivel_saude = score >= 85 ? 'Excelente' : score >= 65 ? 'Bom' : score >= 45 ? 'Atenção' : 'Crítico';
+  const nivel_saude = score >= 85 ? 'Excelente' : score >= 65 ? 'Saudável' : score >= 45 ? 'Precisa de Atenção' : 'Crítico / Sangria';
 
+  // Processar dados individuais das campanhas para enviar TUDO mastigado ao Frontend
   const campanhas_analise = campaigns.map(c => {
-    let statusPerf = 'Atenção';
-    let prob = 'Baixo Engajamento';
-    if(c.spend === 0) { statusPerf = 'Parada'; prob = 'Sem Gasto'; }
-    else if(c.ctr > 1.2 && c.cpc < benchCpc) { statusPerf = 'Excelente'; prob = 'Nenhum, escalar!'; }
-    else if(c.ctr >= 0.8) { statusPerf = 'Bom'; prob = 'Pode melhorar CTR'; }
+    let diag = 'Analisando';
+    if(c.spend === 0) diag = 'Sem Investimento';
+    else if(c.roas > 2.5) diag = 'Escalar Imediatamente';
+    else if(c.roas > 0 && c.roas < 1.5) diag = 'ROAS Negativo (Pausar)';
+    else if(c.ctr < 1.0) diag = 'Baixo Engajamento (Criativo)';
+    else if(c.cpc > 4.0) diag = 'Leilão Caro';
+    else if(c.connectRate > 0 && c.connectRate < 50) diag = 'Fuga de Cliques';
+    else diag = 'Performance Estável';
 
     return { 
-      nome: c.name, campStatus: c.status, status_performance: statusPerf,
-      gasto: `${S} ${safeNum(c.spend).toFixed(2)}`, ctr: `${safeNum(c.ctr).toFixed(2)}%`, 
-      cpc: `${S} ${safeNum(c.cpc).toFixed(2)}`, frequencia: `${safeNum(c.frequency).toFixed(2)}x`,
-      problema_principal: prob,
-      spendRaw: safeNum(c.spend) // Usado no frontend para o filtro "Rodando"
+      campId: c.id,
+      nome: c.name || 'Desconhecida', 
+      campStatus: c.status,
+      gasto: `${S} ${safeNum(c.spend).toFixed(2)}`, 
+      impressoes: safeNum(c.impressions),
+      cliques: safeNum(c.clicks),
+      ctr: `${safeNum(c.ctr).toFixed(2)}%`, 
+      cpc: `${S} ${safeNum(c.cpc).toFixed(2)}`, 
+      mensagens: safeNum(c.messages),
+      leads: safeNum(c.leads),
+      compras: safeNum(c.purchases),
+      roas: c.roas > 0 ? `${safeNum(c.roas).toFixed(2)}x` : '-',
+      connectRate: c.connectRate > 0 ? `${safeNum(c.connectRate).toFixed(1)}%` : '-',
+      diagnostico: diag,
+      spendRaw: safeNum(c.spend)
     };
   });
 
+  if (pri === 1 && totalSpend > 0) {
+    otimizacoes.push({ prioridade: pri++, titulo: 'Manutenção Estável', categoria: 'Geral', impacto_esperado: 'Baixo', descricao: 'A conta não apresenta vazamentos graves de orçamento ou métricas ruins.', acao: 'Mantenha as regras e foque em produzir novos vídeos para não deixar o público saturar.' });
+  }
+
   return {
-    resumo_geral: { score_saude: score, nivel_saude, pontos_principais: issues.length ? issues : ['Estrutura técnica sólida.', 'Métricas de leilão favoráveis.'] },
+    resumo_geral: { score_saude: score, nivel_saude, pontos_principais: issues.length ? issues : ['Métricas de Funil Saudáveis.'], resumo_historico: previousRun ? `Score anterior: ${previousRun.health_score} pts.` : 'Primeira análise profunda.' },
     campanhas_analise,
     otimizacoes_prioritarias: otimizacoes,
-    alertas_criticos: alertas,
-    plano_acao_30dias: [
-      { semana: 1, foco: 'Diagnóstico & Limpeza', acoes: ['Pausar anúncios com CTR < 0.5%', 'Criar novos ganchos visuais'] },
-      { semana: 2, foco: 'Teste de Públicos', acoes: ['Testar Lookalike 2% vs Público Aberto (Broad)'] }
-    ]
+    alertas_criticos: alertas
   };
 }
 
-// ─── INSTAGRAM CONTENT ────────────────────────────────────────────────────────
-app.get('/api/instagram/accounts', auth, async (req, res) => {
-  try {
-    // Alterado para buscar paginas com contas IG associadas
-    const pages = await axios.get('https://graph.facebook.com/v19.0/me/accounts', { 
-      params: { fields: 'instagram_business_account{id,username,profile_picture_url}', access_token: req.session.accessToken } 
-    });
-    const igAccounts = []; 
-    if (pages.data && pages.data.data) {
-      pages.data.data.forEach(p => { 
-        if (p.instagram_business_account) igAccounts.push(p.instagram_business_account); 
-      });
-    }
-    res.json({ data: igAccounts });
-  } catch (e) { 
-    console.error("IG API Error:", e.response?.data || e.message);
-    res.status(500).json({ error: 'Falha ao buscar Instagram. Confirme se a sua página está vinculada a uma conta IG Profissional.' }); 
-  }
-});
-
-const { generateContentPlanEngine } = require('./content_engine');
-app.post('/api/content-plan', auth, (req, res) => {
-  try { res.json({ success: true, plan: generateContentPlanEngine(req.body) }); } 
-  catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ─── TENDENCIAS ───────────────────────────────────────────────────────────────
+// ─── TENDENCIAS E HISTORICO ───────────────────────────────────────────────────
 app.get('/api/trend/:accountId', auth, async (req, res) => { 
-  try { res.json({ trend: await db.getAccountTrend(req.params.accountId) }); } 
-  catch (e) { res.status(500).json({ error: e.message }); } 
+  try { res.json({ trend: await db.getAccountTrend(req.params.accountId) }); } catch (e) { res.status(500).json({ error: e.message }); } 
 });
 
 // ─── ROUTES PADRÃO ───────────────────────────────────────────────────────────
