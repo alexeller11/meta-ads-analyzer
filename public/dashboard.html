@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meta Ads Analyzer - Full Dashboard</title>
+  <title>Meta Ads Analyzer - Full Suite</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -24,22 +24,21 @@
     .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:20px}
     .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:15px}
     .mval{font-size:24px;font-weight:800;margin-top:5px} .mlabel{font-size:10px;color:var(--dim);text-transform:uppercase;font-weight:700}
-    table{width:100%;border-collapse:collapse} th,td{padding:12px;text-align:left;border-bottom:1px solid var(--b1)}
     .loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,9,13,0.9);z-index:2000;flex-direction:column;align-items:center;justify-content:center}
     .loading-overlay.show{display:flex}
     .slabel{font-size:10px;color:var(--dim);text-transform:uppercase;padding:15px 12px 8px;font-weight:800}
+    table{width:100%;border-collapse:collapse} th,td{padding:12px;text-align:left;border-bottom:1px solid var(--b1)}
   </style>
 </head>
 <body>
 
 <header class="topbar">
   <div class="logo">⚡ Meta Ads <span>Analyzer</span></div>
-  <div class="sep"></div>
-  <select class="sel" id="accountSel"><option value="">A carregar contas...</option></select>
+  <select class="sel" id="accountSel"><option value="">Carregando...</option></select>
   
   <select class="sel" id="dateSel" onchange="onDateSelChange()">
-    <option value="last_7d">Últimos 7 dias</option>
-    <option value="last_30d" selected>Últimos 30 dias</option>
+    <option value="last_7d">7 dias</option>
+    <option value="last_30d" selected>30 dias</option>
     <option value="this_month">Este mês</option>
     <option value="last_month">Mês passado</option>
     <option value="custom">Personalizado...</option>
@@ -51,12 +50,11 @@
     <input type="date" id="customUntil" class="sel">
   </div>
 
-  <button class="btn btn-primary" onclick="runAnalysis()">Analisar Dados</button>
+  <button class="btn btn-primary" onclick="runAnalysis()">Analisar</button>
   
-  <div style="margin-left:auto; display:flex; align-items:center; gap:12px">
+  <div style="margin-left:auto; display:flex; align-items:center; gap:10px">
     <span id="uName">...</span>
     <img id="uAvatar" style="width:28px; border-radius:50%">
-    <a href="/auth/logout" style="color:var(--dim); text-decoration:none; font-size:11px">Sair</a>
   </div>
 </header>
 
@@ -66,52 +64,28 @@
     <button class="nav-item active" onclick="showView('overview')">📊 Visão Geral</button>
     <button class="nav-item" onclick="showView('analysis')">🧠 Análise IA</button>
     <button class="nav-item" onclick="showView('campaigns')">📋 Campanhas</button>
-    <button class="nav-item" onclick="showView('creatives')">🖼️ Criativos</button>
-    <button class="nav-item" onclick="showView('breakdown')">📉 Breakdown</button>
-    <button class="nav-item" onclick="showView('content')">📸 Conteúdo IG</button>
-    <button class="nav-item" onclick="showView('google')">🔍 Google Ads</button>
-    
-    <div class="slabel">CAMPANHAS ATIVAS</div>
-    <div id="campSidebar" style="font-size:11px; padding:0 12px; color:var(--dim)">Escolha uma conta...</div>
   </aside>
 
   <main class="main">
     <div id="stateEmpty" style="text-align:center; padding-top:100px; opacity:0.6">
-      <h2>Escolha uma conta e defina o período para analisar</h2>
+      <h2>Escolha uma conta para começar</h2>
     </div>
 
     <div id="contentWrap" style="display:none">
       <div id="view-overview">
         <div id="analysisSummary" style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1); margin-bottom:20px"></div>
         <div class="mgrid" id="metricsGrid"></div>
-        <div style="background:var(--s1); border-radius:12px; border:1px solid var(--b1); overflow:hidden">
-          <table>
-            <thead><tr><th>Campanha</th><th>Performance</th><th>Gasto</th><th>CTR</th><th>CPC</th></tr></thead>
-            <tbody id="campTbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="view-analysis" style="display:none">
-        <h2 style="margin-bottom:15px">Diagnóstico de Inteligência</h2>
-        <div id="optimList"></div>
-      </div>
-
-      <div id="view-breakdown" style="display:none">
-        <h2 style="margin-bottom:15px">Breakdown por Dispositivo</h2>
-        <div id="bdContent" style="background:var(--s1); padding:20px; border-radius:12px">A carregar...</div>
-      </div>
-
-      <div id="view-creatives" style="display:none">
-        <h2 style="margin-bottom:15px">Análise de Criativos</h2>
-        <div id="creativeGrid" class="mgrid"></div>
+        <table style="background:var(--s1); border-radius:12px; overflow:hidden">
+          <thead><tr><th>Campanha</th><th>Perf.</th><th>Gasto</th><th>CTR</th><th>CPC</th></tr></thead>
+          <tbody id="campTbody"></tbody>
+        </table>
       </div>
     </div>
   </main>
 </div>
 
 <div class="loading-overlay" id="loadingOverlay">
-  <div style="font-size:18px; font-weight:700">A Puxar Dados da Meta...</div>
+  <div style="font-size:18px; font-weight:700">Analisando...</div>
 </div>
 
 <script>
@@ -129,8 +103,8 @@ async function loadAccounts(){
   const res = await fetch('/api/adaccounts').then(r=>r.json());
   accounts = res.data || [];
   const sel = document.getElementById('accountSel');
-  sel.innerHTML = '<option value="">Escolha a conta...</option>' + 
-    accounts.map(a => `<option value="${a.account_id}">${a.name} (${a.currency})</option>`).join('');
+  sel.innerHTML = '<option value="">Selecione...</option>' + 
+    accounts.map(a => `<option value="${a.account_id}">${a.name}</option>`).join('');
   sel.onchange = onAccChange;
 }
 
@@ -139,7 +113,6 @@ async function onAccChange(){
   if(!selAccountId) return;
   const res = await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
   campaigns = res.data || [];
-  document.getElementById('campSidebar').innerHTML = campaigns.slice(0,10).map(c=>`<div style="margin-bottom:5px">• ${c.name.slice(0,25)}...</div>`).join('');
 }
 
 function onDateSelChange(){
@@ -147,14 +120,11 @@ function onDateSelChange(){
 }
 
 function showView(v){
-  ['overview','analysis','campaigns','creatives','breakdown','content','google'].forEach(id=>{
+  const views = ['overview', 'analysis', 'campaigns'];
+  views.forEach(id => {
     const el = document.getElementById('view-'+id);
     if(el) el.style.display = id === v ? 'block' : 'none';
   });
-  document.querySelectorAll('.nav-item').forEach(btn => {
-    btn.classList.toggle('active', btn.textContent.toLowerCase().includes(v.replace('overview','visão')));
-  });
-  if(v === 'breakdown') loadBreakdown();
 }
 
 async function runAnalysis(){
@@ -185,11 +155,10 @@ function renderAll(){
   document.getElementById('stateEmpty').style.display = 'none';
   document.getElementById('contentWrap').style.display = 'block';
   
-  const S = accounts.find(a=>a.account_id === selAccountId).currency === 'BRL' ? 'R$' : '$';
   document.getElementById('metricsGrid').innerHTML = `
-    <div class="mcard"><div class="mlabel">Investimento</div><div class="mval" style="color:var(--blue)">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
-    <div class="mcard"><div class="mlabel">CTR Médio</div><div class="mval">${metrics.avgCtr.toFixed(2)}%</div></div>
-    <div class="mcard"><div class="mlabel">CPC Médio</div><div class="mval">${S} ${metrics.avgCpc.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">Gasto</div><div class="mval" style="color:var(--blue)">R$ ${metrics.totalSpend.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">CTR</div><div class="mval">${metrics.avgCtr.toFixed(2)}%</div></div>
+    <div class="mcard"><div class="mlabel">CPC</div><div class="mval">R$ ${metrics.avgCpc.toFixed(2)}</div></div>
     <div class="mcard"><div class="mlabel">Impressões</div><div class="mval">${metrics.totalImpressions.toLocaleString()}</div></div>
   `;
 
@@ -198,36 +167,9 @@ function renderAll(){
   `).join('');
 
   document.getElementById('analysisSummary').innerHTML = `
-    <div style="display:flex; align-items:center; gap:20px">
-      <div style="width:60px; height:60px; border:4px solid var(--green); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:900">${analysis.resumo_geral.score_saude}</div>
-      <div>
-        <div style="font-size:18px; font-weight:800">${analysis.resumo_geral.nivel_saude}</div>
-        <div style="color:var(--dim)">${analysis.resumo_geral.resumo_historico}</div>
-      </div>
-    </div>
+    <div style="font-size:18px; font-weight:800; color:var(--green)">${analysis.resumo_geral.nivel_saude} (${analysis.resumo_geral.score_saude} pts)</div>
+    <div style="color:var(--dim)">${analysis.resumo_geral.resumo_historico}</div>
   `;
-  
-  document.getElementById('optimList').innerHTML = analysis.otimizacoes_prioritarias.map(o => `
-    <div style="background:var(--s2); padding:15px; border-radius:12px; margin-bottom:10px; border-left:5px solid var(--cyan)">
-      <strong>#${o.prioridade} ${o.titulo}</strong> - ${o.categoria}<br><small>${o.descricao}</small>
-    </div>
-  `).join('');
-}
-
-async function loadBreakdown(){
-  const res = await fetch(`/api/adaccounts/${selAccountId}/breakdown/device`).then(r=>r.json());
-  document.getElementById('bdContent').innerHTML = `<pre style="font-size:11px">${JSON.stringify(res.data || [], null, 2)}</pre>`;
-}
-
-// Correção anti-quebra de sintaxe
-async function exportContentPlan(){
-  if(!contentPlan){alert('Gere o plano.');return;}
-  let html='<html><body><h1>Planeamento</h1>';
-  (contentPlan.plano||[]).forEach(p=>{
-    html+=`<div><b>Dia ${p.dia}</b>: ${p.titulo}<br>${p.copy.replace(/\n/g,'<br>')}</div><hr>`;
-  });
-  html+='</body></html>';
-  const w=window.open('','_blank'); w.document.write(html); w.document.close();
 }
 
 init();
