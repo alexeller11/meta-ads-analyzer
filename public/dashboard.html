@@ -16,7 +16,7 @@
     .logo{font-weight:800;font-size:14px;color:var(--text)} .logo span{color:var(--cyan)}
     .sel{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;outline:none}
     .btn{padding:7px 15px;border-radius:8px;font-weight:700;cursor:pointer;border:none;font-size:12px;transition:0.2s}
-    .btn-primary{background:var(--blue);color:#fff}
+    .btn-primary{background:var(--blue);color:#fff} .btn-ghost{background:transparent;color:var(--dim);border:1px solid var(--b1)}
     .app-body{display:flex;flex:1;min-height:0}
     .sidebar{width:220px;background:var(--s1);border-right:1px solid var(--b1);padding:15px;overflow-y:auto}
     .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:var(--dim);cursor:pointer;width:100%;text-align:left;background:none;border:none;margin-bottom:4px;font-weight:700}
@@ -32,19 +32,18 @@
     .loading-overlay.show{display:flex}
     .spinner{width:40px;height:40px;border:3px solid var(--b1);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
-    .budget-chip{padding:5px 12px; border-radius:6px; font-size:11px; font-weight:800; display:flex; align-items:center; gap:8px}
-    .postpaid{background:rgba(24,119,242,0.1); color:var(--blue); border:1px solid rgba(24,119,242,0.2)}
-    .prepaid{background:rgba(0,230,118,0.1); color:var(--green); border:1px solid rgba(0,230,118,0.2)}
+    .stitle{font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.05em}
     .cfrow{display:flex;gap:5px;margin-bottom:15px}
     .cfbtn{padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--b1);background:var(--s2);color:var(--muted)}
     .cfbtn.active{background:rgba(24,119,242,.15);border-color:var(--blue);color:var(--blue)}
+    .score-ring{width:60px;height:60px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:4px solid var(--green);color:var(--green); font-size:22px; font-weight:900}
   </style>
 </head>
 <body>
 
 <header class="topbar">
   <div class="logo">⚡ Meta Ads <span>Analyzer</span></div>
-  <select class="sel" id="accountSel" style="max-width:230px"><option value="">Carregando...</option></select>
+  <select class="sel" id="accountSel" style="max-width:230px"><option value="">Carregando contas...</option></select>
   <select class="sel" id="dateSel" onchange="onDateSelChange()">
     <option value="last_7d">7 dias</option><option value="last_30d" selected>30 dias</option>
     <option value="this_month">Este mês</option><option value="last_month">Mês passado</option>
@@ -55,8 +54,8 @@
   </div>
   <button class="btn btn-primary" onclick="runAnalysis()">Analisar Dados</button>
   <div style="margin-left:auto; display:flex; align-items:center; gap:10px">
-    <div id="budgetChip" class="budget-chip" style="display:none"></div>
-    <span id="uName">...</span><img id="uAvatar" style="width:28px; border-radius:50%">
+    <div id="budgetChip" style="font-size:11px; font-weight:700; color:var(--green)"></div>
+    <span id="uName">Alex</span><img id="uAvatar" style="width:28px; border-radius:50%">
   </div>
 </header>
 
@@ -68,7 +67,6 @@
     <button class="nav-item" onclick="showView('creatives')">🖼️ Criativos</button>
     <button class="nav-item" onclick="showView('breakdown')">📉 Breakdown</button>
     <button class="nav-item" onclick="showView('trend')">📈 Tendências</button>
-    <button class="nav-item" onclick="showView('competitors')">🕵️ Radar Concorrência</button>
     <div id="campSidebar" style="margin-top:20px; font-size:11px; padding:0 12px; color:var(--dim)">Escolha conta...</div>
   </aside>
 
@@ -83,27 +81,17 @@
       </div>
 
       <div id="view-campaigns" style="display:none">
-        <div class="cfrow">
-          <button class="cfbtn active" id="tf_all" onclick="filterCampTable('all')">Todas</button>
-          <button class="cfbtn" id="tf_running" onclick="filterCampTable('running')">Rodando</button>
-        </div>
+        <div class="cfrow"><button class="cfbtn active" id="tf_all" onclick="filterCampTable('all')">Todas</button><button class="cfbtn" id="tf_running" onclick="filterCampTable('running')">Rodando</button></div>
         <table>
-          <thead><tr><th>Campanha</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>CTR</th><th>CPC</th><th>Msgs</th><th>Leads</th><th>Connect %</th><th>ROAS</th><th>Diagnóstico</th></tr></thead>
+          <thead><tr><th>Campanha</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>CTR</th><th>CPC</th><th>Msgs</th><th>Compras</th><th>Receita</th><th>Connect %</th><th>ROAS</th><th>Diagnóstico IA</th></tr></thead>
           <tbody id="campTbody"></tbody>
         </table>
       </div>
 
       <div id="view-analysis" style="display:none"><div id="optimList" style="display:flex; flex-direction:column; gap:12px"></div></div>
-      
-      <div id="view-breakdown" style="display:none"><div id="bdContent"></div></div>
-      
       <div id="view-creatives" style="display:none"><div id="crGrid" class="mgrid"></div></div>
-
-      <div id="view-competitors" style="display:none; text-align:center; padding:40px">
-        <h3>Pesquisar Concorrente</h3>
-        <input type="text" id="compName" class="sel" style="width:300px; margin:20px" placeholder="Nome da empresa...">
-        <button class="btn btn-primary" onclick="window.open('https://www.facebook.com/ads/library/?q='+encodeURIComponent(document.getElementById('compName').value), '_blank')">Abrir Biblioteca da Meta</button>
-      </div>
+      <div id="view-breakdown" style="display:none"><div id="bdContent"></div></div>
+      <div id="view-trend" style="display:none"><div class="chart-wrap"><canvas id="cHealth" height="100"></canvas></div></div>
     </div>
   </main>
 </div>
@@ -139,31 +127,26 @@ async function loadAccounts(){
 
 async function onAccChange(){
   selAccountId = document.getElementById('accountSel').value; if(!selAccountId) return;
-  showLoad('Verificando Saldo...');
+  showLoad('Verificando conta...');
   try {
-    const balRes = await fetch(`/api/adaccounts/${selAccountId}/balance`).then(r=>r.json());
-    const chip = document.getElementById('budgetChip');
-    if(balRes.balance !== undefined){
-        const bal = parseFloat(balRes.balance)/100;
-        chip.className = 'budget-chip ' + (bal > 0 ? 'postpaid' : 'prepaid');
-        chip.innerHTML = bal > 0 ? `💳 Fatura: R$ ${bal.toFixed(2)}` : `💰 Saldo: R$ ${Math.abs(bal).toFixed(2)}`;
-        chip.style.display = 'flex';
-    }
     const res = await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
     campaigns = res.data || [];
-    document.getElementById('campSidebar').innerHTML = campaigns.filter(c=>c.status==='ACTIVE').map(c=>`🟢 ${c.name.slice(0,22)}...`).join('<br>');
+    document.getElementById('campSidebar').innerHTML = campaigns.filter(c=>c.status==='ACTIVE').map(c=>`🟢 ${c.name.slice(0,25)}...`).join('<br>');
   } finally { hideLoad(); }
 }
 
 function showView(v){
-  ['overview','analysis','campaigns','creatives','breakdown','trend','competitors'].forEach(id => { 
+  ['overview','analysis','campaigns','creatives','breakdown','trend'].forEach(id => { 
       const el = document.getElementById('view-'+id); if(el) el.style.display = id === v ? 'block' : 'none'; 
   });
+  if(v==='creatives') loadCreatives();
+  if(v==='breakdown') loadBreakdown('device');
+  if(v==='trend') loadTrend();
 }
 
 async function runAnalysis(){
   if(!selAccountId) return alert('Selecione uma conta!');
-  showLoad('IA Sénior analisando tudo...');
+  showLoad('IA Sénior analisando dados...');
   const d = document.getElementById('dateSel').value;
   try {
     const [ins, crRes] = await Promise.all([
@@ -186,14 +169,14 @@ function renderAll(){
     <div class="mcard"><div class="mlabel">Investimento</div><div class="mval c-blue">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
     <div class="mcard"><div class="mlabel">Impressoes</div><div class="mval">${fmtN(metrics.totalImpressions)}</div></div>
     <div class="mcard"><div class="mlabel">Cliques</div><div class="mval">${fmtN(metrics.totalClicks)}</div></div>
-    <div class="mcard"><div class="mlabel">CPM Medio</div><div class="mval">${S} ${metrics.avgCpm.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">CTR</div><div class="mval c-green">${metrics.avgCtr.toFixed(2)}%</div></div>
   `;
 
   document.getElementById('convGrid').innerHTML = `
-    <div class="mcard"><div class="mlabel">CTR Médio</div><div class="mval c-green">${metrics.avgCtr.toFixed(2)}%</div></div>
     <div class="mcard"><div class="mlabel">Connect Rate</div><div class="mval c-orange">${metrics.connectRate.toFixed(1)}%</div></div>
-    <div class="mcard"><div class="mlabel">Compras</div><div class="mval c-purple">${metrics.totalPurchases}</div></div>
+    <div class="mcard"><div class="mlabel">Vendas</div><div class="mval c-purple">${metrics.totalPurchases}</div></div>
     <div class="mcard"><div class="mlabel">Receita</div><div class="mval c-green">${S} ${metrics.totalRev.toFixed(2)}</div></div>
+    <div class="mcard"><div class="mlabel">ROAS</div><div class="mval c-cyan">${metrics.roas.toFixed(2)}x</div></div>
   `;
 
   filterCampTable('all');
@@ -203,7 +186,26 @@ function renderAll(){
 function filterCampTable(mode) {
   let list = analysis.campanhas_analise || [];
   if(mode === 'running') list = list.filter(c => c.spendRaw > 0);
-  document.getElementById('campTbody').innerHTML = list.map(c => `<tr><td>${c.nome}</td><td>${c.gasto}</td><td>${fmtN(c.impressoes)}</td><td>${fmtN(c.cliques)}</td><td>${c.ctr}</td><td>${c.cpc}</td><td>${c.mensagens}</td><td>${c.connectRate}</td><td style="color:var(--green)">${c.roas}</td><td>${c.diagnostico}</td></tr>`).join('');
+  const S = accounts.find(a=>a.account_id===selAccountId).currency==='BRL'?'R$':'$';
+  document.getElementById('campTbody').innerHTML = list.map(c => `<tr><td style="font-weight:700">${c.nome}</td><td>${c.gasto}</td><td>${fmtN(c.impressoes)}</td><td>${fmtN(c.cliques)}</td><td>${c.ctr}</td><td>${c.cpc}</td><td>${c.mensagens}</td><td>${c.compras}</td><td style="font-weight:700; color:var(--green)">${S} ${c.receita.toFixed(2)}</td><td>${c.connectRate}</td><td style="color:var(--green)">${c.roas}</td><td><button class="btn btn-ghost" style="padding:2px 8px; font-size:9px" onclick="alert('${c.diagnostico}')">🤖 Ver Analise</button></td></tr>`).join('');
+}
+
+async function loadCreatives() {
+  document.getElementById('crGrid').innerHTML = allCreatives.slice(0,12).map(c => {
+      const ins = (c.insights?.data || [])[0] || {};
+      return `<div class="mcard" style="padding:10px; text-align:center"><img src="${c.creative?.thumbnail_url || ''}" style="width:100%; border-radius:8px"><div style="font-size:11px; margin-top:8px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${c.name}</div></div>`;
+  }).join('');
+}
+
+async function loadBreakdown(type){
+  const res = await fetch(`/api/adaccounts/${selAccountId}/breakdown/${type}`).then(r=>r.json());
+  document.getElementById('bdContent').innerHTML = `<table style="background:transparent"><thead><tr><th>Segmento</th><th>Gasto</th><th>CTR</th><th>CPC</th></tr></thead><tbody>${res.data.map(r=>`<tr><td>${r.device_platform || r.publisher_platform || 'Outro'}</td><td>R$ ${parseFloat(r.spend).toFixed(2)}</td><td>${parseFloat(r.ctr).toFixed(2)}%</td><td>R$ ${parseFloat(r.cpc).toFixed(2)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+async function loadTrend(){
+  const res = await fetch(`/api/trend/${selAccountId}`).then(r=>r.json());
+  const data = res.trend || [];
+  new Chart(document.getElementById('cHealth'), { type: 'line', data: { labels: data.map(d=>new Date(d.date).toLocaleDateString()), datasets: [{ label: 'Score', data: data.map(d=>d.avg_health), borderColor: '#00e676', tension: 0.4 }] } });
 }
 
 function onDateSelChange(){ document.getElementById('customDateWrap').style.display = document.getElementById('dateSel').value === 'custom' ? 'flex' : 'none'; }
