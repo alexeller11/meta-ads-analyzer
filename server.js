@@ -16,7 +16,7 @@ const googleOAuth2 = new google.auth.OAuth2(
 
 const app = express();
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'meta-ads-secret-2024',
@@ -280,7 +280,7 @@ app.post('/api/analyze', auth, async (req, res) => {
   }
 });
 
-// ─── MOTOR ESTRATÉGICO DE ANÁLISE (v3 — Estrategista Expert) ─────────────────
+// ─── MOTOR ESTRATÉGICO DE ANÁLISE ─────────────────
 
 function runAnalysisEngine(accountData, campaigns, metrics, previousRun, dateRange) {
   const {
@@ -297,7 +297,6 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun, dateRan
     ? { ctrBom: 1.0, ctrExc: 2.0, cpcBom: 3.0, cpcAlto: 7.0, cpmBom: 20, cpmAlto: 45, freqMax: 3.5, freqCrit: 5.0, roasBom: 2.0, roasExc: 4.0 }
     : { ctrBom: 0.9, ctrExc: 1.5, cpcBom: 1.5, cpcAlto: 4.0, cpmBom: 10, cpmAlto: 25, freqMax: 3.5, freqCrit: 5.0, roasBom: 2.0, roasExc: 4.0 };
 
-  // ── Score de saúde — multidimensional ────────────────────────────────────
   let score = 100;
   const issues = []; 
 
@@ -311,15 +310,17 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun, dateRan
   // Frequência (peso 20)
   if      (avgFrequency > bench.freqCrit) { score -= 20; issues.push({metric:'Freq', severity:'critica', msg:`Frequência ${avgFrequency.toFixed(1)}x — público saturado`}); }
   else if (avgFrequency > bench.freqMax)  { score -= 12; issues.push({metric:'Freq', severity:'alta', msg:`Frequência ${avgFrequency.toFixed(1)}x — início de saturação`}); }
-  else if (avgFrequency > 2.5)            { score -= 4; }
-  else if (avgFrequency < 1.2 && totalSpend > 100) { score -= 6; issues.push({metric:'Freq', severity:'baixa', msg:`Frequência ${avgFrequency.toFixed(1)}x muito baixa`}); }
 
   // CPC (peso 15)
   if      (avgCpc > bench.cpcAlto * 1.5) { score -= 15; issues.push({metric:'CPC', severity:'alta', msg:`CPC ${S} ${avgCpc.toFixed(2)} — muito acima do ideal`}); }
   else if (avgCpc > bench.cpcAlto)        { score -= 8; issues.push({metric:'CPC', severity:'media', msg:`CPC ${S} ${avgCpc.toFixed(2)} elevado`}); }
 
+  // CPM (peso 10)
+  if      (avgCpm > bench.cpmAlto * 1.5) { score -= 10; issues.push({metric:'CPM', severity:'media', msg:`CPM ${S} ${avgCpm.toFixed(2)} — leilão muito disputado`}); }
+  else if (avgCpm > bench.cpmAlto)        { score -= 5; }
+
   // Ativação (peso 10)
-  if (totalSpend === 0)                                { score -= 30; issues.push({metric:'Ativação', severity:'critica', msg:'Sem gasto no período'}); }
+  if (totalSpend === 0)                                { score -= 30; issues.push({metric:'Ativação', severity:'critica', msg:'Sem gasto no período — conta sem veiculação'}); }
   else if (activeCampaigns === 0 && totalCampaigns > 0){ score -= 20; issues.push({metric:'Ativação', severity:'critica', msg:'Todas as campanhas pausadas'}); }
 
   score = Math.max(0, Math.min(100, score));
@@ -336,9 +337,8 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun, dateRan
     resumo_historico = `Score vs análise de ${dt} (era ${previousRun.health_score} pts).`;
   }
 
-  const pontos_principais = issues.length > 0 ? issues.filter(i => i.severity !== 'baixa').slice(0, 3).map(i => i.msg) : ['Performance sólida'];
+  const pontos_principais = issues.length > 0 ? issues.filter(i => i.severity !== 'baixa').slice(0, 3).map(i => i.msg) : ['Performance sólida — métricas dentro dos benchmarks'];
 
-  // Análise por campanha
   const campanhas_analise = campaigns
     .filter(c => c.impressions > 0 || c.status === 'ACTIVE')
     .map(c => {
@@ -363,17 +363,17 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun, dateRan
   const otimizacoes = [];
   let pri = 1;
   if (avgCtr < bench.ctrBom && totalImpressions > 5000) {
-    otimizacoes.push({ prioridade: pri++, titulo: 'Renovar criativos', categoria: 'Criativo', impacto_esperado: 'Alto', descricao: `CTR de ${avgCtr.toFixed(2)}% baixo.`, acao: `Testar ganchos diferentes.`, prazo: 'Esta semana' });
+    otimizacoes.push({ prioridade: pri++, titulo: 'Renovar criativos — causa raiz do CTR baixo', categoria: 'Criativo', impacto_esperado: 'Alto', descricao: `CTR de ${avgCtr.toFixed(2)}% baixo.`, acao: `Testar ganchos diferentes.`, prazo: 'Esta semana' });
   }
 
+  // CORREÇÃO: A propriedade metricas_comparativas que causava o Erro 500 foi REMOVIDA.
   return {
     resumo_geral: { score_saude: score, nivel_saude, variacao_score, tendencia, pontos_principais, resumo_historico },
-    // CORREÇÃO: Removido "metricas_comparativas" que causava erro 500
     campanhas_analise,
     otimizacoes_prioritarias: otimizacoes,
-    alertas_criticos: issues.filter(i => i.severity !== 'baixa').map(i => ({ tipo: i.metric, severidade: 'Alta', mensagem: i.msg, acao_requerida: 'Revisar' })),
+    alertas_criticos: issues.filter(i => i.severity !== 'baixa').map(i => ({ tipo: i.metric, severidade: i.severity, mensagem: i.msg, acao_requerida: 'Revisar urgência' })),
     insights_historicos: previousRun ? [{ titulo: 'Histórico', observacao: resumo_historico, implicacao: 'Monitore tendências.' }] : [],
-    oportunidades: [{ titulo: 'Lookalike', descricao: 'Use listas de clientes.', potencial_impacto: 'Alto' }],
+    oportunidades: [{ titulo: 'Lookalike', descricao: 'Use listas de clientes.', potencial_impacto: 'Redução de CPA' }],
     plano_acao_30dias: [{ semana: 1, foco: 'Ajustes', acoes: ['Revisar criativos'] }],
     proximos_passos: ['Nova análise em 7 dias']
   };
@@ -382,7 +382,9 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun, dateRan
 // ─── EMAIL SERVICE ────────────────────────────────────────────────────────────
 
 function createMailTransporter() {
-  return nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.ALERT_EMAIL_USER, pass: process.env.ALERT_EMAIL_PASS } });
+  return nodemailer.createTransport({
+    service: 'gmail', auth: { user: process.env.ALERT_EMAIL_USER, pass: process.env.ALERT_EMAIL_PASS }
+  });
 }
 
 // ─── ALERT ROUTES ─────────────────────────────────────────────────────────────
@@ -406,9 +408,11 @@ app.delete('/api/alert/:accountId', auth, async (req, res) => {
 // ─── CAMPAIGN ACTIONS ────────────────────────────────────────────────────────
 
 app.post('/api/campaigns/:campaignId/toggle', auth, async (req, res) => {
-  const { newStatus } = req.body;
-  try { await axios.post(`https://graph.facebook.com/v19.0/${req.params.campaignId}`, { status: newStatus, access_token: req.session.accessToken }); res.json({ success: true, status: newStatus }); }
-  catch (e) { res.status(500).json({ error: e.message }); }
+  const { newStatus } = req.body; 
+  try {
+    await axios.post(`https://graph.facebook.com/v19.0/${req.params.campaignId}`, { status: newStatus, access_token: req.session.accessToken });
+    res.json({ success: true, status: newStatus });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── BREAKDOWN ENDPOINTS ──────────────────────────────────────────────────────
@@ -484,6 +488,30 @@ app.post('/api/content-plan', auth, (req, res) => {
   try { res.json({ success: true, plan: generateContentPlanEngine({ niche, igUsername, businessName, recentPosts, accountMetrics, tone, audience }) }); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// ─── GOOGLE ADS AUTH ──────────────────────────────────────────────────────────
+
+app.get('/auth/google', auth, (req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID) return res.status(400).json({ error: 'Google Client ID nao configurado. Adicione GOOGLE_CLIENT_ID no .env' });
+  const url = googleOAuth2.generateAuthUrl({
+    access_type: 'offline', prompt: 'consent',
+    scope: ['https://www.googleapis.com/auth/adwords', 'https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email'],
+    state: req.session.user?.id || 'anon'
+  });
+  res.redirect(url);
+});
+
+app.get('/auth/google/callback', async (req, res) => {
+  const { code, error } = req.query;
+  if (error) return res.redirect('/dashboard?google_error=denied');
+  try {
+    const { tokens } = await googleOAuth2.getToken(code);
+    req.session.googleTokens = tokens;
+    res.redirect('/dashboard?google=connected');
+  } catch (e) { res.redirect('/dashboard?google_error=failed'); }
+});
+
+app.get('/api/google/status', auth, (req, res) => { res.json({ connected: !!req.session.googleTokens }); });
 
 // ─── PAGES ───────────────────────────────────────────────────────────────────
 
