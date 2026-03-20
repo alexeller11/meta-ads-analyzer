@@ -66,6 +66,16 @@ app.get('/api/adaccounts', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Rota de Saldo Restaurada
+app.get('/api/adaccounts/:id/balance', auth, async (req, res) => {
+  try {
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}`, {
+      params: { fields: 'name,balance,amount_spent,spend_cap,currency,account_status', access_token: req.session.accessToken }
+    });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/adaccounts/:id/campaigns', auth, async (req, res) => {
   try {
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/campaigns`, {
@@ -89,6 +99,20 @@ app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/api/adaccounts/:id/creatives', auth, async (req, res) => {
+  try {
+    const { since, until, date_preset } = req.query;
+    let insightsParam = since && until ? `insights.time_range({"since":"${since}","until":"${until}"})` : `insights.date_preset(${date_preset || 'last_30d'})`;
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, {
+      params: {
+        fields: `id,name,status,campaign{name},creative{id,name,thumbnail_url,image_url,body,title},${insightsParam}{impressions,clicks,spend,ctr,cpc,cpm,frequency,actions,action_values}`,
+        access_token: req.session.accessToken, limit: 100
+      }
+    });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
   try {
     const params = { fields: 'impressions,clicks,spend,cpm,ctr,cpc', level: 'account', access_token: req.session.accessToken, limit: 100 };
@@ -103,26 +127,9 @@ app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// NOVO: Rota para puxar Criativos e os seus dados individuais
-app.get('/api/adaccounts/:id/creatives', auth, async (req, res) => {
-  try {
-    const { since, until, date_preset } = req.query;
-    let insightsParam = since && until ? `insights.time_range({"since":"${since}","until":"${until}"})` : `insights.date_preset(${date_preset || 'last_30d'})`;
-    
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, {
-      params: {
-        fields: `id,name,status,campaign{name},creative{id,name,thumbnail_url,image_url,body,title},${insightsParam}{impressions,clicks,spend,ctr,cpc,cpm,frequency,actions,action_values}`,
-        access_token: req.session.accessToken,
-        limit: 100
-      }
-    });
-    res.json(r.data);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ─── MOTOR DE ANÁLISE IA (SÉNIOR) ───────────────────────────────────────────
+// ─── MOTOR DE ANÁLISE IA (PROFUNDO COM CRIATIVOS) ──────────────────────────
 app.post('/api/analyze', auth, async (req, res) => {
-  const { accountData, campaigns, insights, dateRange } = req.body;
+  const { accountData, campaigns, insights, creatives, dateRange } = req.body;
   try {
     const rows = insights?.data || [];
     const getAct = (arr, type) => { const f = (arr||[]).find(x=>x.action_type===type); return f ? parseFloat(f.value||0) : 0; };
@@ -165,7 +172,7 @@ app.post('/api/analyze', auth, async (req, res) => {
       totalCampaigns: campaigns.length
     };
 
-    const enriched = campaigns.map(c => {
+    const enrichedCampaigns = campaigns.map(c => {
       const m = byId[c.id] || { pur:0, lds:0, msg:0, sess:0, rev:0, sp:0, cl:0 };
       return { 
         ...c, spend: m.sp, ctr: parseFloat(m.ctr || 0), cpc: parseFloat(m.cpc || 0), cpm: parseFloat(m.cpm || 0), frequency: parseFloat(m.frequency || 0), 
@@ -175,16 +182,18 @@ app.post('/api/analyze', auth, async (req, res) => {
     });
     
     const previousRun = await db.getLastRun(accountData.account_id);
-    const aiAnalysis = runAnalysisEngine(accountData, enriched, metrics, previousRun);
+    const aiAnalysis = runAnalysisEngine(accountData, enrichedCampaigns, metrics, creatives, previousRun);
     
-    await db.saveRun({ fbAccountId: accountData.account_id, fbUserId: req.session.user.id, accountName: accountData.name, dateRange, metrics, campaigns: enriched, aiAnalysis });
+    await db.saveRun({ fbAccountId: accountData.account_id, fbUserId: req.session.user.id, accountName: accountData.name, dateRange, metrics, campaigns: enrichedCampaigns, aiAnalysis });
     res.json({ success: true, analysis: aiAnalysis, metrics, previousRun });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error(err); res.status(500).json({ error: err.message }); 
+  }
 });
 
 const safeNum = (val) => Number(val) || 0;
 
-function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
+function runAnalysisEngine(accountData, campaigns, metrics, creativesRaw, previousRun) {
   const { avgCtr, avgCpc, avgCpm, avgFrequency, totalSpend, connectRate, roas, totalLeads, totalMsg, totalPurchases } = metrics;
   const S = accountData.currency === 'BRL' ? 'R$' : '$';
   
@@ -194,75 +203,97 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
   const alertas = [];
   let pri = 1;
 
-  const benchCtr = 1.2; const benchCpc = 3.5; const benchFreq = 3.0;
+  // Processamento Profundo de Criativos
+  const adStats = (creativesRaw || []).map(ad => {
+    const ins = (ad.insights?.data || [])[0] || {};
+    const a = ins.actions || [];
+    const v = ins.action_values || [];
+    const getAct = (arr, type) => { const f = arr.find(x=>x.action_type===type); return f ? parseFloat(f.value||0) : 0; };
+    const spend = parseFloat(ins.spend || 0);
+    const pur = getAct(a,'offsite_conversion.fb_pixel_purchase') || getAct(a,'purchase');
+    const rev = getAct(v,'offsite_conversion.fb_pixel_purchase');
+    const adRoas = spend > 0 ? rev / spend : 0;
+    return { name: ad.name || ad.creative?.name || 'Desconhecido', spend, ctr: parseFloat(ins.ctr || 0), pur, adRoas, status: ad.status };
+  });
+
+  const adsGastões = adStats.filter(a => a.spend > (totalSpend * 0.1) && a.status === 'ACTIVE'); // Gastaram +10% da verba
+  const pioresAds = adsGastões.filter(a => a.ctr < 1.0 && a.pur === 0);
+  const melhoresAds = adsGastões.filter(a => a.adRoas >= 2.0 || a.pur > 0);
 
   if (totalSpend === 0) {
     score -= 40;
-    alertas.push({ mensagem: 'Sem investimento no período.', acao_requerida: 'Verifique se há limite de gastos atingido ou falha no cartão.' });
+    alertas.push({ mensagem: 'Conta sem investimento no período.', acao_requerida: 'Verifique se há limite de gastos atingido ou falha no cartão.' });
   } else {
-    if (avgCtr < benchCtr) {
+    // Avaliação de Criativos Dinâmica
+    if (pioresAds.length > 0) {
       score -= 15;
-      if (avgFrequency > benchFreq) {
-        issues.push(`Fadiga de Criativo Severa: CTR baixo e alta frequência.`);
-        otimizacoes.push({ prioridade: pri++, titulo: 'Combater Saturação Urgente', categoria: 'Criativo/Público', impacto_esperado: 'Alto', descricao: `O público parou de clicar (CTR de ${safeNum(avgCtr).toFixed(2)}%). Isso inflaciona o CPA.`, acao: 'Pause os anúncios antigos. Crie novos criativos e expanda o seu público em 30%.' });
-      } else {
-        issues.push(`Desconexão de Oferta: CTR baixo (${safeNum(avgCtr).toFixed(2)}%) com público novo.`);
-        otimizacoes.push({ prioridade: pri++, titulo: 'Melhorar Ganchos (Hooks)', categoria: 'Criativo', impacto_esperado: 'Alto', descricao: `O anúncio não está a reter atenção.`, acao: 'Teste os 3 primeiros segundos do vídeo com foco na dor primária do cliente.' });
-      }
+      const worst = pioresAds.sort((a,b) => b.spend - a.spend)[0];
+      issues.push(`Ralo de Orçamento: O anúncio '${worst.name}' gastou ${S} ${worst.spend.toFixed(2)} sem gerar conversões e com CTR baixo (${worst.ctr.toFixed(2)}%).`);
+      otimizacoes.push({ prioridade: pri++, titulo: 'Pausar Criativos que Sangram Verba', categoria: 'Criativo', impacto_esperado: 'Crítico', descricao: `Identificamos que o anúncio "${worst.name}" está a consumir verba com um engajamento péssimo e zero vendas. Ele está a prejudicar o ROAS geral.`, acao: `Ação: Acesse o Gerenciador e PAUSE o anúncio "${worst.name}" imediatamente. O algoritmo da Meta está a forçar entrega num formato que o seu público rejeita.` });
     }
-    if (avgCpc > benchCpc) {
+
+    if (melhoresAds.length > 0) {
+      const best = melhoresAds.sort((a,b) => b.adRoas - a.adRoas)[0];
+      otimizacoes.push({ prioridade: pri++, titulo: 'Escalar o Anúncio Campeão', categoria: 'Estratégia', impacto_esperado: 'Alto', descricao: `O anúncio "${best.name}" é a sua estrela! Ele gerou vendas com um ROAS de ${best.adRoas.toFixed(2)}x.`, acao: `Ação: Aumente o orçamento do conjunto de anúncios onde o "${best.name}" está em 20%. Pegue na estrutura visual deste anúncio e crie 2 variantes semelhantes para evitar fadiga.` });
+    } else if (avgCtr < 1.0) {
       score -= 10;
-      if (avgCpm > 30) {
-        issues.push(`Leilão Altamente Competitivo: CPM de ${S} ${safeNum(avgCpm).toFixed(2)}.`);
-        otimizacoes.push({ prioridade: pri++, titulo: 'Fugir de Leilões Caros', categoria: 'Estrutura', impacto_esperado: 'Médio', descricao: `A briga está cara para esse público.`, acao: 'Mude para públicos Advantage+ (Broad) para o algoritmo encontrar impressões mais baratas.' });
-      }
+      otimizacoes.push({ prioridade: pri++, titulo: 'Renovar Oferta ou Gancho (Hook)', categoria: 'Criativos', impacto_esperado: 'Alto', descricao: `O seu CTR médio é de apenas ${safeNum(avgCtr).toFixed(2)}%. O público rola o feed e ignora a sua mensagem.`, acao: `Ação: Foque os 3 primeiros segundos dos vídeos na DOR do cliente. Use títulos mais chamativos.` });
     }
+
+    // Leilão e Funil
+    if (avgCpm > 35) {
+      score -= 10;
+      otimizacoes.push({ prioridade: pri++, titulo: 'Leilão Sufocado (Reduzir CPM)', categoria: 'Lances / Público', impacto_esperado: 'Alto', descricao: `O seu custo para aparecer (CPM) está em ${S} ${safeNum(avgCpm).toFixed(2)}. Público muito pequeno ou concorrência esmagadora.`, acao: 'Ação: Mude para públicos Advantage+ (Broad) para encontrar leilões mais baratos.' });
+    }
+
     if (metrics.totalSessions > 0 && connectRate < 60) {
       score -= 15;
-      otimizacoes.push({ prioridade: pri++, titulo: 'Vazamento no Site', categoria: 'Landing Page', impacto_esperado: 'Crítico', descricao: `Apenas ${safeNum(connectRate).toFixed(0)}% dos cliques chegam a carregar a página.`, acao: 'Otimize a velocidade do site e remova o posicionamento "Audience Network".' });
+      issues.push(`Fuga de Tráfego: Apenas ${safeNum(connectRate).toFixed(1)}% dos cliques carregam o site.`);
+      otimizacoes.push({ prioridade: pri++, titulo: 'Vazamento de Verba no Site', categoria: 'Landing Page', impacto_esperado: 'Crítico', descricao: `De cada 100 cliques que você paga, apenas ${safeNum(connectRate).toFixed(0)} chegam a ver a sua página.`, acao: 'Ação: Melhore a velocidade do site mobile e desligue o posicionamento "Audience Network".' });
     }
-    const hasConversions = (totalPurchases + totalLeads + totalMsg) > 0;
-    if (totalSpend > 100 && !hasConversions) {
-      score -= 20;
-      alertas.push({ mensagem: `Gastou ${S} ${totalSpend.toFixed(2)} sem gerar conversões rastreadas.`, acao_requerida: 'Verifique o Pixel.' });
-    }
-    if (totalPurchases > 0 && roas < 1.5) {
+
+    if (totalPurchases > 0 && roas < 1.5 && roas > 0) {
       score -= 15;
-      otimizacoes.push({ prioridade: pri++, titulo: 'Cortar Campanhas Sangrentas', categoria: 'Orçamento', impacto_esperado: 'Crítico', descricao: `ROAS negativo (${safeNum(roas).toFixed(2)}x).`, acao: 'Pause conjuntos não lucrativos e foque numa campanha de Retargeting.' });
-    } else if (roas > 3.0) {
-      otimizacoes.push({ prioridade: pri++, titulo: 'Escala de Lucro', categoria: 'Estratégia', impacto_esperado: 'Alto', descricao: `O ROAS está saudável (${safeNum(roas).toFixed(2)}x).`, acao: 'Aumente o orçamento das campanhas campeãs em 20% a cada 48 horas.' });
+      alertas.push({ mensagem: `Sangria de Caixa: ROAS geral negativo (${safeNum(roas).toFixed(2)}x). As campanhas não estão a cobrir os custos.`, acao_requerida: 'Pause as campanhas que mais gastam e não retornam. Foco urgente em Retargeting.' });
     }
   }
 
   score = Math.max(0, Math.min(100, score));
-  const nivel_saude = score >= 85 ? 'Excelente' : score >= 65 ? 'Bom' : score >= 45 ? 'Atenção' : 'Crítico';
+  const nivel_saude = score >= 85 ? 'Excelente' : score >= 65 ? 'Saudável' : score >= 45 ? 'Precisa de Atenção' : 'Crítico';
 
   const campanhas_analise = campaigns.map(c => {
     let diag = 'Analisando';
     if(c.spend === 0) diag = 'Sem Investimento';
     else if(c.roas > 2.5) diag = 'Escalar Imediatamente';
     else if(c.roas > 0 && c.roas < 1.5) diag = 'ROAS Negativo (Pausar)';
-    else if(c.ctr < 1.0) diag = 'Baixo Engajamento';
+    else if(c.ctr < 1.0) diag = 'Baixo Engajamento (Criativo)';
     else if(c.cpc > 4.0) diag = 'Leilão Caro';
+    else if(c.connectRate > 0 && c.connectRate < 50) diag = 'Fuga de Cliques';
     else diag = 'Performance Estável';
 
     return { 
       campId: c.id, nome: c.name || 'Desconhecida', campStatus: c.status,
-      gasto: `${S} ${safeNum(c.spend).toFixed(2)}`, ctr: `${safeNum(c.ctr).toFixed(2)}%`, cpc: `${S} ${safeNum(c.cpc).toFixed(2)}`, frequencia: `${safeNum(c.frequency).toFixed(2)}x`,
-      impressoes: safeNum(c.impressions), cliques: safeNum(c.clicks), mensagens: safeNum(c.messages), leads: safeNum(c.leads), compras: safeNum(c.purchases), 
+      gasto: `${S} ${safeNum(c.spend).toFixed(2)}`, impressoes: safeNum(c.impressions), cliques: safeNum(c.clicks),
+      ctr: `${safeNum(c.ctr).toFixed(2)}%`, cpc: `${S} ${safeNum(c.cpc).toFixed(2)}`, mensagens: safeNum(c.messages), leads: safeNum(c.leads), compras: safeNum(c.purchases),
       receita: safeNum(c.revenue), roas: c.roas > 0 ? `${safeNum(c.roas).toFixed(2)}x` : '-', connectRate: c.connectRate > 0 ? `${safeNum(c.connectRate).toFixed(1)}%` : '-',
       diagnostico: diag, spendRaw: safeNum(c.spend)
     };
   });
 
   return {
-    resumo_geral: { score_saude: score, nivel_saude, pontos_principais: issues.length ? issues : ['Métricas Saudáveis.'], resumo_historico: previousRun ? `Score anterior: ${previousRun.health_score} pts.` : 'Primeira análise profunda.' },
-    campanhas_analise, otimizacoes_prioritarias: otimizacoes, alertas_criticos: alertas
+    resumo_geral: { score_saude: score, nivel_saude, pontos_principais: issues.length ? issues : ['Métricas de Funil Saudáveis e Criativos Estáveis.'], resumo_historico: previousRun ? `Score anterior: ${previousRun.health_score} pts.` : 'Primeira análise profunda.' },
+    campanhas_analise,
+    otimizacoes_prioritarias: otimizacoes.length ? otimizacoes : [{ prioridade: 1, titulo: 'Manutenção Estável', categoria: 'Geral', impacto_esperado: 'Baixo', descricao: 'A conta não apresenta vazamentos graves.', acao: 'Mantenha as regras e crie novos vídeos para evitar saturação futura.' }],
+    alertas_criticos: alertas
   };
 }
 
 // ─── TENDENCIAS E HISTORICO ───────────────────────────────────────────────────
-app.get('/api/trend/:accountId', auth, async (req, res) => { try { res.json({ trend: await db.getAccountTrend(req.params.accountId) }); } catch (e) { res.status(500).json({ error: e.message }); } });
+app.get('/api/trend/:accountId', auth, async (req, res) => { 
+  try { res.json({ trend: await db.getAccountTrend(req.params.accountId) }); } catch (e) { res.status(500).json({ error: e.message }); } 
+});
+
+// ─── ROUTES PADRÃO ───────────────────────────────────────────────────────────
 app.get('/dashboard', (req, res) => { if (!req.session.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
