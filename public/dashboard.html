@@ -22,28 +22,26 @@
     .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:var(--dim);cursor:pointer;width:100%;text-align:left;background:none;border:none;margin-bottom:4px;font-weight:700}
     .nav-item:hover, .nav-item.active{background:rgba(24,119,242,0.15);color:var(--blue)}
     .main{flex:1;padding:25px;overflow-y:auto;background:var(--bg)}
-    .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px;margin-bottom:25px}
+    .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px;margin-bottom:25px}
     .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:18px}
     .mval{font-size:24px;font-weight:800;margin-top:5px} .mlabel{font-size:10px;color:var(--dim);text-transform:uppercase;font-weight:700}
-    table{width:100%;border-collapse:collapse;background:var(--s1);border-radius:12px;overflow:hidden;font-size:11px} 
+    table{width:100%;border-collapse:collapse;background:var(--s1);border-radius:12px;font-size:11px} 
     th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--b1); white-space:nowrap}
     th{color:var(--dim);text-transform:uppercase;font-size:9px;font-weight:800}
     .loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,9,13,0.9);z-index:2000;flex-direction:column;align-items:center;justify-content:center}
     .loading-overlay.show{display:flex}
     .spinner{width:40px;height:40px;border:3px solid var(--b1);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
-    .stitle{font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.05em}
     .cfrow{display:flex;gap:5px;margin-bottom:15px}
     .cfbtn{padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--b1);background:var(--s2);color:var(--muted)}
     .cfbtn.active{background:rgba(24,119,242,.15);border-color:var(--blue);color:var(--blue)}
-    .score-ring{width:60px;height:60px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:4px solid var(--green);color:var(--green); font-size:22px; font-weight:900}
   </style>
 </head>
 <body>
 
 <header class="topbar">
   <div class="logo">⚡ Meta Ads <span>Analyzer</span></div>
-  <select class="sel" id="accountSel" style="max-width:230px"><option value="">Carregando contas...</option></select>
+  <select class="sel" id="accountSel" style="max-width:230px"><option value="">Carregando...</option></select>
   <select class="sel" id="dateSel" onchange="onDateSelChange()">
     <option value="last_7d">7 dias</option><option value="last_30d" selected>30 dias</option>
     <option value="this_month">Este mês</option><option value="last_month">Mês passado</option>
@@ -64,9 +62,10 @@
     <button class="nav-item active" onclick="showView('overview')">📊 Visão Geral</button>
     <button class="nav-item" onclick="showView('analysis')">🧠 Análise IA Senior</button>
     <button class="nav-item" onclick="showView('campaigns')">📋 Campanhas</button>
-    <button class="nav-item" onclick="showView('creatives')">🖼️ Criativos</button>
+    <button class="nav-item" onclick="showView('creatives')">🖼️ Criativos Campeões</button>
     <button class="nav-item" onclick="showView('breakdown')">📉 Breakdown</button>
     <button class="nav-item" onclick="showView('trend')">📈 Tendências</button>
+    <button class="nav-item" onclick="showView('competitors')">🕵️ Radar Concorrência</button>
     <div id="campSidebar" style="margin-top:20px; font-size:11px; padding:0 12px; color:var(--dim)">Escolha conta...</div>
   </aside>
 
@@ -83,15 +82,28 @@
       <div id="view-campaigns" style="display:none">
         <div class="cfrow"><button class="cfbtn active" id="tf_all" onclick="filterCampTable('all')">Todas</button><button class="cfbtn" id="tf_running" onclick="filterCampTable('running')">Rodando</button></div>
         <table>
-          <thead><tr><th>Campanha</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>CTR</th><th>CPC</th><th>Msgs</th><th>Compras</th><th>Receita</th><th>Connect %</th><th>ROAS</th><th>Diagnóstico IA</th></tr></thead>
+          <thead><tr><th>Campanha</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>CTR</th><th>CPC</th><th>Msgs</th><th>Connect %</th><th>ROAS</th><th>Diagnóstico</th></tr></thead>
           <tbody id="campTbody"></tbody>
         </table>
       </div>
 
+      <div id="view-creatives" style="display:none">
+        <div class="cfrow">
+          <button class="cfbtn active" id="cr_all" onclick="filterCreatives('all')">Todos</button>
+          <button class="cfbtn" id="cr_sales" onclick="filterCreatives('sales')">🏆 +Vendas</button>
+          <button class="cfbtn" id="cr_msgs" onclick="filterCreatives('msgs')">💬 +Mensagens</button>
+          <button class="cfbtn" id="cr_roas" onclick="filterCreatives('roas')">💰 +ROAS</button>
+        </div>
+        <div id="crGrid" class="mgrid"></div>
+      </div>
+
       <div id="view-analysis" style="display:none"><div id="optimList" style="display:flex; flex-direction:column; gap:12px"></div></div>
-      <div id="view-creatives" style="display:none"><div id="crGrid" class="mgrid"></div></div>
       <div id="view-breakdown" style="display:none"><div id="bdContent"></div></div>
       <div id="view-trend" style="display:none"><div class="chart-wrap"><canvas id="cHealth" height="100"></canvas></div></div>
+      <div id="view-competitors" style="display:none; text-align:center; padding:40px">
+        <input type="text" id="compName" class="sel" style="width:300px" placeholder="Concorrente...">
+        <button class="btn btn-primary" onclick="window.open('https://www.facebook.com/ads/library/?q='+document.getElementById('compName').value, '_blank')">Abrir Biblioteca</button>
+      </div>
     </div>
   </main>
 </div>
@@ -100,7 +112,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null, insData=null, allCreatives=[];
+let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null, allCreatives=[];
 
 function showLoad(t){ document.getElementById('loadingOverlay').classList.add('show'); document.getElementById('loadText').textContent=t; }
 function hideLoad(){ document.getElementById('loadingOverlay').classList.remove('show'); }
@@ -111,8 +123,7 @@ async function init(){
     const me = await fetch('/api/me').then(r=>r.json());
     if(!me.authenticated) return location.href='/';
     document.getElementById('uName').textContent = me.user.name;
-    const av = me.user.picture?.data?.url || me.user.picture;
-    if(av && document.getElementById('uAvatar')) document.getElementById('uAvatar').src = av;
+    if(me.user.picture?.data?.url) document.getElementById('uAvatar').src = me.user.picture.data.url;
     await loadAccounts();
   } catch(e) {}
 }
@@ -120,92 +131,83 @@ async function init(){
 async function loadAccounts(){
   const res = await fetch('/api/adaccounts').then(r=>r.json());
   accounts = res.data || [];
-  const sel = document.getElementById('accountSel');
-  sel.innerHTML = '<option value="">Escolha a conta...</option>' + accounts.map(a => `<option value="${a.account_id}">${a.name}</option>`).join('');
-  sel.onchange = onAccChange;
+  document.getElementById('accountSel').innerHTML = '<option value="">Escolha a conta...</option>' + accounts.map(a => `<option value="${a.account_id}">${a.name}</option>`).join('');
+  document.getElementById('accountSel').onchange = onAccChange;
 }
 
 async function onAccChange(){
   selAccountId = document.getElementById('accountSel').value; if(!selAccountId) return;
   showLoad('Verificando conta...');
-  try {
-    const res = await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
-    campaigns = res.data || [];
-    document.getElementById('campSidebar').innerHTML = campaigns.filter(c=>c.status==='ACTIVE').map(c=>`🟢 ${c.name.slice(0,25)}...`).join('<br>');
-  } finally { hideLoad(); }
+  const res = await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
+  campaigns = res.data || [];
+  document.getElementById('campSidebar').innerHTML = campaigns.filter(c=>c.status==='ACTIVE').map(c=>`🟢 ${c.name.slice(0,25)}...`).join('<br>');
+  hideLoad();
 }
 
 function showView(v){
-  ['overview','analysis','campaigns','creatives','breakdown','trend'].forEach(id => { 
+  ['overview','analysis','campaigns','creatives','breakdown','trend','competitors'].forEach(id => { 
       const el = document.getElementById('view-'+id); if(el) el.style.display = id === v ? 'block' : 'none'; 
   });
   if(v==='creatives') loadCreatives();
-  if(v==='breakdown') loadBreakdown('device');
-  if(v==='trend') loadTrend();
 }
 
 async function runAnalysis(){
   if(!selAccountId) return alert('Selecione uma conta!');
-  showLoad('IA Sénior analisando dados...');
+  showLoad('Analisando dados...');
   const d = document.getElementById('dateSel').value;
-  try {
-    const [ins, crRes] = await Promise.all([
-      fetch(`/api/adaccounts/${selAccountId}/insights?date_preset=${d}`).then(r=>r.json()),
-      fetch(`/api/adaccounts/${selAccountId}/creatives?date_preset=${d}`).then(r=>r.json())
-    ]);
-    insData = ins; allCreatives = crRes.data || [];
-    const res = await fetch('/api/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ accountData: accounts.find(a=>a.account_id===selAccountId), campaigns, insights: ins, creatives: allCreatives, dateRange: d }) }).then(r=>r.json());
-    metrics = res.metrics; analysis = res.analysis; renderAll();
-  } catch(e) { alert(e.message); } finally { hideLoad(); }
+  const ins = await fetch(`/api/adaccounts/${selAccountId}/insights?date_preset=${d}`).then(r=>r.json());
+  const res = await fetch('/api/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ accountData: accounts.find(a=>a.account_id===selAccountId), campaigns, insights: ins, dateRange: d }) }).then(r=>r.json());
+  metrics = res.metrics; analysis = res.analysis; renderAll(); hideLoad();
 }
 
 function renderAll(){
   document.getElementById('stateEmpty').style.display='none'; document.getElementById('contentWrap').style.display='block';
   const r = analysis.resumo_geral; const S = accounts.find(a=>a.account_id===selAccountId).currency==='BRL'?'R$':'$';
-  
-  document.getElementById('analysisSummary').innerHTML = `<div class="score-ring">${r.score_saude}</div><div><div style="font-size:18px; font-weight:800">${r.nivel_saude}</div><div style="color:var(--dim)">${r.resumo_historico}</div></div>`;
-  
-  document.getElementById('metricsGrid').innerHTML = `
-    <div class="mcard"><div class="mlabel">Investimento</div><div class="mval c-blue">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
-    <div class="mcard"><div class="mlabel">Impressoes</div><div class="mval">${fmtN(metrics.totalImpressions)}</div></div>
-    <div class="mcard"><div class="mlabel">Cliques</div><div class="mval">${fmtN(metrics.totalClicks)}</div></div>
-    <div class="mcard"><div class="mlabel">CTR</div><div class="mval c-green">${metrics.avgCtr.toFixed(2)}%</div></div>
-  `;
-
-  document.getElementById('convGrid').innerHTML = `
-    <div class="mcard"><div class="mlabel">Connect Rate</div><div class="mval c-orange">${metrics.connectRate.toFixed(1)}%</div></div>
-    <div class="mcard"><div class="mlabel">Vendas</div><div class="mval c-purple">${metrics.totalPurchases}</div></div>
-    <div class="mcard"><div class="mlabel">Receita</div><div class="mval c-green">${S} ${metrics.totalRev.toFixed(2)}</div></div>
-    <div class="mcard"><div class="mlabel">ROAS</div><div class="mval c-cyan">${metrics.roas.toFixed(2)}x</div></div>
-  `;
-
+  document.getElementById('analysisSummary').innerHTML = `<div class="score-ring">${r.score_saude}</div><div><b>${r.nivel_saude}</b><p>${r.resumo_historico}</p></div>`;
+  document.getElementById('metricsGrid').innerHTML = `<div class="mcard"><div class="mlabel">Investimento</div><div class="mval c-blue">${S} ${metrics.totalSpend.toFixed(2)}</div></div><div class="mcard"><div class="mlabel">Cliques</div><div class="mval">${fmtN(metrics.totalClicks)}</div></div>`;
+  document.getElementById('convGrid').innerHTML = `<div class="mcard"><div class="mlabel">Vendas</div><div class="mval c-purple">${metrics.totalPurchases}</div></div><div class="mcard"><div class="mlabel">Receita</div><div class="mval c-green">${S} ${metrics.totalRev.toFixed(2)}</div></div>`;
   filterCampTable('all');
-  document.getElementById('optimList').innerHTML = analysis.otimizacoes_prioritarias.map(o => `<div style="background:var(--s2); padding:18px; border-radius:10px; border-left:4px solid var(--cyan)"><strong>#${o.prioridade} ${o.titulo}</strong><div style="font-size:12px; color:var(--dim)">${o.descricao}</div><div style="margin-top:10px; color:var(--orange); font-weight:700">${o.acao}</div></div>`).join('');
 }
 
 function filterCampTable(mode) {
   let list = analysis.campanhas_analise || [];
   if(mode === 'running') list = list.filter(c => c.spendRaw > 0);
-  const S = accounts.find(a=>a.account_id===selAccountId).currency==='BRL'?'R$':'$';
-  document.getElementById('campTbody').innerHTML = list.map(c => `<tr><td style="font-weight:700">${c.nome}</td><td>${c.gasto}</td><td>${fmtN(c.impressoes)}</td><td>${fmtN(c.cliques)}</td><td>${c.ctr}</td><td>${c.cpc}</td><td>${c.mensagens}</td><td>${c.compras}</td><td style="font-weight:700; color:var(--green)">${S} ${c.receita.toFixed(2)}</td><td>${c.connectRate}</td><td style="color:var(--green)">${c.roas}</td><td><button class="btn btn-ghost" style="padding:2px 8px; font-size:9px" onclick="alert('${c.diagnostico}')">🤖 Ver Analise</button></td></tr>`).join('');
+  document.getElementById('campTbody').innerHTML = list.map(c => `<tr><td>${c.nome}</td><td>${c.gasto}</td><td>${fmtN(c.impressoes)}</td><td>${fmtN(c.cliques)}</td><td>${c.ctr}</td><td>${c.cpc}</td><td>${c.mensagens}</td><td>${c.connectRate}</td><td style="color:var(--green)">${c.roas}</td><td>${c.diagnostico}</td></tr>`).join('');
 }
 
 async function loadCreatives() {
-  document.getElementById('crGrid').innerHTML = allCreatives.slice(0,12).map(c => {
-      const ins = (c.insights?.data || [])[0] || {};
-      return `<div class="mcard" style="padding:10px; text-align:center"><img src="${c.creative?.thumbnail_url || ''}" style="width:100%; border-radius:8px"><div style="font-size:11px; margin-top:8px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${c.name}</div></div>`;
-  }).join('');
+  showLoad('Carregando criativos...');
+  const res = await fetch(`/api/adaccounts/${selAccountId}/creatives`).then(r=>r.json());
+  allCreatives = res.data || [];
+  filterCreatives('all');
+  hideLoad();
 }
 
-async function loadBreakdown(type){
-  const res = await fetch(`/api/adaccounts/${selAccountId}/breakdown/${type}`).then(r=>r.json());
-  document.getElementById('bdContent').innerHTML = `<table style="background:transparent"><thead><tr><th>Segmento</th><th>Gasto</th><th>CTR</th><th>CPC</th></tr></thead><tbody>${res.data.map(r=>`<tr><td>${r.device_platform || r.publisher_platform || 'Outro'}</td><td>R$ ${parseFloat(r.spend).toFixed(2)}</td><td>${parseFloat(r.ctr).toFixed(2)}%</td><td>R$ ${parseFloat(r.cpc).toFixed(2)}</td></tr>`).join('')}</tbody></table>`;
-}
+function filterCreatives(mode) {
+  ['all','sales','msgs','roas'].forEach(id => document.getElementById('cr_'+id).classList.toggle('active', id===mode));
+  
+  let list = allCreatives.map(ad => {
+      const ins = (ad.insights?.data || [])[0] || {};
+      const a = ins.actions || [];
+      const getAct = (type) => { const f = a.find(x=>x.action_type===type); return f ? parseFloat(f.value||0) : 0; };
+      const pur = getAct('offsite_conversion.fb_pixel_purchase') || getAct('purchase');
+      const msg = getAct('onsite_conversion.messaging_conversation_started_7d');
+      const rev = Number((ins.action_values || []).find(x=>x.action_type==='offsite_conversion.fb_pixel_purchase')?.value || 0);
+      const spend = parseFloat(ins.spend || 0);
+      return { ...ad, pur, msg, roas: spend > 0 ? rev/spend : 0, spend };
+  });
 
-async function loadTrend(){
-  const res = await fetch(`/api/trend/${selAccountId}`).then(r=>r.json());
-  const data = res.trend || [];
-  new Chart(document.getElementById('cHealth'), { type: 'line', data: { labels: data.map(d=>new Date(d.date).toLocaleDateString()), datasets: [{ label: 'Score', data: data.map(d=>d.avg_health), borderColor: '#00e676', tension: 0.4 }] } });
+  if(mode === 'sales') list = list.filter(c => c.pur > 0).sort((a,b)=>b.pur - a.pur);
+  else if(mode === 'msgs') list = list.filter(c => c.msg > 0).sort((a,b)=>b.msg - a.msg);
+  else if(mode === 'roas') list = list.filter(c => c.roas > 0).sort((a,b)=>b.roas - a.roas);
+  else list.sort((a,b)=>b.spend - a.spend);
+
+  document.getElementById('crGrid').innerHTML = list.slice(0,12).map(c => `
+    <div class="mcard" style="text-align:center">
+      <img src="${c.creative?.thumbnail_url || ''}" style="width:100%; border-radius:8px">
+      <div style="font-size:10px; margin-top:8px"><b>${c.name.slice(0,20)}</b></div>
+      <div style="font-size:9px; color:var(--cyan)">Vendas: ${c.pur} | ROAS: ${c.roas.toFixed(1)}x</div>
+    </div>`).join('');
 }
 
 function onDateSelChange(){ document.getElementById('customDateWrap').style.display = document.getElementById('dateSel').value === 'custom' ? 'flex' : 'none'; }
