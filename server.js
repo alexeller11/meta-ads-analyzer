@@ -1,231 +1,202 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meta Ads Analyzer - Full Suite</title>
-  <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{
-      --bg:#08090d;--s1:#0f1118;--s2:#161923;--b1:#1e2433;--b2:#252d3f;
-      --blue:#1877F2;--cyan:#00d4ff;--green:#00e676;--orange:#ff9800;--red:#ff3860;--purple:#b388ff;--yellow:#ffeb3b;
-      --text:#e8eaf0;--dim:#8892a4;--muted:#3d4456;
-    }
-    body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column}
-    .topbar{height:52px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 16px;gap:12px;position:sticky;top:0;z-index:100}
-    .logo{font-weight:800;font-size:14px;color:var(--text)} .logo span{color:var(--cyan)}
-    .sel{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;outline:none}
-    .btn{padding:7px 15px;border-radius:8px;font-weight:700;cursor:pointer;border:none;font-size:12px;transition:0.2s}
-    .btn-primary{background:var(--blue);color:#fff}
-    .app-body{display:flex;flex:1;min-height:0}
-    .sidebar{width:220px;background:var(--s1);border-right:1px solid var(--b1);padding:15px;overflow-y:auto}
-    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:var(--dim);cursor:pointer;width:100%;text-align:left;background:none;border:none;margin-bottom:4px;font-weight:700}
-    .nav-item:hover, .nav-item.active{background:rgba(24,119,242,0.15);color:var(--blue)}
-    .main{flex:1;padding:25px;overflow-y:auto;background:var(--bg)}
-    .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px;margin-bottom:25px}
-    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:18px}
-    .mval{font-size:24px;font-weight:800;margin-top:5px} .mlabel{font-size:10px;color:var(--dim);text-transform:uppercase;font-weight:700}
-    table{width:100%;border-collapse:collapse;background:var(--s1);border-radius:12px;overflow:hidden;font-size:12px} 
-    th,td{padding:12px 15px;text-align:left;border-bottom:1px solid var(--b1); white-space:nowrap}
-    th{color:var(--dim);text-transform:uppercase;font-size:10px;font-weight:800;cursor:pointer}
-    .loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,9,13,0.9);z-index:2000;flex-direction:column;align-items:center;justify-content:center}
-    .loading-overlay.show{display:flex}
-    .spinner{width:40px;height:40px;border:3px solid var(--b1);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .budget-chip{padding:5px 12px; border-radius:6px; font-size:11px; font-weight:800; display:flex; align-items:center; gap:8px; background:rgba(0,230,118,0.1); color:var(--green)}
-    .cfrow{display:flex;gap:5px;margin-bottom:15px}
-    .cfbtn{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--b1);background:var(--s2);color:var(--muted)}
-    .cfbtn.active{background:rgba(24,119,242,.15);border-color:var(--blue);color:var(--blue)}
-  </style>
-</head>
-<body>
+require('dotenv').config();
+const express = require('express');
+const session = require('express-session');
+const axios = require('axios');
+const path = require('path');
+const db = require('./db');
 
-<header class="topbar">
-  <div class="logo">⚡ Meta Ads <span>Analyzer</span></div>
-  <select class="sel" id="accountSel" style="max-width:230px"><option value="">Carregando...</option></select>
-  <select class="sel" id="dateSel" onchange="onDateSelChange()">
-    <option value="last_7d">7 dias</option><option value="last_30d" selected>30 dias</option>
-    <option value="this_month">Este mês</option><option value="last_month">Mês passado</option>
-    <option value="custom">Personalizado...</option>
-  </select>
-  <div id="customDateWrap" style="display:none;align-items:center;gap:4px">
-    <input type="date" id="customSince" class="sel"><input type="date" id="customUntil" class="sel">
-  </div>
-  <button class="btn btn-primary" onclick="runAnalysis()">Analisar Dados</button>
-  <div style="margin-left:auto; display:flex; align-items:center; gap:10px">
-    <div id="budgetChip" class="budget-chip" style="display:none"></div>
-    <span id="uName">...</span><img id="uAvatar" style="width:28px; border-radius:50%">
-  </div>
-</header>
+const app = express();
 
-<div class="app-body">
-  <aside class="sidebar">
-    <div style="font-size:10px;font-weight:800;color:var(--dim);margin-bottom:10px">NAVEGAÇÃO</div>
-    <button class="nav-item active" onclick="showView('overview')">📊 Visão Geral</button>
-    <button class="nav-item" onclick="showView('analysis')">🧠 Análise IA Senior</button>
-    <button class="nav-item" onclick="showView('campaigns')">📋 Campanhas</button>
-    <button class="nav-item" onclick="showView('creatives')">🖼️ Criativos</button>
-    <button class="nav-item" onclick="showView('breakdown')">📉 Breakdown</button>
-    <button class="nav-item" onclick="showView('trend')">📈 Tendências</button>
-    <button class="nav-item" onclick="showView('competitors')">🕵️ Radar Concorrência</button>
-    <div style="margin-top:20px; font-size:10px;font-weight:800;color:var(--dim);margin-bottom:10px">CAMPANHAS ATIVAS</div>
-    <div id="campSidebar" style="font-size:11px; padding:0 12px; color:var(--dim)">Escolha conta...</div>
-  </aside>
+// 🚀 Aumenta o limite para suportar contas grandes com muitos criativos
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 
-  <main class="main" id="mainContent">
-    <div id="stateEmpty" style="text-align:center; padding-top:100px; opacity:0.6"><h2>Escolha uma conta e clique em Analisar</h2></div>
-    <div id="contentWrap" style="display:none">
-      <div id="view-overview">
-        <div id="analysisSummary" style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1); margin-bottom:20px; display:flex; align-items:center; gap:20px"></div>
-        <div class="stitle">MÉTRICAS DE AQUISIÇÃO</div>
-        <div class="mgrid" id="metricsGrid"></div>
-        <div class="stitle">CONVERSÕES E PERFORMANCE FINAL</div>
-        <div class="mgrid" id="convGrid"></div>
-      </div>
-      <div id="view-analysis" style="display:none"><div id="optimList" style="display:flex; flex-direction:column; gap:12px"></div></div>
-      <div id="view-campaigns" style="display:none">
-        <div class="cfrow">
-          <button class="cfbtn active" id="tf_all" onclick="filterCampTable('all')">Todas</button>
-          <button class="cfbtn" id="tf_running" onclick="filterCampTable('running')">Rodando no período</button>
-        </div>
-        <table id="campTable">
-          <thead><tr><th>Campanha</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>CTR</th><th>CPC</th><th>Msgs</th><th>Connect %</th><th>ROAS</th><th>Diagnóstico</th></tr></thead>
-          <tbody id="campTbody"></tbody>
-        </table>
-      </div>
-      <div id="view-breakdown" style="display:none"><div id="bdContent"></div></div>
-      <div id="view-creatives" style="display:none"><div id="crGrid" class="mgrid"></div></div>
-      <div id="view-trend" style="display:none"><div class="chart-wrap"><canvas id="cHealth" height="100"></canvas></div></div>
-      <div id="view-competitors" style="display:none">
-        <div style="background:var(--s1); padding:20px; border-radius:12px; text-align:center">
-          <h3>🕵️ Radar Concorrência</h3>
-          <p style="margin-bottom:15px">Pesquise anúncios ativos de qualquer empresa na Biblioteca da Meta.</p>
-          <input type="text" id="compName" class="sel" style="width:300px" placeholder="Nome do concorrente...">
-          <button class="btn btn-primary" onclick="window.open('https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=BR&q='+encodeURIComponent(document.getElementById('compName').value), '_blank')">Pesquisar</button>
-        </div>
-      </div>
-    </div>
-  </main>
-</div>
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'meta-ads-secret-2024',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
+}));
 
-<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div id="loadText" style="margin-top:15px; font-weight:700">Carregando...</div></div>
+const FB_APP_ID = process.env.FB_APP_ID;
+const FB_APP_SECRET = process.env.FB_APP_SECRET;
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const REDIRECT_URI = `${BASE_URL}/auth/facebook/callback`;
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>
-let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null, insData=null, allCreatives=[];
+// --- AUTHENTICATION ---
+app.get('/auth/facebook', (req, res) => {
+  const scopes = ['ads_read', 'ads_management', 'business_management', 'public_profile'].join(',');
+  res.redirect(`https://www.facebook.com/v19.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${scopes}&response_type=code`);
+});
 
-function showLoad(t){ document.getElementById('loadingOverlay').classList.add('show'); document.getElementById('loadText').textContent=t; }
-function hideLoad(){ document.getElementById('loadingOverlay').classList.remove('show'); }
-function fmtN(n){ n=parseInt(n||0); return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(1)+'K':n.toString(); }
-
-async function init(){
+app.get('/auth/facebook/callback', async (req, res) => {
+  if (req.query.error) return res.redirect('/?error=auth_denied');
   try {
-    const me = await fetch('/api/me').then(r=>r.json());
-    if(!me.authenticated) return location.href='/';
-    document.getElementById('uName').textContent = me.user.name;
-    const av = me.user.picture?.data?.url || me.user.picture;
-    if(av && document.getElementById('uAvatar')) document.getElementById('uAvatar').src = av;
-    await loadAccounts();
-  } catch(e) {}
+    const t1 = await axios.get('https://graph.facebook.com/v19.0/oauth/access_token', {
+      params: { client_id: FB_APP_ID, client_secret: FB_APP_SECRET, redirect_uri: REDIRECT_URI, code: req.query.code }
+    });
+    const t2 = await axios.get('https://graph.facebook.com/v19.0/oauth/access_token', {
+      params: { grant_type: 'fb_exchange_token', client_id: FB_APP_ID, client_secret: FB_APP_SECRET, fb_exchange_token: t1.data.access_token }
+    });
+    const token = t2.data.access_token;
+    const user = await axios.get('https://graph.facebook.com/v19.0/me', {
+      params: { fields: 'id,name,email,picture', access_token: token }
+    });
+    req.session.user = user.data;
+    req.session.accessToken = token;
+    res.redirect('/dashboard');
+  } catch (err) {
+    res.redirect('/?error=auth_failed');
+  }
+});
+
+app.get('/auth/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
+app.get('/api/me', (req, res) => res.json(req.session.user ? { authenticated: true, user: req.session.user } : { authenticated: false }));
+
+function auth(req, res, next) {
+  if (!req.session.accessToken) return res.status(401).json({ error: 'Not authenticated' });
+  next();
 }
 
-async function loadAccounts(){
-  const res = await fetch('/api/adaccounts').then(r=>r.json());
-  accounts = res.data || [];
-  const sel = document.getElementById('accountSel');
-  sel.innerHTML = '<option value="">Escolha a conta...</option>' + accounts.map(a => `<option value="${a.account_id}">${a.name}</option>`).join('');
-  sel.onchange = onAccChange;
-}
-
-async function onAccChange(){
-  selAccountId = document.getElementById('accountSel').value; if(!selAccountId) return;
-  showLoad('Verificando Saldo e Campanhas...');
+// --- META API ENDPOINTS ---
+app.get('/api/adaccounts', auth, async (req, res) => {
   try {
-    const balRes = await fetch(`/api/adaccounts/${selAccountId}/balance`).then(r=>r.json());
-    const chip = document.getElementById('budgetChip');
-    if(balRes.balance !== undefined){
-        const bal = parseFloat(balRes.balance)/100;
-        chip.innerHTML = bal > 0 ? `💳 Fatura: R$ ${bal.toFixed(2)}` : `💰 Saldo: R$ ${Math.abs(bal).toFixed(2)}`;
-        chip.style.display = 'flex';
-    }
-    const res = await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
-    campaigns = res.data || [];
-    document.getElementById('campSidebar').innerHTML = campaigns.filter(c=>c.status==='ACTIVE').map(c=>`🟢 ${c.name.slice(0,25)}...`).join('<br>');
-  } finally { hideLoad(); }
-}
+    const r = await axios.get('https://graph.facebook.com/v19.0/me/adaccounts', {
+      params: { fields: 'name,account_id,currency,account_status', access_token: req.session.accessToken, limit: 100 }
+    });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
-function showView(v){
-  ['overview','analysis','campaigns','creatives','breakdown','trend','competitors'].forEach(id => { 
-      const el = document.getElementById('view-'+id); if(el) el.style.display = id === v ? 'block' : 'none'; 
-  });
-  if(v==='breakdown') loadBreakdown('device');
-  if(v==='trend') loadTrend();
-}
-
-async function runAnalysis(){
-  if(!selAccountId) return alert('Selecione uma conta!');
-  showLoad('IA Sénior analisando criativos e funil...');
-  const d = document.getElementById('dateSel').value;
+app.get('/api/adaccounts/:id/balance', auth, async (req, res) => {
   try {
-    const [ins, crRes] = await Promise.all([
-      fetch(`/api/adaccounts/${selAccountId}/insights?date_preset=${d}`).then(r=>r.json()),
-      fetch(`/api/adaccounts/${selAccountId}/creatives?date_preset=${d}`).then(r=>r.json())
-    ]);
-    insData = ins; allCreatives = crRes.data || [];
-    const res = await fetch('/api/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ accountData: accounts.find(a=>a.account_id===selAccountId), campaigns, insights: ins, creatives: allCreatives, dateRange: d }) }).then(r=>r.json());
-    metrics = res.metrics; analysis = res.analysis; renderAll();
-  } catch(e) { alert(e.message); } finally { hideLoad(); }
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}`, {
+      params: { fields: 'balance,amount_spent,spend_cap,currency', access_token: req.session.accessToken }
+    });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/adaccounts/:id/campaigns', auth, async (req, res) => {
+  try {
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/campaigns`, {
+      params: { fields: 'id,name,status', access_token: req.session.accessToken, limit: 100 }
+    });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
+  try {
+    const { since, until, date_preset } = req.query;
+    const params = {
+      fields: 'campaign_id,campaign_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values',
+      level: 'campaign', access_token: req.session.accessToken, limit: 200
+    };
+    if (since && until) params.time_range = JSON.stringify({ since, until });
+    else params.date_preset = date_preset || 'last_30d';
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/adaccounts/:id/creatives', auth, async (req, res) => {
+  try {
+    const { date_preset } = req.query;
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, {
+      params: { fields: `id,name,status,creative{thumbnail_url,image_url},insights.date_preset(${date_preset || 'last_30d'}){impressions,clicks,spend,ctr,actions,action_values}`, access_token: req.session.accessToken, limit: 50 }
+    });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
+  try {
+    const { date_preset } = req.query;
+    const params = { fields: 'impressions,clicks,spend,ctr,cpc', level: 'account', access_token: req.session.accessToken, date_preset: date_preset || 'last_30d' };
+    if (req.params.type === 'device') params.breakdowns = 'device_platform';
+    else if (req.params.type === 'placement') params.breakdowns = 'publisher_platform,platform_position';
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- ANALYZE ENGINE (SÉNIOR) ---
+app.post('/api/analyze', auth, async (req, res) => {
+  const { accountData, campaigns, insights, creatives, dateRange } = req.body;
+  try {
+    const rows = insights?.data || [];
+    const getAct = (arr, type) => { const f = (arr||[]).find(x=>x.action_type===type); return f ? parseFloat(f.value||0) : 0; };
+    
+    let tSpend = 0, tImpr = 0, tClicks = 0, tReach = 0, fSum = 0, fCount = 0;
+    let tPur = 0, tLds = 0, tMsg = 0, tSess = 0, tRev = 0;
+    const byId = {};
+    
+    rows.forEach(m => {
+      const sp = parseFloat(m.spend || 0); const cl = parseInt(m.clicks || 0);
+      tSpend += sp; tImpr += parseInt(m.impressions || 0); tClicks += cl; tReach += parseInt(m.reach || 0);
+      if(m.frequency) { fSum += parseFloat(m.frequency); fCount++; }
+      const pur = getAct(m.actions,'offsite_conversion.fb_pixel_purchase') || getAct(m.actions,'purchase');
+      const lds = getAct(m.actions,'offsite_conversion.fb_pixel_lead') || getAct(m.actions,'lead');
+      const msg = getAct(m.actions,'onsite_conversion.messaging_conversation_started_7d') || getAct(m.actions,'onsite_conversion.messaging_first_reply');
+      const sess = getAct(m.actions,'landing_page_view');
+      const rev = getAct(m.action_values,'offsite_conversion.fb_pixel_purchase');
+      tPur += pur; tLds += lds; tMsg += msg; tSess += sess; tRev += rev;
+      byId[m.campaign_id] = { ...m, pur, lds, msg, sess, rev, sp, cl };
+    });
+
+    const metrics = { 
+        totalSpend: tSpend, totalImpressions: tImpr, totalClicks: tClicks, totalReach: tReach,
+        totalPurchases: tPur, totalLeads: tLds, totalMsg: tMsg, totalSessions: tSess, totalRev: tRev,
+        avgCtr: tImpr > 0 ? (tClicks / tImpr) * 100 : 0, avgCpc: tClicks > 0 ? tSpend / tClicks : 0,
+        avgCpm: tImpr > 0 ? (tSpend / tImpr) * 1000 : 0, avgFrequency: fCount > 0 ? fSum / fCount : 0,
+        connectRate: tClicks > 0 ? (tSess / tClicks) * 100 : 0, roas: tSpend > 0 ? tRev / tSpend : 0
+    };
+
+    const enriched = campaigns.map(c => {
+      const m = byId[c.id] || { pur:0, lds:0, msg:0, sess:0, rev:0, sp:0, cl:0, impr:0 };
+      return { ...c, spend: m.sp, ctr: parseFloat(m.ctr || 0), cpc: parseFloat(m.cpc || 0), impressions: m.impr || 0, clicks: m.cl || 0, purchases: m.pur, messages: m.msg, revenue: m.rev, roas: m.sp > 0 ? m.rev / m.sp : 0, connectRate: m.cl > 0 ? (m.sess / m.cl) * 100 : 0 };
+    });
+    
+    const previousRun = await db.getLastRun(accountData.account_id);
+    const aiAnalysis = runAnalysisEngine(accountData, enriched, metrics, creatives, previousRun);
+    res.json({ success: true, analysis: aiAnalysis, metrics, previousRun });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+function runAnalysisEngine(accountData, campaigns, metrics, creativesRaw, previousRun) {
+  const { avgCtr, avgCpc, avgCpm, avgFrequency, totalSpend, connectRate, roas } = metrics;
+  const S = accountData.currency === 'BRL' ? 'R$' : '$';
+  const safeNum = (v) => Number(v) || 0;
+
+  let score = totalSpend > 0 ? 100 : 0;
+  const otimizacoes = [];
+  const issues = [];
+
+  if (avgCtr < 1.0) { score -= 20; issues.push("CTR baixo: anúncios pouco atrativos."); }
+  if (connectRate < 60 && totalSpend > 50) { score -= 15; issues.push("Fuga de tráfego: site lento ou Audience Network ativada."); }
+  if (roas > 0 && roas < 1.5) { score -= 20; issues.push("Sangria de Caixa: ROI negativo."); }
+
+  if (avgCtr < 1.0) {
+    otimizacoes.push({ prioridade: 1, titulo: 'Renovar Criativos', categoria: 'Criativo', impacto_esperado: 'Alto', descricao: `CTR médio de ${safeNum(avgCtr).toFixed(2)}%.`, acao: 'Ação: Troque os ganchos (hooks) dos vídeos imediatamente.' });
+  }
+
+  const campanhas_analise = campaigns.map(c => ({
+    nome: c.name, gasto: `${S} ${safeNum(c.spend).toFixed(2)}`, ctr: `${safeNum(c.ctr).toFixed(2)}%`, cpc: `${S} ${safeNum(c.cpc).toFixed(2)}`,
+    roas: c.roas > 0 ? `${safeNum(c.roas).toFixed(2)}x` : '-', mensagens: c.messages, connectRate: `${safeNum(c.connectRate).toFixed(1)}%`,
+    diagnostico: c.roas > 2 ? 'Escalar' : c.ctr < 1 ? 'Trocar Criativo' : 'Estável', spendRaw: c.spend, campStatus: c.status
+  }));
+
+  return { resumo_geral: { score_saude: Math.max(0, score), nivel_saude: score > 85 ? 'Excelente' : score > 60 ? 'Saudável' : 'Crítico', pontos_principais: issues, resumo_historico: previousRun ? `Score anterior: ${previousRun.health_score} pts` : 'Iniciando histórico' }, campanhas_analise, otimizacoes_prioritarias: otimizacoes, alertas_criticos: [] };
 }
 
-function renderAll(){
-  document.getElementById('stateEmpty').style.display='none'; document.getElementById('contentWrap').style.display='block';
-  const r = analysis.resumo_geral; const S = accounts.find(a=>a.account_id===selAccountId).currency==='BRL'?'R$':'$';
-  
-  document.getElementById('analysisSummary').innerHTML = `<div class="score-ring">${r.score_saude}</div><div><div style="font-size:18px; font-weight:800">${r.nivel_saude}</div><div style="color:var(--dim)">${r.resumo_historico}</div></div>`;
-  
-  document.getElementById('metricsGrid').innerHTML = `
-    <div class="mcard"><div class="mlabel">Investimento</div><div class="mval c-blue">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
-    <div class="mcard"><div class="mlabel">Cliques</div><div class="mval">${fmtN(metrics.totalClicks)}</div></div>
-    <div class="mcard"><div class="mlabel">Connect Rate</div><div class="mval c-orange">${metrics.connectRate.toFixed(1)}%</div></div>
-  `;
+// --- HISTORICO ---
+app.get('/api/trend/:accountId', auth, async (req, res) => { try { res.json({ trend: await db.getAccountTrend(req.params.accountId) }); } catch (e) { res.status(500).json({ error: e.message }); } });
 
-  document.getElementById('convGrid').innerHTML = `
-    <div class="mcard"><div class="mlabel">CTR Médio</div><div class="mval c-green">${metrics.avgCtr.toFixed(2)}%</div></div>
-    <div class="mcard"><div class="mlabel">ROAS Total</div><div class="mval c-purple">${metrics.roas.toFixed(2)}x</div></div>
-    <div class="mcard"><div class="mlabel">Vendas</div><div class="mval c-cyan">${metrics.totalPurchases}</div></div>
-    <div class="mcard"><div class="mlabel">Receita</div><div class="mval c-green">${S} ${metrics.totalRev.toFixed(2)}</div></div>
-  `;
+// --- PAGES ---
+app.get('/dashboard', (req, res) => { if (!req.session.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-  filterCampTable('all');
-
-  document.getElementById('optimList').innerHTML = analysis.otimizacoes_prioritarias.map(o => `<div style="background:var(--s2); padding:18px; border-radius:10px; border-left:4px solid var(--cyan)"><strong>#${o.prioridade} ${o.titulo}</strong><div style="font-size:12px; color:var(--dim)">${o.descricao}</div><div style="margin-top:10px; color:var(--orange); font-weight:700">${o.acao}</div></div>`).join('');
-  
-  document.getElementById('crGrid').innerHTML = allCreatives.slice(0,8).map(c => {
-      const ins = (c.insights?.data || [])[0] || {};
-      const thumb = c.creative?.thumbnail_url || c.creative?.image_url || '';
-      return `<div class="mcard" style="padding:10px; text-align:center">${thumb?`<img src="${thumb}" style="width:100%; border-radius:8px">`:'🖼️'}<div style="font-size:11px; margin-top:8px; font-weight:700">${c.name.slice(0,20)}</div></div>`;
-  }).join('');
-}
-
-function filterCampTable(mode) {
-  let list = analysis.campanhas_analise || [];
-  if(mode === 'running') list = list.filter(c => c.spendRaw > 0);
-  document.getElementById('campTbody').innerHTML = list.map(c => `<tr><td style="font-weight:700">${c.nome}</td><td style="color:var(--blue)">${c.gasto}</td><td>${fmtN(c.impressoes)}</td><td>${fmtN(c.cliques)}</td><td>${c.ctr}</td><td>${c.cpc}</td><td>${c.mensagens}</td><td>${c.connectRate}</td><td style="font-weight:700; color:var(--green)">${c.roas}</td><td style="font-size:11px; color:var(--dim)">${c.diagnostico}</td></tr>`).join('');
-}
-
-async function loadBreakdown(type){
-  const res = await fetch(`/api/adaccounts/${selAccountId}/breakdown/${type}`).then(r=>r.json());
-  document.getElementById('bdContent').innerHTML = `<table style="background:transparent"><thead><tr><th>Segmento</th><th>Gasto</th><th>CTR</th><th>CPC</th></tr></thead><tbody>${res.data.map(r=>`<tr><td>${r.device_platform || r.publisher_platform || 'Outro'}</td><td>R$ ${parseFloat(r.spend).toFixed(2)}</td><td>${parseFloat(r.ctr).toFixed(2)}%</td><td>R$ ${parseFloat(r.cpc).toFixed(2)}</td></tr>`).join('')}</tbody></table>`;
-}
-
-async function loadTrend(){
-  const res = await fetch(`/api/trend/${selAccountId}`).then(r=>r.json());
-  const data = res.trend || [];
-  new Chart(document.getElementById('cHealth'), { type: 'line', data: { labels: data.map(d=>new Date(d.date).toLocaleDateString()), datasets: [{ label: 'Score', data: data.map(d=>d.avg_health), borderColor: '#00e676', tension: 0.4 }] } });
-}
-
-function onDateSelChange(){ document.getElementById('customDateWrap').style.display = document.getElementById('dateSel').value === 'custom' ? 'flex' : 'none'; }
-init();
-</script>
-</body>
-</html>
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, async () => { console.log(`🚀 API on port ${PORT}`); if (process.env.DATABASE_URL) await db.initDB(); });
