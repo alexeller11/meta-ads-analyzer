@@ -7,27 +7,27 @@
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
-      --bg:#08090d;--s1:#0f1118;--s2:#161923;--b1:#1e2433;
+      --bg:#08090d;--s1:#0f1118;--s2:#161923;--b1:#1e2433;--b2:#252d3f;
       --blue:#1877F2;--cyan:#00d4ff;--green:#00e676;--orange:#ff9800;--red:#ff3860;--purple:#b388ff;--yellow:#ffeb3b;
       --text:#e8eaf0;--dim:#8892a4;--muted:#3d4456;
     }
     body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column}
     .topbar{height:52px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 16px;gap:12px;position:sticky;top:0;z-index:100}
     .logo{font-weight:800;font-size:14px;color:var(--text)} .logo span{color:var(--cyan)}
-    .sel{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
+    .sel{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;outline:none}
     .btn{padding:7px 15px;border-radius:8px;font-weight:700;cursor:pointer;border:none;font-size:12px;transition:0.2s}
     .btn-primary{background:var(--blue);color:#fff} .btn-ghost{background:transparent;color:var(--dim);border:1px solid var(--b1)}
     .app-body{display:flex;flex:1;min-height:0}
     .sidebar{width:220px;background:var(--s1);border-right:1px solid var(--b1);padding:15px;overflow-y:auto}
     .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:var(--dim);cursor:pointer;width:100%;text-align:left;background:none;border:none;margin-bottom:4px;font-weight:700}
     .nav-item:hover, .nav-item.active{background:rgba(24,119,242,0.15);color:var(--blue)}
-    .main{flex:1;padding:25px;overflow-y:auto}
+    .main{flex:1;padding:25px;overflow-y:auto;background:var(--bg)}
     .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px;margin-bottom:25px}
     .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:18px}
     .mval{font-size:24px;font-weight:800;margin-top:5px} .mlabel{font-size:10px;color:var(--dim);text-transform:uppercase;font-weight:700}
     table{width:100%;border-collapse:collapse;background:var(--s1);border-radius:12px;overflow:hidden;font-size:12px} 
     th,td{padding:12px 15px;text-align:left;border-bottom:1px solid var(--b1)}
-    th{color:var(--dim);text-transform:uppercase;font-size:10px;font-weight:800;cursor:pointer}
+    th{color:var(--dim);text-transform:uppercase;font-size:10px;font-weight:800}
     .loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,9,13,0.9);z-index:2000;flex-direction:column;align-items:center;justify-content:center}
     .loading-overlay.show{display:flex}
     .spinner{width:40px;height:40px;border:3px solid var(--b1);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite}
@@ -36,6 +36,7 @@
     .cfrow{display:flex;gap:5px;margin-bottom:15px}
     .cfbtn{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--b1);background:var(--s2);color:var(--muted)}
     .cfbtn.active{background:rgba(24,119,242,.15);border-color:var(--blue);color:var(--blue)}
+    .score-ring{width:60px;height:60px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:4px solid var(--green);color:var(--green)}
     .c-green{color:var(--green)} .c-blue{color:var(--blue)} .c-orange{color:var(--orange)} .c-red{color:var(--red)} .c-purple{color:var(--purple)} .c-cyan{color:var(--cyan)} .c-yellow{color:var(--yellow)}
   </style>
 </head>
@@ -45,21 +46,16 @@
   <div class="logo">⚡ Meta Ads <span>Analyzer</span></div>
   <select class="sel" id="accountSel" style="max-width:230px"><option value="">A carregar...</option></select>
   <select class="sel" id="dateSel" onchange="onDateSelChange()">
-    <option value="last_7d">7 dias</option>
-    <option value="last_30d" selected>30 dias</option>
-    <option value="this_month">Este mês</option>
-    <option value="last_month">Mês passado</option>
+    <option value="last_7d">7 dias</option><option value="last_30d" selected>30 dias</option>
+    <option value="this_month">Este mês</option><option value="last_month">Mês passado</option>
     <option value="custom">Personalizado...</option>
   </select>
   <div id="customDateWrap" style="display:none;align-items:center;gap:4px">
-    <input type="date" id="customSince" class="sel">
-    <span style="color:var(--dim)">até</span>
-    <input type="date" id="customUntil" class="sel">
+    <input type="date" id="customSince" class="sel"><span style="color:var(--dim)">até</span><input type="date" id="customUntil" class="sel">
   </div>
-  <button class="btn btn-primary" onclick="runAnalysis()">Analisar</button>
+  <button class="btn btn-primary" onclick="runAnalysis()">Analisar Dados</button>
   <div style="margin-left:auto; display:flex; align-items:center; gap:10px">
-    <span id="uName">Alex</span>
-    <img id="uAvatar" style="width:28px; border-radius:50%">
+    <span id="uName">...</span><img id="uAvatar" style="width:28px; border-radius:50%">
   </div>
 </header>
 
@@ -72,11 +68,12 @@
     <button class="nav-item" onclick="showView('breakdown')">📉 Breakdown</button>
     <button class="nav-item" onclick="showView('content')">📸 Conteúdo IG</button>
     <button class="nav-item" onclick="showView('google')">🔍 Google Ads</button>
+    <button class="nav-item" onclick="showView('trend')">📈 Tendências</button>
     <div style="margin-top:20px; font-size:10px;font-weight:800;color:var(--dim);margin-bottom:10px">CAMPANHAS ATIVAS</div>
-    <div id="campSidebar" style="font-size:11px; padding:0 12px; color:var(--dim)">Selecione uma conta...</div>
+    <div id="campSidebar" style="font-size:11px; padding:0 12px; color:var(--dim)">Escolha conta...</div>
   </aside>
 
-  <main class="main">
+  <main class="main" id="mainContent">
     <div id="stateEmpty" style="text-align:center; padding-top:100px; opacity:0.6">
       <h2>Escolha uma conta e clique em Analisar</h2>
     </div>
@@ -85,9 +82,9 @@
       
       <div id="view-overview">
         <div id="analysisSummary" style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1); margin-bottom:20px; display:flex; align-items:center; gap:20px"></div>
-        <div class="stitle">MÉTRICAS DO PERÍODO</div>
+        <div class="stitle">MÉTRICAS DE AQUISIÇÃO (FUNIL)</div>
         <div class="mgrid" id="metricsGrid"></div>
-        <div class="stitle">CONVERSÕES E PERFORMANCE</div>
+        <div class="stitle">CONVERSÕES E PERFORMANCE FINAL</div>
         <div class="mgrid" id="convGrid"></div>
       </div>
 
@@ -126,32 +123,44 @@
       <div id="view-content" style="display:none">
         <div style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1)">
           <h3>Planejamento de Conteúdo IA</h3>
-          <select id="igAccSel" class="sel"><option value="">Carregar contas IG...</option></select>
+          <p style="font-size:11px; color:var(--dim); margin-bottom:15px">A IA analisará o seu nicho e gerará ideias de posts com copys magnéticos.</p>
+          <select id="igAccSel" class="sel" onchange="onIgAccChange()"><option value="">Carregar contas IG...</option></select>
           <input type="text" id="igNiche" placeholder="Qual o nicho do negócio? (Ex: Loja de Roupa)" class="sel" style="width:100%; margin:10px 0">
-          <button class="btn btn-primary" onclick="generateContentPlan()" style="margin-top:10px">✨ Gerar Plano 30 Dias</button>
-          <button class="btn btn-ghost" onclick="exportContentPlan()" style="margin-top:10px">📥 Exportar PDF</button>
+          <button class="btn btn-primary" onclick="generateContentPlan()" style="margin-top:10px">✨ Gerar Planejamento de 30 Dias</button>
+          <button class="btn btn-ghost" onclick="exportContentPlan()" style="margin-top:10px; margin-left:10px">📥 Exportar HTML</button>
           <div id="contentPlanOutput" style="margin-top:20px"></div>
         </div>
       </div>
 
       <div id="view-google" style="display:none">
         <div style="display:flex; gap:15px; margin-bottom:15px; align-items:center">
-          <button class="btn btn-primary" onclick="location.href='/auth/google'">🔗 Conectar Google</button>
+          <button class="btn btn-primary" onclick="location.href='/auth/google'">🔗 Conectar Google Ads</button>
+          <select id="gCustSel" class="sel" onchange="loadGoogleMetrics()"><option value="">Selecione a conta Google...</option></select>
         </div>
-        <div style="background:var(--s1); padding:20px; border-radius:12px">
-           O seu código Google Ads requer o GOOGLE_DEVELOPER_TOKEN no painel do Render. Após colocar, os dados aparecerão aqui.
+        <div id="gMetricsArea" class="mgrid"></div>
+        <div style="border-radius:12px; border:1px solid var(--b1); overflow:hidden; margin-top:20px">
+          <table>
+            <thead><tr><th>Campanha (Google)</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>Conv.</th></tr></thead>
+            <tbody id="gCampTbody"></tbody>
+          </table>
         </div>
+      </div>
+
+      <div id="view-trend" style="display:none">
+        <div class="chart-wrap"><div class="chart-title">Evolução do Score de Saúde</div><canvas id="cHealth" height="100"></canvas></div>
       </div>
 
     </div>
   </main>
 </div>
 
-<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div id="loadText" style="margin-top:15px; font-weight:700">A processar...</div></div>
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div id="loadText" style="margin-top:15px; font-weight:700; font-size:16px">Carregando...</div></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
+// --- STATE ---
 let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null;
-let igAccounts=[], contentPlan=null, insData=null;
+let igAccounts=[], igMedia=[], contentPlan=null, insData=null;
 let currentTableFilter = 'all';
 
 function showLoad(t){ document.getElementById('loadingOverlay').classList.add('show'); document.getElementById('loadText').textContent=t; }
@@ -167,6 +176,7 @@ async function init(){
     const avatarEl = document.getElementById('uAvatar'); const av = me.user.picture?.data?.url || me.user.picture; if(avatarEl && av) avatarEl.src = av;
   } catch(e) {}
   await loadAccounts();
+  checkGoogleStatus();
 }
 
 async function loadAccounts(){
@@ -190,46 +200,55 @@ async function onAccChange(){
 }
 
 function onDateSelChange(){
-  document.getElementById('customDateWrap').style.display = document.getElementById('dateSel').value === 'custom' ? 'flex' : 'none';
+  const wrap = document.getElementById('customDateWrap');
+  if(wrap) wrap.style.display = document.getElementById('dateSel').value === 'custom' ? 'flex' : 'none';
 }
 
 function showView(v){
-  ['overview','analysis','campaigns','breakdown','content','google'].forEach(id => { 
+  ['overview','analysis','campaigns','breakdown','content','google','trend'].forEach(id => { 
       const el = document.getElementById('view-'+id); if(el) el.style.display = id === v ? 'block' : 'none'; 
   });
   document.querySelectorAll('.nav-item').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(v.replace('overview','visão'))));
   if(v==='content' && igAccounts.length===0) loadIgAccounts();
   if(v==='breakdown') loadBreakdown('device');
+  if(v==='trend') loadTrend();
 }
 
-// --- FUNÇÃO DE CONVERSÃO RESTAURADA E BLINDADA ---
+// ─── FUNÇÃO ORIGINAL DE MÉTRICAS COMPLETAS (LEADS, MSG, ROAS, CONNECT) ───
 function convMetrics(rows){
-  let purchases=0, leads=0, msg=0, rev=0, sp=0, cl=0;
+  let purchases=0, leads=0, msg=0, rev=0, sp=0, cl=0, sessions=0;
   (rows||[]).forEach(m => {
     const a = m.actions || []; const v = m.action_values || [];
     const getAct = (arr, type) => { const f = arr.find(x=>x.action_type===type); return f ? parseFloat(f.value||0) : 0; };
     
     purchases += getAct(a,'offsite_conversion.fb_pixel_purchase') || getAct(a,'purchase');
     leads += getAct(a,'offsite_conversion.fb_pixel_lead') || getAct(a,'lead');
-    msg += getAct(a,'onsite_conversion.messaging_conversation_started_7d');
+    msg += getAct(a,'onsite_conversion.messaging_conversation_started_7d') || getAct(a,'onsite_conversion.messaging_first_reply');
+    sessions += getAct(a,'landing_page_view');
     rev += getAct(v,'offsite_conversion.fb_pixel_purchase');
     sp += parseFloat(m.spend||0);
     cl += parseInt(m.clicks||0);
   });
-  return { purchases, leads, msg, rev, sp, cl, roas: sp>0 ? rev/sp : 0, roi: sp>0 ? ((rev-sp)/sp)*100 : 0 };
+  return { purchases, leads, msg, sessions, rev, sp, cl, roas: sp>0 ? rev/sp : 0, roi: sp>0 ? ((rev-sp)/sp)*100 : 0, connectRate: cl>0 ? (sessions/cl)*100 : 0 };
 }
 
 async function runAnalysis(){
-  if(!selAccountId) return alert('Escolha uma conta Meta.');
-  showLoad('A analisar...');
+  if(!selAccountId) return alert('Escolha uma conta Meta no topo.');
+  showLoad('IA Especialista a analisar...');
   const d = document.getElementById('dateSel').value;
   let params = `date_preset=${d}`;
-  if(d === 'custom') params = `since=${document.getElementById('customSince').value}&until=${document.getElementById('customUntil').value}`;
+  if(d === 'custom') {
+    const s = document.getElementById('customSince').value;
+    const u = document.getElementById('customUntil').value;
+    if(!s || !u) { hideLoad(); return alert('Preencha as datas.'); }
+    params = `since=${s}&until=${u}`;
+  }
 
   try {
     const ins = await fetch(`/api/adaccounts/${selAccountId}/insights?${params}`).then(r=>r.json());
-    insData = ins; // Guardar para a tabela de conversão
+    insData = ins; 
     const res = await fetch('/api/analyze', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ accountData: accounts.find(a=>a.account_id===selAccountId), campaigns, insights: ins, dateRange: d }) }).then(r=>r.json());
+    if(res.error) throw new Error(res.error);
     metrics = res.metrics; analysis = res.analysis; 
     renderAll();
   } catch(e) { alert('Erro: ' + e.message); } 
@@ -241,27 +260,38 @@ function renderAll(){
   const r = analysis.resumo_geral; const S = sym();
   const conv = convMetrics(insData?.data || []);
   
-  document.getElementById('analysisSummary').innerHTML = `<div style="width:60px; height:60px; border:4px solid var(--green); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:900; color:var(--green)">${r.score_saude}</div><div><div style="font-size:20px; font-weight:800">${r.nivel_saude}</div><div style="color:var(--dim)">${r.resumo_historico}</div></div>`;
+  document.getElementById('analysisSummary').innerHTML = `<div class="score-ring"><div class="score-num">${r.score_saude}</div><div style="font-size:8px;color:var(--dim)">SCORE</div></div><div><div style="font-size:22px; font-weight:800; color:var(--green)">${r.nivel_saude}</div><div style="color:var(--dim); font-size:12px; margin-top:3px">${r.resumo_historico}</div></div>`;
   
+  // GRELHA 1 (FUNIL)
   document.getElementById('metricsGrid').innerHTML = `
     <div class="mcard"><div class="mlabel">Investimento</div><div class="mval c-blue">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
     <div class="mcard"><div class="mlabel">Impressões</div><div class="mval">${fmtN(metrics.totalImpressions)}</div></div>
-    <div class="mcard"><div class="mlabel">Cliques</div><div class="mval c-cyan">${fmtN(metrics.totalClicks)}</div></div>
+    <div class="mcard"><div class="mlabel">Cliques Totais</div><div class="mval c-cyan">${fmtN(metrics.totalClicks)}</div></div>
+    <div class="mcard"><div class="mlabel">Sessões (LPV)</div><div class="mval">${fmtN(conv.sessions)}</div></div>
+    <div class="mcard"><div class="mlabel">Connect Rate</div><div class="mval ${conv.connectRate>=5?'c-green':'c-orange'}">${conv.connectRate.toFixed(1)}%</div><div class="msub">sessoes / cliques</div></div>
   `;
 
+  // GRELHA 2 (CONVERSÕES)
   document.getElementById('convGrid').innerHTML = `
     <div class="mcard"><div class="mlabel">CTR Médio</div><div class="mval ${metrics.avgCtr>=1?'c-green':'c-orange'}">${metrics.avgCtr.toFixed(2)}%</div></div>
     <div class="mcard"><div class="mlabel">CPC Médio</div><div class="mval">${S} ${metrics.avgCpc.toFixed(2)}</div></div>
     <div class="mcard"><div class="mlabel">Compras</div><div class="mval c-purple">${conv.purchases}</div></div>
     <div class="mcard"><div class="mlabel">Leads</div><div class="mval c-yellow">${conv.leads}</div></div>
+    <div class="mcard"><div class="mlabel">Mensagens</div><div class="mval c-cyan">${conv.msg}</div></div>
+    <div class="mcard"><div class="mlabel">Receita Total</div><div class="mval c-green">${S} ${conv.rev.toFixed(2)}</div></div>
     <div class="mcard"><div class="mlabel">ROAS</div><div class="mval ${conv.roas>=2?'c-green':'c-red'}">${conv.roas.toFixed(2)}x</div></div>
     <div class="mcard"><div class="mlabel">ROI</div><div class="mval ${conv.roi>=0?'c-green':'c-red'}">${conv.roi.toFixed(0)}%</div></div>
   `;
   
   filterCampTable('all');
 
-  document.getElementById('optimList').innerHTML = (analysis.otimizacoes_prioritarias||[]).map(o => `<div style="background:var(--s2); padding:15px; border-radius:10px; border-left:4px solid var(--cyan)"><b>#${o.prioridade} ${o.titulo}</b><br><small style="color:var(--dim)">${o.descricao}</small></div>`).join('');
-  document.getElementById('alertList').innerHTML = (analysis.alertas_criticos||[]).map(a => `<div style="background:rgba(255,56,96,0.1); padding:10px; border-radius:8px; color:var(--red)">⚠️ ${a.mensagem}</div>`).join('') || '<div style="color:var(--green)">Nenhum alerta.</div>';
+  document.getElementById('optimList').innerHTML = (analysis.otimizacoes_prioritarias||[]).map(o => `<div style="background:var(--s2); padding:18px; border-radius:10px; border-left:4px solid var(--cyan)">
+      <strong style="color:var(--cyan); font-size:14px">#${o.prioridade} ${o.titulo}</strong>
+      <div style="color:var(--text); margin-top:6px; font-size:12px">${o.descricao}</div>
+      <div style="color:var(--orange); margin-top:10px; font-size:11px; font-weight:700; background:rgba(255,152,0,0.1); padding:8px; border-radius:6px">Ação sugerida: ${o.acao}</div>
+    </div>`).join('');
+    
+  document.getElementById('alertList').innerHTML = (analysis.alertas_criticos||[]).map(a => `<div style="background:rgba(255,56,96,0.1); padding:12px; border-radius:8px; color:var(--red); margin-bottom:10px; font-weight:700">⚠️ ${a.mensagem}</div>`).join('') || '<div style="color:var(--green)">Nenhum alerta crítico encontrado.</div>';
 }
 
 function filterCampTable(mode) {
@@ -272,7 +302,6 @@ function filterCampTable(mode) {
   if(mode === 'active') list = list.filter(c => c.campStatus === 'ACTIVE');
 
   document.getElementById('campTbody').innerHTML = list.map(c => {
-    // Calculando ROAS individual da campanha a partir do insData
     const campInsight = (insData?.data || []).find(x => x.campaign_id === c.campId);
     let roas = 0;
     if(campInsight) {
@@ -301,17 +330,20 @@ async function loadBreakdown(type){
   
   showLoad('A processar breakdown...');
   try {
-    const res = await fetch(`/api/adaccounts/${selAccountId}/breakdown/${type}`).then(r=>r.json());
+    const d = document.getElementById('dateSel').value;
+    let params = `date_preset=${d}`;
+    if(d === 'custom') params = `since=${document.getElementById('customSince').value}&until=${document.getElementById('customUntil').value}`;
+    const res = await fetch(`/api/adaccounts/${selAccountId}/breakdown/${type}?${params}`).then(r=>r.json());
     const data = res.data || [];
     const S = sym();
     
     document.getElementById('bdContent').innerHTML = `
-      <table style="background:transparent">
+      <table style="background:transparent; font-size:12px">
         <thead><tr><th>Segmento</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>CTR</th><th>CPC</th></tr></thead>
         <tbody>
           ${data.sort((a,b)=>parseFloat(b.spend||0)-parseFloat(a.spend||0)).map(r => `
             <tr>
-              <td style="font-weight:700">${r.device_platform || r.publisher_platform || 'Outro'}</td>
+              <td style="font-weight:700; color:var(--cyan)">${r.device_platform || r.publisher_platform || 'Outro'}</td>
               <td>${S} ${parseFloat(r.spend||0).toFixed(2)}</td>
               <td>${fmtN(r.impressions)}</td>
               <td>${fmtN(r.clicks)}</td>
@@ -324,6 +356,20 @@ async function loadBreakdown(type){
   } catch(e){} finally { hideLoad(); }
 }
 
+async function loadTrend(){
+  if(!selAccountId) return;
+  try {
+    const res = await fetch(`/api/trend/${selAccountId}`).then(r=>r.json());
+    const data = res.trend || [];
+    if(data.length === 0) return document.getElementById('cHealth').parentElement.innerHTML = '<div style="padding:20px; color:var(--dim)">Execute análises recorrentes para gerar o gráfico de evolução histórica do Score.</div>';
+    new Chart(document.getElementById('cHealth'), {
+      type: 'line', 
+      data: { labels: data.map(d=>new Date(d.date).toLocaleDateString()), datasets: [{ label: 'Score de Saúde', data: data.map(d=>d.avg_health), borderColor: '#00e676', backgroundColor: 'rgba(0,230,118,0.1)', tension: 0.4, fill:true }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { suggestedMin: 0, suggestedMax: 100 } } }
+    });
+  } catch(e) {}
+}
+
 async function loadIgAccounts(){
   const res = await fetch('/api/instagram/accounts').then(r=>r.json());
   igAccounts = res.data || [];
@@ -331,27 +377,67 @@ async function loadIgAccounts(){
   if(sel) sel.innerHTML = '<option value="">Selecione Conta Instagram...</option>' + igAccounts.map(a => `<option value="${a.id}">${a.username}</option>`).join('');
 }
 
+async function onIgAccChange(){
+  const id = document.getElementById('igAccSel').value; if(!id) return;
+  const res = await fetch(`/api/instagram/${id}/media`).then(r=>r.json()); igMedia = res.data || [];
+}
+
 async function generateContentPlan(){
   const niche = document.getElementById('igNiche').value;
-  if(!niche) return alert('Por favor, informe o nicho.');
-  showLoad('A gerar calendário editorial...');
+  if(!niche) return alert('Por favor, informe o nicho do negócio.');
+  showLoad('A analisar o nicho e gerar matriz...');
   try {
-    const res = await fetch('/api/content-plan', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({niche}) }).then(r=>r.json());
+    const res = await fetch('/api/content-plan', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({niche, recentPosts:igMedia}) }).then(r=>r.json());
     contentPlan = res.plan;
-    document.getElementById('contentPlanOutput').innerHTML = '<div style="padding:15px; background:rgba(0,230,118,0.1); color:var(--green); border-radius:8px; font-weight:700">✨ Planejamento mensal gerado! Clique no botão Exportar PDF.</div>';
-  } catch(e) {} finally { hideLoad(); }
+    document.getElementById('contentPlanOutput').innerHTML = '<div style="padding:15px; background:rgba(0,230,118,0.1); color:var(--green); border-radius:8px; font-weight:700">✨ Calendário mensal gerado com sucesso! Clique em "Exportar HTML" para ler os roteiros e copys.</div>';
+  } catch(e) {
+    alert("Erro ao gerar plano. " + e.message);
+  } finally { hideLoad(); }
 }
 
 function exportContentPlan(){
-  if(!contentPlan) return alert('Gere o plano IA primeiro.');
-  let html = '<html><body style="font-family:Arial; padding:30px; color:#333">';
-  html += '<h1 style="color:#1877F2">Calendário Editorial 30 Dias (IA)</h1><hr>';
+  if(!contentPlan) return alert('Gere o plano de 30 dias primeiro.');
+  let html = '<html><body style="font-family:Arial; padding:30px; color:#333; max-width:800px; margin:auto">';
+  html += '<h1 style="color:#1877F2">Calendário Editorial (Criado com Inteligência Artificial)</h1><hr>';
   (contentPlan.plano || []).forEach(p => {
     let copyFormatado = (p.copy || '').replace(/\n/g, '<br>');
-    html += `<div style="border:1px solid #ddd; padding:20px; border-radius:8px; margin-bottom:20px; background:#f9f9f9"><h3 style="margin-top:0; color:#d81b60">Dia ${p.dia}: ${p.titulo}</h3><p><strong>Formato:</strong> ${p.tipo}</p><p><strong>Gancho:</strong> <i>${p.gancho}</i></p><div style="background:#fff; padding:15px; border-left:4px solid #1877F2; margin:15px 0">${copyFormatado}</div></div>`;
+    html += `<div style="border:1px solid #ddd; padding:20px; border-radius:8px; margin-bottom:20px; background:#f9f9f9">
+                <h3 style="margin-top:0; color:#d81b60">Dia ${p.dia}: ${p.titulo}</h3>
+                <p><strong>Formato:</strong> ${p.tipo}</p>
+                <p><strong>Gancho (Headline):</strong> <i>${p.gancho}</i></p>
+                <div style="background:#fff; padding:15px; border-left:4px solid #1877F2; margin:15px 0">${copyFormatado}</div>
+             </div>`;
   });
   html += '</body></html>';
   const win = window.open('','_blank'); win.document.write(html); win.document.close();
+}
+
+// ─── GOOGLE ADS ───
+async function checkGoogleStatus(){
+  try {
+    const res = await fetch('/api/google/status').then(r=>r.json());
+    if(res.connected) {
+      const custRes = await fetch('/api/google/customers').then(r=>r.json());
+      const sel = document.getElementById('gCustSel');
+      if(sel && custRes.customers) {
+        sel.innerHTML = '<option value="">Contas do Google Ads...</option>' + custRes.customers.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+      }
+    }
+  } catch(e){}
+}
+
+async function loadGoogleMetrics(){
+  const id = document.getElementById('gCustSel').value; if(!id) return; showLoad('A puxar do Google...');
+  try {
+    const res = await fetch(`/api/google/customers/${id}/metrics`).then(r=>r.json());
+    document.getElementById('gMetricsArea').innerHTML = `
+      <div class="mcard"><div class="mlabel">Gasto Google</div><div class="mval">R$ ${res.spend.toFixed(2)}</div></div>
+      <div class="mcard"><div class="mlabel">Cliques (Google)</div><div class="mval c-cyan">${res.clicks}</div></div>
+      <div class="mcard"><div class="mlabel">Conversões (Google)</div><div class="mval" style="color:var(--purple)">${res.conversions}</div></div>
+    `;
+    const camps = await fetch(`/api/google/customers/${id}/campaigns`).then(r=>r.json());
+    document.getElementById('gCampTbody').innerHTML = (camps.data||[]).map(c=>`<tr><td>${c.campaign?.name}</td><td>R$ ${(c.metrics?.costMicros/1e6).toFixed(2)}</td><td>${c.metrics?.impressions}</td><td>${c.metrics?.clicks}</td><td>${c.metrics?.conversions}</td></tr>`).join('');
+  } catch(e){} finally { hideLoad(); }
 }
 
 window.onload = init;
