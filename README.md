@@ -1,3 +1,12 @@
+---
+title: Meta Ads Analyzer
+emoji: 📊
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+---
+
 # ⚡ Meta Ads Analyzer
 
 Analisador inteligente de campanhas Meta Ads (Facebook + Instagram) com IA Claude Opus.
