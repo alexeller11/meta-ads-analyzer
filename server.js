@@ -31,13 +31,13 @@ const REDIRECT_URI = `${process.env.BASE_URL}/auth/facebook/callback`;
 
 // --- AUTH ---
 app.get('/auth/facebook', (req, res) => {
-  // Scopes expandidos para garantir acesso total aos dados de anúncios
+  // Removido 'email' para evitar o erro "Invalid Scopes"
+  // Mantido apenas o essencial para análise de anúncios
   const scopes = [
     'ads_read', 
     'ads_management', 
     'business_management', 
-    'public_profile', 
-    'email'
+    'public_profile'
   ].join(',');
   
   res.redirect(`https://www.facebook.com/v19.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI )}&scope=${scopes}`);
@@ -45,8 +45,6 @@ app.get('/auth/facebook', (req, res) => {
 
 app.get('/auth/facebook/callback', async (req, res) => {
   try {
-    console.log('Iniciando troca de token no Railway...');
-    
     const t1 = await axios.get('https://graph.facebook.com/v19.0/oauth/access_token', {
       params: { client_id: FB_APP_ID, client_secret: FB_APP_SECRET, redirect_uri: REDIRECT_URI, code: req.query.code }
     } );
@@ -62,10 +60,9 @@ app.get('/auth/facebook/callback', async (req, res) => {
     } );
 
     req.session.user = user.data;
-    console.log('Login realizado com sucesso para:', user.data.name);
     res.redirect('/dashboard');
   } catch (err) { 
-    console.error('Erro no Callback do Facebook:', err.response ? JSON.stringify(err.response.data) : err.message);
+    console.error('Erro no Callback:', err.response ? JSON.stringify(err.response.data) : err.message);
     res.redirect('/?error=auth_failed'); 
   }
 });
@@ -78,37 +75,23 @@ function auth(req, res, next) {
   next();
 }
 
-// --- API DATA (COM TRATAMENTO DE ERROS MELHORADO) ---
+// --- API DATA ---
 app.get('/api/adaccounts', auth, async (req, res) => {
   try {
     const r = await axios.get('https://graph.facebook.com/v19.0/me/adaccounts', { 
-        params: { 
-            fields: 'name,account_id,currency,account_status', 
-            access_token: req.session.accessToken, 
-            limit: 100 
-        } 
+        params: { fields: 'name,account_id,currency,account_status', access_token: req.session.accessToken, limit: 100 } 
     } );
     res.json(r.data);
-  } catch (e) { 
-    console.error('Erro ao buscar contas de anúncios:', e.response?.data || e.message);
-    res.status(500).json({ error: e.message }); 
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/adaccounts/:id/campaigns', auth, async (req, res) => {
   try {
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/campaigns`, { 
-        params: { 
-            fields: 'id,name,status,objective,start_time,stop_time', 
-            access_token: req.session.accessToken, 
-            limit: 100 
-        } 
+        params: { fields: 'id,name,status,objective', access_token: req.session.accessToken, limit: 100 } 
     } );
     res.json(r.data);
-  } catch (e) { 
-    console.error(`Erro ao buscar campanhas da conta ${req.params.id}:`, e.response?.data || e.message);
-    res.status(500).json({ error: e.message }); 
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
@@ -116,22 +99,16 @@ app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
     const { since, until, date_preset } = req.query;
     const params = { 
         fields: 'campaign_id,campaign_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values', 
-        level: 'campaign', 
-        access_token: req.session.accessToken, 
-        limit: 200 
+        level: 'campaign', access_token: req.session.accessToken, limit: 200 
     };
     if (since && until) params.time_range = JSON.stringify({ since, until });
     else params.date_preset = date_preset || 'last_30d';
-    
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params } );
     res.json(r.data);
-  } catch (e) { 
-    console.error(`Erro ao buscar insights da conta ${req.params.id}:`, e.response?.data || e.message);
-    res.status(500).json({ error: e.message }); 
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- MOTOR DE IA SÊNIOR (LÓGICA DE ANÁLISE ROBUSTA) ---
+// --- MOTOR DE IA SÊNIOR (VERSÃO ULTRA ROBUSTA) ---
 app.post('/api/analyze', auth, async (req, res) => {
   const { accountData, campaigns, insights, creatives, dateRange } = req.body;
   try {
@@ -161,14 +138,8 @@ app.post('/api/analyze', auth, async (req, res) => {
     });
 
     const metrics = { 
-        totalSpend: tSpend, 
-        totalImpressions: tImpr, 
-        totalClicks: tClicks,
-        totalPurchases: tPur, 
-        totalLeads: tLds, 
-        totalMsg: tMsg, 
-        totalSessions: tSess, 
-        totalRev: tRev,
+        totalSpend: tSpend, totalImpressions: tImpr, totalClicks: tClicks,
+        totalPurchases: tPur, totalLeads: tLds, totalMsg: tMsg, totalSessions: tSess, totalRev: tRev,
         avgCtr: tImpr > 0 ? (tClicks / tImpr) * 100 : 0, 
         avgCpc: tClicks > 0 ? tSpend / tClicks : 0,
         connectRate: tClicks > 0 ? (tSess / tClicks) * 100 : 0, 
@@ -188,7 +159,7 @@ app.post('/api/analyze', auth, async (req, res) => {
           if (campRoas > 3) {
               diagIA = "🔥 Alta performance! Pode escalar o orçamento em 20% a cada 3 dias.";
               statusPerf = "Excelente";
-          } else if (campRoas > 1.5 && campRoas <= 3) {
+          } else if (campRoas > 1.5) {
               diagIA = "✅ ROI Positivo. Mantenha a campanha e monitore a frequência.";
               statusPerf = "Bom";
           } else if (campRoas > 0 && campRoas < 1.2) {
@@ -204,26 +175,17 @@ app.post('/api/analyze', auth, async (req, res) => {
       }
 
       return { 
-          ...c, 
-          spend: m.sp, 
-          ctr: campCtr, 
-          impressions: m.impr, 
-          clicks: m.cl, 
-          purchases: m.pur, 
-          messages: m.msg, 
-          leads: m.lds, 
-          revenue: m.rev, 
-          roas: campRoas, 
-          connectRate: campConnect,
-          diagnostico: diagIA,
-          status_performance: statusPerf
+          ...c, spend: m.sp, ctr: campCtr, impressions: m.impr, clicks: m.cl, 
+          purchases: m.pur, messages: m.msg, leads: m.lds, revenue: m.rev, 
+          roas: campRoas, connectRate: campConnect,
+          diagnostico: diagIA, status_performance: statusPerf
       };
     });
     
     const previousRun = await db.getLastRun(accountData.account_id);
     const aiAnalysis = runAnalysisEngine(accountData, enriched, metrics, previousRun);
     
-    // Salva o histórico no banco de dados
+    // Salva histórico no banco
     await db.saveRun({
         fbAccountId: accountData.account_id,
         fbUserId: req.session.user.id,
@@ -248,29 +210,28 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
 
   if (avgCtr < 1.0) {
       score -= 20;
-      otimizacoes.push({ prioridade: 1, titulo: 'Fadiga Criativa', categoria: 'Criativo', descricao: `Seu CTR médio (${avgCtr.toFixed(2)}%) está abaixo do ideal de 1.2%.`, acao: 'Troque os primeiros 3 segundos dos seus vídeos.' });
+      otimizacoes.push({ prioridade: 1, titulo: 'Fadiga Criativa', categoria: 'Criativo', descricao: `Seu CTR médio (${avgCtr.toFixed(2)}%) está abaixo do ideal.`, acao: 'Troque os criativos por novos ganchos.' });
   }
   if (connectRate < 60 && totalSpend > 50) {
       score -= 15;
-      otimizacoes.push({ prioridade: 2, titulo: 'Lentidão no Funil', categoria: 'Site', descricao: `Apenas ${connectRate.toFixed(1)}% dos cliques chegam ao site.`, acao: 'Otimize o peso das imagens na sua Landing Page.' });
+      otimizacoes.push({ prioridade: 2, titulo: 'Lentidão no Funil', categoria: 'Site', descricao: `Apenas ${connectRate.toFixed(1)}% dos cliques chegam ao site.`, acao: 'Otimize a velocidade de carregamento da página.' });
   }
   if (roas < 1.5 && totalSpend > 100) {
       score -= 25;
-      otimizacoes.push({ prioridade: 1, titulo: 'ROI Insustentável', categoria: 'Oferta', descricao: 'Seu ROAS está abaixo do ponto de equilíbrio.', acao: 'Teste uma nova oferta ou mude o público-alvo.' });
+      otimizacoes.push({ prioridade: 1, titulo: 'ROI Insustentável', categoria: 'Oferta', descricao: 'Seu ROAS está abaixo do ponto de equilíbrio.', acao: 'Teste uma nova oferta ou mude o público.' });
   }
 
   return { 
     resumo_geral: { 
         score_saude: Math.max(0, score), 
         nivel_saude: score > 80 ? 'Excelente' : (score > 50 ? 'Atenção' : 'Crítico'), 
-        resumo_historico: previousRun ? `A última análise foi em ${new Date(previousRun.created_at).toLocaleDateString()}. Saúde: ${previousRun.health_score} pts.` : 'Esta é a sua primeira análise histórica.' 
+        resumo_historico: previousRun ? `Saúde anterior: ${previousRun.health_score} pts.` : 'Iniciando histórico de análise.' 
     }, 
-    campanhas_analise: enriched = campaigns.sort((a,b) => b.spend - a.spend), 
+    campanhas_analise: campaigns.sort((a,b) => b.spend - a.spend), 
     otimizacoes_prioritarias: otimizacoes 
   };
 }
 
-// --- OUTRAS ROTAS ---
 app.get('/api/trend/:accountId', auth, async (req, res) => { try { res.json({ trend: await db.getAccountTrend(req.params.accountId) }); } catch (e) { res.status(500).json({ error: e.message }); } });
 app.get('/dashboard', (req, res) => { if (!req.session.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
