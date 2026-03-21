@@ -102,6 +102,21 @@
     .creative-info { padding: 16px; }
     
     .flex-center { display: flex; align-items: center; gap: 8px; }
+
+    .toggle-switch {
+      position: relative; display: inline-block; width: 40px; height: 20px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--border); transition: .4s; border-radius: 20px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+      background-color: white; transition: .4s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(20px); }
   </style>
 </head>
 <body>
@@ -131,6 +146,14 @@
       <input type="date" id="sinceDate" class="input-sel">
       <span>até</span>
       <input type="date" id="untilDate" class="input-sel">
+    </div>
+
+    <div class="flex-center" style="margin-left: 8px; font-size: 12px; color: var(--text-dim);">
+      <span>Comparar</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="compareToggle" checked>
+        <span class="slider"></span>
+      </label>
     </div>
     
     <button class="btn btn-primary" onclick="runAnalysis()">Analisar Agora</button>
@@ -185,8 +208,8 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
             <h2>Performance das Campanhas</h2>
             <div class="flex-center">
-              <button class="btn btn-outline active" onclick="filterCamps('all', this)">Todas</button>
-              <button class="btn btn-outline" onclick="filterCamps('active', this)">Ativas</button>
+              <button class="btn btn-outline active" id="btnFilterAll" onclick="filterCamps('all', this)">Todas</button>
+              <button class="btn btn-outline" id="btnFilterActive" onclick="filterCamps('active', this)">Ativas</button>
             </div>
           </div>
           <div class="table-container">
@@ -195,10 +218,11 @@
                 <tr>
                   <th>Campanha</th>
                   <th>Gasto</th>
-                  <th>Cliques</th>
+                  <th>Mensagens</th>
+                  <th>Compras</th>
                   <th>ROAS</th>
                   <th>CTR</th>
-                  <th>Status IA</th>
+                  <th>Análise IA</th>
                 </tr>
               </thead>
               <tbody id="campTableBody"></tbody>
@@ -226,6 +250,19 @@
 
       </div>
     </main>
+  </div>
+</div>
+
+<div id="iaModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:600px; width:100%; max-height:90vh; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+      <h2 id="modalTitle">Análise da Campanha</h2>
+      <button onclick="closeModal()" style="background:none; border:none; color:white; cursor:pointer; font-size:24px;">&times;</button>
+    </div>
+    <div id="modalBody"></div>
+    <div style="margin-top:20px; text-align:right;">
+      <button class="btn btn-primary" onclick="closeModal()">Fechar</button>
+    </div>
   </div>
 </div>
 
@@ -268,11 +305,15 @@
 
   function renderBudget(bal) {
     const chip = document.getElementById('budgetStatus');
-    if(bal.balance !== undefined) {
-      const val = parseFloat(bal.balance)/100;
-      chip.className = 'badge ' + (val > 0 ? 'badge-warning' : 'badge-success');
-      chip.textContent = val > 0 ? `Fatura: R$ ${val.toFixed(2)}` : `Saldo: R$ ${Math.abs(val).toFixed(2)}`;
-      chip.style.display = 'block';
+    const isPrepaid = bal.is_prepaid;
+    const val = bal.readable_balance;
+    
+    chip.className = 'badge ' + (isPrepaid ? (val < 100 ? 'badge-danger' : 'badge-success') : 'badge-primary');
+    chip.innerHTML = isPrepaid ? `<b>PRÉ-PAGO:</b> R$ ${val.toFixed(2)}` : `<b>CARTÃO/PÓS:</b> OK`;
+    chip.style.display = 'block';
+    
+    if(isPrepaid && val < 100) {
+        alert(`🚨 ALERTA: Saldo baixo na conta ${bal.name}! Apenas R$ ${val.toFixed(2)} restantes.`);
     }
   }
 
@@ -284,6 +325,7 @@
     if(!state.selectedAccountId) return alert('Selecione uma conta!');
     setLoading(true);
     const preset = document.getElementById('dateSel').value;
+    const compare = document.getElementById('compareToggle').checked;
     let params = `date_preset=${preset}`;
     if(preset === 'custom') params = `since=${document.getElementById('sinceDate').value}&until=${document.getElementById('untilDate').value}`;
 
@@ -291,7 +333,7 @@
       const [ins, cr, prevIns] = await Promise.all([
         fetch(`/api/adaccounts/${state.selectedAccountId}/insights?${params}`).then(r=>r.json()),
         fetch(`/api/adaccounts/${state.selectedAccountId}/creatives?${params}`).then(r=>r.json()),
-        getPreviousPeriodData(preset)
+        compare ? getPreviousPeriodData(preset) : Promise.resolve(null)
       ]);
       
       const res = await fetch('/api/analyze', {
@@ -305,9 +347,8 @@
   }
 
   async function getPreviousPeriodData(preset) {
-    // Lógica simplificada: para comparação, buscamos o período anterior se for preset conhecido
     let prevPreset = null;
-    if(preset === 'last_7d') prevPreset = 'last_14d'; // Aproximação
+    if(preset === 'last_7d') prevPreset = 'last_14d';
     if(preset === 'last_30d') prevPreset = 'last_90d';
     if(!prevPreset) return null;
     return fetch(`/api/adaccounts/${state.selectedAccountId}/insights?date_preset=${prevPreset}`).then(r=>r.json()).catch(()=>null);
@@ -316,6 +357,7 @@
   function renderDashboard() {
     document.getElementById('emptyState').style.display='none'; document.getElementById('dashboardContent').style.display='block';
     const { metrics, prevMetrics, analysis } = state;
+    const compare = document.getElementById('compareToggle').checked;
     
     const score = analysis.resumo_geral.score_saude;
     const color = score > 80 ? 'var(--success)' : (score > 50 ? 'var(--warning)' : 'var(--danger)');
@@ -325,23 +367,23 @@
     `;
 
     const getTrend = (curr, prev) => {
-      if(!prev) return '';
+      if(!compare || !prev) return '';
       const diff = ((curr - prev) / (prev || 1)) * 100;
-      return `<div class="card-trend ${diff >= 0 ? 'trend-up' : 'trend-down'}">${diff >= 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(1)}% vs anterior</div>`;
+      return `<div class="card-trend ${diff >= 0 ? 'trend-up' : 'trend-down'}">${diff >= 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(1)}%</div>`;
     };
 
     document.getElementById('mainStatsGrid').innerHTML = `
       <div class="card"><p class="card-label">Investimento</p><p class="card-value">R$ ${metrics.totalSpend.toFixed(2)}</p>${getTrend(metrics.totalSpend, prevMetrics?.totalSpend)}</div>
+      <div class="card"><p class="card-label">Vendas (Purchase)</p><p class="card-value">R$ ${metrics.totalRev.toFixed(2)}</p>${getTrend(metrics.totalRev, prevMetrics?.totalRev)}</div>
       <div class="card"><p class="card-label">ROAS</p><p class="card-value">${metrics.roas.toFixed(2)}x</p>${getTrend(metrics.roas, prevMetrics?.roas)}</div>
-      <div class="card"><p class="card-label">Vendas/Leads</p><p class="card-value">${(metrics.totalPurchases + metrics.totalLeads)}</p>${getTrend(metrics.totalPurchases + metrics.totalLeads, (prevMetrics?.totalPurchases + prevMetrics?.totalLeads))}</div>
-      <div class="card"><p class="card-label">CPA</p><p class="card-value">R$ ${(metrics.totalPurchases > 0 ? metrics.totalSpend/metrics.totalPurchases : 0).toFixed(2)}</p></div>
+      <div class="card"><p class="card-label">Qtd Compras</p><p class="card-value">${metrics.totalPurchases}</p>${getTrend(metrics.totalPurchases, prevMetrics?.totalPurchases)}</div>
     `;
 
     document.getElementById('secondaryStatsGrid').innerHTML = `
+      <div class="card"><p class="card-label">Mensagens</p><p class="card-value">${metrics.totalMsg}</p>${getTrend(metrics.totalMsg, prevMetrics?.totalMsg)}</div>
+      <div class="card"><p class="card-label">Custo/Mensagem</p><p class="card-value">R$ ${(metrics.totalMsg > 0 ? metrics.totalSpend/metrics.totalMsg : 0).toFixed(2)}</p></div>
       <div class="card"><p class="card-label">CTR Médio</p><p class="card-value">${metrics.avgCtr.toFixed(2)}%</p>${getTrend(metrics.avgCtr, prevMetrics?.avgCtr)}</div>
-      <div class="card"><p class="card-label">Connect Rate</p><p class="card-value">${metrics.connectRate.toFixed(1)}%</p></div>
       <div class="card"><p class="card-label">Cliques</p><p class="card-value">${metrics.totalClicks}</p></div>
-      <div class="card"><p class="card-label">Impressões</p><p class="card-value">${(metrics.totalImpressions/1000).toFixed(1)}K</p></div>
     `;
 
     document.getElementById('analysisList').innerHTML = analysis.otimizacoes_prioritarias.map(o => `
@@ -360,13 +402,45 @@
     document.getElementById('campTableBody').innerHTML = camps.map(c => `
       <tr>
         <td><div style="font-weight:700">${c.name}</div><div style="font-size:10px; color:var(--text-muted)">${c.status}</div></td>
-        <td>R$ ${c.spend.toFixed(2)}</td><td>${c.clicks}</td>
+        <td>R$ ${c.spend.toFixed(2)}</td>
+        <td>${c.messages} <small style="display:block; color:var(--text-dim)">R$ ${c.costPerMsg.toFixed(2)}/msg</small></td>
+        <td>${c.purchases} <small style="display:block; color:var(--text-dim)">R$ ${c.revenue.toFixed(2)}</small></td>
         <td style="font-weight:800; color:${c.roas>1.5?'var(--success)':'var(--text)'}">${c.roas.toFixed(2)}x</td>
         <td>${c.ctr.toFixed(2)}%</td>
-        <td><span class="badge ${c.status_performance==='Excelente'?'badge-success':(c.status_performance==='Bom'?'badge-success':'badge-warning')}">${c.status_performance}</span></td>
+        <td><button class="btn btn-outline" onclick="openIAAnalysis('${c.id}')">🧠 Analisar</button></td>
       </tr>
     `).join('');
   }
+
+  function filterCamps(type, btn) {
+    document.querySelectorAll('#tab-campaigns .btn-outline').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filtered = type === 'active' ? state.analysis.campanhas_analise.filter(c => c.status === 'ACTIVE') : state.analysis.campanhas_analise;
+    renderCampTable(filtered);
+  }
+
+  function openIAAnalysis(campId) {
+    const camp = state.analysis.campanhas_analise.find(c => c.id === campId);
+    if(!camp) return;
+    document.getElementById('modalTitle').textContent = camp.name;
+    document.getElementById('modalBody').innerHTML = `
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+        <div class="card"><p class="card-label">Status Performance</p><span class="badge ${camp.status_performance.includes('Crítico')?'badge-danger':'badge-success'}">${camp.status_performance}</span></div>
+        <div class="card"><p class="card-label">CTR</p><p class="card-value" style="font-size:20px;">${camp.ctr.toFixed(2)}%</p></div>
+      </div>
+      <div class="card" style="border-left:4px solid var(--primary); margin-bottom:16px;">
+        <p class="card-label">Diagnóstico IA</p>
+        <p style="font-size:16px; font-weight:600; margin:8px 0;">${camp.diagnostico}</p>
+      </div>
+      <div class="card" style="border-left:4px solid var(--success);">
+        <p class="card-label">Sugestão de Escala</p>
+        <p style="font-size:16px; font-weight:600; margin:8px 0;">${camp.escala_sugestao}</p>
+      </div>
+    `;
+    document.getElementById('iaModal').style.display = 'flex';
+  }
+
+  function closeModal() { document.getElementById('iaModal').style.display = 'none'; }
 
   function renderCreatives(sortType, btn) {
     if(btn) {

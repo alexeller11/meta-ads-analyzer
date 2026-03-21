@@ -4,6 +4,7 @@ const session = require('express-session');
 const axios = require('axios');
 const path = require('path');
 const db = require('./db');
+const nodemailer = require('nodemailer');
 
 const app = express();
 
@@ -28,6 +29,28 @@ app.use(session({
 const FB_APP_ID = process.env.FB_APP_ID;
 const FB_APP_SECRET = process.env.FB_APP_SECRET;
 const REDIRECT_URI = `${process.env.BASE_URL}/auth/facebook/callback`;
+
+// Configuração de E-mail para Alertas
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.ALERT_EMAIL_USER,
+    pass: process.env.ALERT_EMAIL_PASS
+  }
+});
+
+async function sendLowBalanceAlert(accountName, balance) {
+  if (!process.env.ALERT_EMAIL_USER || !process.env.ALERT_EMAIL_TO) return;
+  try {
+    await transporter.sendMail({
+      from: `"Meta Ads Analyzer" <${process.env.ALERT_EMAIL_USER}>`,
+      to: process.env.ALERT_EMAIL_TO,
+      subject: `🚨 ALERTA: Saldo Baixo na Conta ${accountName}`,
+      text: `A conta ${accountName} está com saldo de R$ ${balance.toFixed(2)}. Adicione fundos para evitar a pausa dos anúncios.`,
+      html: `<h2>Alerta de Saldo Baixo</h2><p>A conta <b>${accountName}</b> está com saldo de <b>R$ ${balance.toFixed(2)}</b>.</p><p>Adicione fundos imediatamente.</p>`
+    });
+  } catch (e) { console.error('Erro ao enviar e-mail:', e); }
+}
 
 // --- AUTH ---
 app.get('/auth/facebook', (req, res) => {
@@ -65,15 +88,27 @@ function auth(req, res, next) {
 // --- API DATA ---
 app.get('/api/adaccounts', auth, async (req, res) => {
   try {
-    const r = await axios.get('https://graph.facebook.com/v19.0/me/adaccounts', { params: { fields: 'name,account_id,currency,account_status', access_token: req.session.accessToken, limit: 100 } });
+    const r = await axios.get('https://graph.facebook.com/v19.0/me/adaccounts', { params: { fields: 'name,account_id,currency,account_status,funding_source_details', access_token: req.session.accessToken, limit: 100 } });
     res.json(r.data);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/adaccounts/:id/balance', auth, async (req, res) => {
   try {
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}`, { params: { fields: 'balance,amount_spent,spend_cap', access_token: req.session.accessToken } });
-    res.json(r.data);
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}`, { params: { fields: 'name,balance,amount_spent,spend_cap,funding_source_details', access_token: req.session.accessToken } });
+    const data = r.data;
+    
+    // Identificar tipo de conta
+    const funding = data.funding_source_details || {};
+    data.is_prepaid = funding.type === 'PREPAID' || (data.balance && parseInt(data.balance) < 0);
+    data.readable_balance = data.balance ? Math.abs(parseFloat(data.balance) / 100) : 0;
+    
+    // Alerta de saldo baixo (< R$ 100,00)
+    if (data.is_prepaid && data.readable_balance < 100) {
+        await sendLowBalanceAlert(data.name, data.readable_balance);
+    }
+    
+    res.json(data);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -140,17 +175,25 @@ app.post('/api/analyze', auth, async (req, res) => {
   try {
     const getMetrics = (dataRows) => {
         const rows = dataRows || [];
-        const getAct = (arr, type) => { const f = (arr||[]).find(x => x.action_type === type); return f ? parseFloat(f.value || 0) : 0; };
+        const getAct = (arr, type) => { 
+            const f = (arr||[]).find(x => x.action_type === type); 
+            return f ? parseFloat(f.value || 0) : 0; 
+        };
         let tSpend = 0, tImpr = 0, tClicks = 0, tPur = 0, tLds = 0, tMsg = 0, tSess = 0, tRev = 0;
         const byId = {};
         rows.forEach(m => {
-          const sp = parseFloat(m.spend || 0); const cl = parseInt(m.clicks || 0); const impr = parseInt(m.impressions || 0);
+          const sp = parseFloat(m.spend || 0); 
+          const cl = parseInt(m.clicks || 0); 
+          const impr = parseInt(m.impressions || 0);
           tSpend += sp; tImpr += impr; tClicks += cl;
+          
+          // Métricas de Conversão
           const pur = getAct(m.actions,'offsite_conversion.fb_pixel_purchase') || getAct(m.actions,'purchase');
           const lds = getAct(m.actions,'offsite_conversion.fb_pixel_lead') || getAct(m.actions,'lead');
           const msg = getAct(m.actions,'onsite_conversion.messaging_conversation_started_7d') || getAct(m.actions,'onsite_conversion.messaging_first_reply');
           const sess = getAct(m.actions,'landing_page_view');
           const rev = getAct(m.action_values,'offsite_conversion.fb_pixel_purchase') || getAct(m.action_values, 'purchase');
+          
           tPur += pur; tLds += lds; tMsg += msg; tSess += sess; tRev += rev;
           byId[m.campaign_id] = { ...m, pur, lds, msg, sess, rev, sp, cl, impr };
         });
@@ -170,19 +213,48 @@ app.post('/api/analyze', auth, async (req, res) => {
       const m = metrics.byId[c.id] || { pur:0, lds:0, msg:0, sess:0, rev:0, sp:0, cl:0, impr:0, ctr:0 };
       let diagIA = "Campanha com poucos dados.";
       let statusPerf = "Estável";
+      let escalaIA = "Aguardando mais dados.";
 
       if (m.sp > 0) {
           const campRoas = m.sp > 0 ? m.rev / m.sp : 0;
           const campCtr = parseFloat(m.ctr || 0);
           const campConnect = m.cl > 0 ? (m.sess / m.cl) * 100 : 0;
+          const costPerMsg = m.msg > 0 ? m.sp / m.msg : 0;
 
-          if (campRoas > 3) { diagIA = "🔥 Alta performance! Pode escalar 20%."; statusPerf = "Excelente"; }
-          else if (campRoas > 1.5) { diagIA = "✅ ROI Positivo. Mantenha."; statusPerf = "Bom"; }
-          else if (campRoas > 0 && campRoas < 1.2) { diagIA = "⚠️ ROAS baixo. Oferta fraca."; statusPerf = "Atenção"; }
-          else if (campCtr < 0.8) { diagIA = "🪝 CTR Baixo. Troque o criativo."; statusPerf = "Crítico (Criativo)"; }
-          else if (campConnect < 50) { diagIA = "📉 Connect Rate baixo. Site lento."; statusPerf = "Crítico (Site)"; }
+          if (campRoas > 3 || (m.msg > 10 && costPerMsg < 5)) { 
+              diagIA = "🔥 Alta performance! Otimização de criativo e público validada."; 
+              statusPerf = "Excelente";
+              escalaIA = "Sugestão: Aumentar orçamento em 20% a cada 48h.";
+          }
+          else if (campRoas > 1.5 || (m.msg > 5 && costPerMsg < 10)) { 
+              diagIA = "✅ Performance estável. ROI dentro da meta."; 
+              statusPerf = "Bom";
+              escalaIA = "Sugestão: Manter orçamento e monitorar CTR.";
+          }
+          else if (m.sp > 50 && m.msg === 0 && m.pur === 0) {
+              diagIA = "🚨 Alerta de Queima de Verba! Sem conversões após gasto relevante.";
+              statusPerf = "Crítico (Gasto)";
+              escalaIA = "Sugestão: Pausar imediatamente e revisar oferta.";
+          }
+          else if (campCtr < 0.8) { 
+              diagIA = "🪝 CTR Baixo. O público não está clicando no seu anúncio."; 
+              statusPerf = "Crítico (Criativo)";
+              escalaIA = "Sugestão: Trocar criativo por um com gancho mais forte.";
+          }
+          else if (campConnect < 50) { 
+              diagIA = "📉 Perda de Tráfego. O site está demorando para carregar."; 
+              statusPerf = "Crítico (Site)";
+              escalaIA = "Sugestão: Otimizar velocidade do site ou checkout.";
+          }
       }
-      return { ...c, spend: m.sp, ctr: parseFloat(m.ctr || 0), impressions: m.impr, clicks: m.cl, purchases: m.pur, messages: m.msg, leads: m.lds, revenue: m.rev, roas: m.sp > 0 ? m.rev / m.sp : 0, connectRate: m.cl > 0 ? (m.sess / m.cl) * 100 : 0, diagnostico: diagIA, status_performance: statusPerf };
+      return { 
+          ...c, 
+          spend: m.sp, ctr: parseFloat(m.ctr || 0), impressions: m.impr, clicks: m.cl, 
+          purchases: m.pur, messages: m.msg, leads: m.lds, revenue: m.rev, 
+          roas: m.sp > 0 ? m.rev / m.sp : 0, connectRate: m.cl > 0 ? (m.sess / m.cl) * 100 : 0, 
+          diagnostico: diagIA, status_performance: statusPerf, escala_sugestao: escalaIA,
+          costPerMsg: m.msg > 0 ? m.sp / m.msg : 0
+      };
     });
 
     const previousRun = await db.getLastRun(accountData.account_id);
@@ -206,7 +278,7 @@ app.post('/api/analyze', auth, async (req, res) => {
 });
 
 function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
-  const { avgCtr, totalSpend, connectRate, roas } = metrics;
+  const { avgCtr, totalSpend, connectRate, roas, totalMsg, totalPurchases } = metrics;
   let score = totalSpend > 0 ? 100 : 0;
   const otimizacoes = [];
 
@@ -218,7 +290,7 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
       score -= 15;
       otimizacoes.push({ prioridade: 2, titulo: 'Gargalo no Site', categoria: 'Site', descricao: `Apenas ${connectRate.toFixed(1)}% dos cliques chegam à página.`, acao: 'Otimize a velocidade do seu site.' });
   }
-  if (roas < 1.5 && totalSpend > 100) {
+  if (roas < 1.5 && totalSpend > 100 && totalMsg < 5 && totalPurchases < 1) {
       score -= 25;
       otimizacoes.push({ prioridade: 1, titulo: 'ROI Insustentável', categoria: 'Oferta', descricao: 'O retorno está abaixo do breakeven.', acao: 'Revise sua oferta ou mude o público.' });
   }
