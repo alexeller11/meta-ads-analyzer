@@ -7,7 +7,10 @@ const db = require('./db');
 
 const app = express();
 
-// Suporte para grandes volumes de dados (Contas com muitos anúncios)
+// --- CONFIGURAÇÃO PARA HUGGING FACE SPACES (PROXY) ---
+app.set('trust proxy', 1); // Essencial para sessões atrás de proxy HTTPS
+
+// Suporte para grandes volumes de dados
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -16,7 +19,11 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'meta-analyzer-ultra-v6',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
+  cookie: { 
+    secure: true, // Deve ser true para HTTPS no Hugging Face
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: 'none' // Necessário para cookies em iframes/cross-site
+  }
 }));
 
 const FB_APP_ID = process.env.FB_APP_ID;
@@ -26,22 +33,25 @@ const REDIRECT_URI = `${process.env.BASE_URL}/auth/facebook/callback`;
 // --- AUTH ---
 app.get('/auth/facebook', (req, res) => {
   const scopes = ['ads_read', 'ads_management', 'business_management', 'public_profile'].join(',');
-  res.redirect(`https://www.facebook.com/v19.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${scopes}`);
+  res.redirect(`https://www.facebook.com/v19.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI )}&scope=${scopes}`);
 });
 
 app.get('/auth/facebook/callback', async (req, res) => {
   try {
     const t1 = await axios.get('https://graph.facebook.com/v19.0/oauth/access_token', {
       params: { client_id: FB_APP_ID, client_secret: FB_APP_SECRET, redirect_uri: REDIRECT_URI, code: req.query.code }
-    });
+    } );
     const t2 = await axios.get('https://graph.facebook.com/v19.0/oauth/access_token', {
       params: { grant_type: 'fb_exchange_token', client_id: FB_APP_ID, client_secret: FB_APP_SECRET, fb_exchange_token: t1.data.access_token }
-    });
+    } );
     req.session.accessToken = t2.data.access_token;
-    const user = await axios.get('https://graph.facebook.com/v19.0/me', { params: { fields: 'id,name,picture', access_token: req.session.accessToken } });
+    const user = await axios.get('https://graph.facebook.com/v19.0/me', { params: { fields: 'id,name,picture', access_token: req.session.accessToken } } );
     req.session.user = user.data;
     res.redirect('/dashboard');
-  } catch (err) { res.redirect('/?error=auth_failed'); }
+  } catch (err) { 
+    console.error('Erro no Callback do Facebook:', err.response ? err.response.data : err.message);
+    res.redirect('/?error=auth_failed'); 
+  }
 });
 
 app.get('/api/me', (req, res) => res.json(req.session.user ? { authenticated: true, user: req.session.user } : { authenticated: false }));
@@ -55,21 +65,21 @@ function auth(req, res, next) {
 // --- API DATA ---
 app.get('/api/adaccounts', auth, async (req, res) => {
   try {
-    const r = await axios.get('https://graph.facebook.com/v19.0/me/adaccounts', { params: { fields: 'name,account_id,currency', access_token: req.session.accessToken, limit: 100 } });
+    const r = await axios.get('https://graph.facebook.com/v19.0/me/adaccounts', { params: { fields: 'name,account_id,currency', access_token: req.session.accessToken, limit: 100 } } );
     res.json(r.data);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/adaccounts/:id/balance', auth, async (req, res) => {
   try {
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}`, { params: { fields: 'balance,amount_spent,spend_cap', access_token: req.session.accessToken } });
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}`, { params: { fields: 'balance,amount_spent,spend_cap', access_token: req.session.accessToken } } );
     res.json(r.data);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/adaccounts/:id/campaigns', auth, async (req, res) => {
   try {
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/campaigns`, { params: { fields: 'id,name,status', access_token: req.session.accessToken, limit: 100 } });
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/campaigns`, { params: { fields: 'id,name,status', access_token: req.session.accessToken, limit: 100 } } );
     res.json(r.data);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -80,7 +90,7 @@ app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
     const params = { fields: 'campaign_id,campaign_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values', level: 'campaign', access_token: req.session.accessToken, limit: 200 };
     if (since && until) params.time_range = JSON.stringify({ since, until });
     else params.date_preset = date_preset || 'last_30d';
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params } );
     res.json(r.data);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -89,7 +99,7 @@ app.get('/api/adaccounts/:id/creatives', auth, async (req, res) => {
   try {
     const { date_preset } = req.query;
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, {
-      params: { fields: `id,name,status,creative{thumbnail_url,image_url},insights.date_preset(${date_preset || 'last_30d'}){impressions,clicks,spend,ctr,actions,action_values}`, access_token: req.session.accessToken, limit: 50 }
+      params: { fields: `id,name,status,creative{thumbnail_url,image_url},insights.date_preset(${date_preset || 'last_30d'} ){impressions,clicks,spend,ctr,actions,action_values}`, access_token: req.session.accessToken, limit: 50 }
     });
     res.json(r.data);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -100,7 +110,7 @@ app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
     const params = { fields: 'impressions,clicks,spend,ctr', level: 'account', access_token: req.session.accessToken, date_preset: req.query.date_preset || 'last_30d' };
     if (req.params.type === 'device') params.breakdowns = 'device_platform';
     else if (req.params.type === 'placement') params.breakdowns = 'publisher_platform,platform_position';
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params } );
     res.json(r.data);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
