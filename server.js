@@ -104,8 +104,6 @@ app.get('/api/adaccounts/:id/creatives', auth, async (req, res) => {
       limit: 50 
     };
     if (since && until) {
-        // Facebook API doesn't support time_range inside insights expansion easily for creatives in this format,
-        // so we fall back to date_preset or handle as best as we can.
         params.fields = `id,name,status,creative{thumbnail_url,image_url},insights.time_range({"since":"${since}","until":"${until}"}){impressions,clicks,spend,ctr,actions,action_values}`;
     }
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, { params });
@@ -138,34 +136,39 @@ app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
 
 // --- MOTOR DE IA SÊNIOR ---
 app.post('/api/analyze', auth, async (req, res) => {
-  const { accountData, campaigns, insights, creatives, dateRange } = req.body;
+  const { accountData, campaigns, insights, creatives, dateRange, previousInsights } = req.body;
   try {
-    const rows = insights?.data || [];
-    const getAct = (arr, type) => { const f = (arr||[]).find(x => x.action_type === type); return f ? parseFloat(f.value || 0) : 0; };
-    let tSpend = 0, tImpr = 0, tClicks = 0, tPur = 0, tLds = 0, tMsg = 0, tSess = 0, tRev = 0;
-    const byId = {};
-    rows.forEach(m => {
-      const sp = parseFloat(m.spend || 0); const cl = parseInt(m.clicks || 0); const impr = parseInt(m.impressions || 0);
-      tSpend += sp; tImpr += impr; tClicks += cl;
-      const pur = getAct(m.actions,'offsite_conversion.fb_pixel_purchase') || getAct(m.actions,'purchase');
-      const lds = getAct(m.actions,'offsite_conversion.fb_pixel_lead') || getAct(m.actions,'lead');
-      const msg = getAct(m.actions,'onsite_conversion.messaging_conversation_started_7d') || getAct(m.actions,'onsite_conversion.messaging_first_reply');
-      const sess = getAct(m.actions,'landing_page_view');
-      const rev = getAct(m.action_values,'offsite_conversion.fb_pixel_purchase') || getAct(m.action_values, 'purchase');
-      tPur += pur; tLds += lds; tMsg += msg; tSess += sess; tRev += rev;
-      byId[m.campaign_id] = { ...m, pur, lds, msg, sess, rev, sp, cl, impr };
-    });
-
-    const metrics = { 
-        totalSpend: tSpend, totalImpressions: tImpr, totalClicks: tClicks, totalPurchases: tPur, 
-        totalLeads: tLds, totalMsg: tMsg, totalSessions: tSess, totalRev: tRev, 
-        avgCtr: tImpr > 0 ? (tClicks / tImpr) * 100 : 0, avgCpc: tClicks > 0 ? tSpend / tClicks : 0, 
-        connectRate: tClicks > 0 ? (tSess / tClicks) * 100 : 0, roas: tSpend > 0 ? tRev / tSpend : 0 
+    const getMetrics = (dataRows) => {
+        const rows = dataRows || [];
+        const getAct = (arr, type) => { const f = (arr||[]).find(x => x.action_type === type); return f ? parseFloat(f.value || 0) : 0; };
+        let tSpend = 0, tImpr = 0, tClicks = 0, tPur = 0, tLds = 0, tMsg = 0, tSess = 0, tRev = 0;
+        const byId = {};
+        rows.forEach(m => {
+          const sp = parseFloat(m.spend || 0); const cl = parseInt(m.clicks || 0); const impr = parseInt(m.impressions || 0);
+          tSpend += sp; tImpr += impr; tClicks += cl;
+          const pur = getAct(m.actions,'offsite_conversion.fb_pixel_purchase') || getAct(m.actions,'purchase');
+          const lds = getAct(m.actions,'offsite_conversion.fb_pixel_lead') || getAct(m.actions,'lead');
+          const msg = getAct(m.actions,'onsite_conversion.messaging_conversation_started_7d') || getAct(m.actions,'onsite_conversion.messaging_first_reply');
+          const sess = getAct(m.actions,'landing_page_view');
+          const rev = getAct(m.action_values,'offsite_conversion.fb_pixel_purchase') || getAct(m.action_values, 'purchase');
+          tPur += pur; tLds += lds; tMsg += msg; tSess += sess; tRev += rev;
+          byId[m.campaign_id] = { ...m, pur, lds, msg, sess, rev, sp, cl, impr };
+        });
+        return { 
+            totalSpend: tSpend, totalImpressions: tImpr, totalClicks: tClicks, totalPurchases: tPur, 
+            totalLeads: tLds, totalMsg: tMsg, totalSessions: tSess, totalRev: tRev, 
+            avgCtr: tImpr > 0 ? (tClicks / tImpr) * 100 : 0, avgCpc: tClicks > 0 ? tSpend / tClicks : 0, 
+            connectRate: tClicks > 0 ? (tSess / tClicks) * 100 : 0, roas: tSpend > 0 ? tRev / tSpend : 0,
+            byId
+        };
     };
 
+    const metrics = getMetrics(insights?.data);
+    const prevMetrics = previousInsights ? getMetrics(previousInsights.data) : null;
+
     const enriched = campaigns.map(c => {
-      const m = byId[c.id] || { pur:0, lds:0, msg:0, sess:0, rev:0, sp:0, cl:0, impr:0, ctr:0 };
-      let diagIA = "Campanha com poucos dados para análise.";
+      const m = metrics.byId[c.id] || { pur:0, lds:0, msg:0, sess:0, rev:0, sp:0, cl:0, impr:0, ctr:0 };
+      let diagIA = "Campanha com poucos dados.";
       let statusPerf = "Estável";
 
       if (m.sp > 0) {
@@ -173,24 +176,11 @@ app.post('/api/analyze', auth, async (req, res) => {
           const campCtr = parseFloat(m.ctr || 0);
           const campConnect = m.cl > 0 ? (m.sess / m.cl) * 100 : 0;
 
-          if (campRoas > 3) {
-              diagIA = "🔥 Alta performance! Pode escalar o orçamento em 20%.";
-              statusPerf = "Excelente";
-          } else if (campRoas > 1.5) {
-              diagIA = "✅ ROI Positivo. Mantenha e monitore a frequência.";
-              statusPerf = "Bom";
-          } else if (campRoas > 0 && campRoas < 1.2) {
-              diagIA = "⚠️ ROAS baixo. Criativo ou oferta não estão convertendo.";
-              statusPerf = "Atenção";
-          } else if (campCtr < 0.8) {
-              diagIA = "🪝 CTR Baixo. Público não está parando o scroll. Troque o criativo.";
-              statusPerf = "Crítico (Criativo)";
-          } else if (campConnect < 50) {
-              diagIA = "📉 Connect Rate baixo. Site lento ou público desqualificado.";
-              statusPerf = "Crítico (Site)";
-          } else {
-              diagIA = "Campanha estável, aguardando mais conversões para escala.";
-          }
+          if (campRoas > 3) { diagIA = "🔥 Alta performance! Pode escalar 20%."; statusPerf = "Excelente"; }
+          else if (campRoas > 1.5) { diagIA = "✅ ROI Positivo. Mantenha."; statusPerf = "Bom"; }
+          else if (campRoas > 0 && campRoas < 1.2) { diagIA = "⚠️ ROAS baixo. Oferta fraca."; statusPerf = "Atenção"; }
+          else if (campCtr < 0.8) { diagIA = "🪝 CTR Baixo. Troque o criativo."; statusPerf = "Crítico (Criativo)"; }
+          else if (campConnect < 50) { diagIA = "📉 Connect Rate baixo. Site lento."; statusPerf = "Crítico (Site)"; }
       }
       return { ...c, spend: m.sp, ctr: parseFloat(m.ctr || 0), impressions: m.impr, clicks: m.cl, purchases: m.pur, messages: m.msg, leads: m.lds, revenue: m.rev, roas: m.sp > 0 ? m.rev / m.sp : 0, connectRate: m.cl > 0 ? (m.sess / m.cl) * 100 : 0, diagnostico: diagIA, status_performance: statusPerf };
     });
@@ -198,7 +188,6 @@ app.post('/api/analyze', auth, async (req, res) => {
     const previousRun = await db.getLastRun(accountData.account_id);
     const aiAnalysis = runAnalysisEngine(accountData, enriched, metrics, previousRun);
 
-    // Salva histórico no banco
     await db.saveRun({
         fbAccountId: accountData.account_id,
         fbUserId: req.session.user.id,
@@ -209,7 +198,7 @@ app.post('/api/analyze', auth, async (req, res) => {
         aiAnalysis: aiAnalysis
     });
 
-    res.json({ success: true, analysis: aiAnalysis, metrics, previousRun });
+    res.json({ success: true, analysis: aiAnalysis, metrics, prevMetrics, previousRun });
   } catch (err) { 
     console.error('Erro na análise IA:', err);
     res.status(500).json({ error: err.message }); 
@@ -223,22 +212,22 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
 
   if (avgCtr < 1.0) {
       score -= 20;
-      otimizacoes.push({ prioridade: 1, titulo: 'Fadiga Criativa', categoria: 'Criativo', descricao: `Seu CTR médio (${avgCtr.toFixed(2)}%) está abaixo do ideal de 1.2%.`, acao: 'Troque os primeiros 3 segundos dos seus vídeos para reter a atenção.' });
+      otimizacoes.push({ prioridade: 1, titulo: 'Fadiga Criativa', categoria: 'Criativo', descricao: `CTR (${avgCtr.toFixed(2)}%) abaixo do ideal.`, acao: 'Troque os criativos campeões que estão caindo.' });
   }
   if (connectRate < 60 && totalSpend > 50) {
       score -= 15;
-      otimizacoes.push({ prioridade: 2, titulo: 'Gargalo no Site', categoria: 'Site', descricao: `Apenas ${connectRate.toFixed(1)}% dos cliques chegam à página.`, acao: 'Otimize o carregamento das imagens e remova scripts desnecessários.' });
+      otimizacoes.push({ prioridade: 2, titulo: 'Gargalo no Site', categoria: 'Site', descricao: `Apenas ${connectRate.toFixed(1)}% dos cliques chegam à página.`, acao: 'Otimize a velocidade do seu site.' });
   }
   if (roas < 1.5 && totalSpend > 100) {
       score -= 25;
-      otimizacoes.push({ prioridade: 1, titulo: 'ROI Insustentável', categoria: 'Oferta', descricao: 'O retorno sobre investimento está abaixo do ponto de equilíbrio.', acao: 'Revise sua oferta ou mude o público para um mais qualificado.' });
+      otimizacoes.push({ prioridade: 1, titulo: 'ROI Insustentável', categoria: 'Oferta', descricao: 'O retorno está abaixo do breakeven.', acao: 'Revise sua oferta ou mude o público.' });
   }
 
   return { 
     resumo_geral: { 
         score_saude: Math.max(0, score), 
         nivel_saude: score > 80 ? 'Excelente' : (score > 50 ? 'Atenção' : 'Crítico'),
-        resumo_historico: previousRun ? `A saúde anterior era de ${previousRun.health_score} pts.` : 'Iniciando histórico de análise.'
+        resumo_historico: previousRun ? `Saúde anterior: ${previousRun.health_score} pts.` : 'Primeira análise registrada.'
     }, 
     campanhas_analise: campaigns.sort((a,b) => b.spend - a.spend), 
     otimizacoes_prioritarias: otimizacoes 
