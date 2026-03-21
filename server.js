@@ -8,9 +8,8 @@ const db = require('./db');
 const app = express();
 
 // --- CONFIGURAÇÃO PARA HUGGING FACE SPACES (PROXY) ---
-app.set('trust proxy', 1); // Essencial para sessões atrás de proxy HTTPS
+app.set('trust proxy', 1);
 
-// Suporte para grandes volumes de dados
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -20,15 +19,28 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: true, // Deve ser true para HTTPS no Hugging Face
+    secure: true, 
     maxAge: 24 * 60 * 60 * 1000,
-    sameSite: 'none' // Necessário para cookies em iframes/cross-site
+    sameSite: 'none'
   }
 }));
 
 const FB_APP_ID = process.env.FB_APP_ID;
 const FB_APP_SECRET = process.env.FB_APP_SECRET;
 const REDIRECT_URI = `${process.env.BASE_URL}/auth/facebook/callback`;
+
+// Função auxiliar para chamadas à API com Retry (resolve instabilidades de DNS no HF)
+async function fetchWithRetry(url, params, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await axios.get(url, { params, timeout: 10000 });
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      console.log(`Tentativa ${i + 1} falhou para ${url}. Tentando novamente em 2s...`);
+      await new Promise(res => setTimeout(res, 2000));
+    }
+  }
+}
 
 // --- AUTH ---
 app.get('/auth/facebook', (req, res) => {
@@ -38,19 +50,39 @@ app.get('/auth/facebook', (req, res) => {
 
 app.get('/auth/facebook/callback', async (req, res) => {
   try {
-    const t1 = await axios.get('https://graph.facebook.com/v19.0/oauth/access_token', {
-      params: { client_id: FB_APP_ID, client_secret: FB_APP_SECRET, redirect_uri: REDIRECT_URI, code: req.query.code }
+    console.log('Iniciando troca de token para o código:', req.query.code ? 'Recebido' : 'Ausente');
+    
+    // Troca de código por token (com retry para evitar ENOTFOUND)
+    const t1 = await fetchWithRetry('https://graph.facebook.com/v19.0/oauth/access_token', {
+      client_id: FB_APP_ID,
+      client_secret: FB_APP_SECRET,
+      redirect_uri: REDIRECT_URI,
+      code: req.query.code
     } );
-    const t2 = await axios.get('https://graph.facebook.com/v19.0/oauth/access_token', {
-      params: { grant_type: 'fb_exchange_token', client_id: FB_APP_ID, client_secret: FB_APP_SECRET, fb_exchange_token: t1.data.access_token }
+
+    // Troca por token de longa duração
+    const t2 = await fetchWithRetry('https://graph.facebook.com/v19.0/oauth/access_token', {
+      grant_type: 'fb_exchange_token',
+      client_id: FB_APP_ID,
+      client_secret: FB_APP_SECRET,
+      fb_exchange_token: t1.data.access_token
     } );
+
     req.session.accessToken = t2.data.access_token;
-    const user = await axios.get('https://graph.facebook.com/v19.0/me', { params: { fields: 'id,name,picture', access_token: req.session.accessToken } } );
+    
+    // Busca dados do usuário
+    const user = await fetchWithRetry('https://graph.facebook.com/v19.0/me', {
+      fields: 'id,name,picture',
+      access_token: req.session.accessToken
+    } );
+
     req.session.user = user.data;
+    console.log('Login realizado com sucesso para:', user.data.name);
     res.redirect('/dashboard');
   } catch (err) { 
-    console.error('Erro no Callback do Facebook:', err.response ? err.response.data : err.message);
-    res.redirect('/?error=auth_failed'); 
+    const errorMsg = err.response ? JSON.stringify(err.response.data) : err.message;
+    console.error('ERRO CRÍTICO NO LOGIN:', errorMsg);
+    res.redirect(`/?error=auth_failed&details=${encodeURIComponent(errorMsg)}`); 
   }
 });
 
