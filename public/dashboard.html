@@ -41,6 +41,8 @@
     }
     .btn-primary { background: var(--primary); color: white; }
     .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-ai { background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%); color: white; }
+    .btn-ai:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
     .btn-outline.active { border-color: var(--primary); color: var(--primary); background: rgba(59, 130, 246, 0.1); }
     
@@ -117,6 +119,12 @@
     }
     input:checked + .slider { background-color: var(--primary); }
     input:checked + .slider:before { transform: translateX(20px); }
+
+    .consolidated-bar {
+      background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary);
+      border-radius: 12px; padding: 12px 20px; margin-bottom: 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
   </style>
 </head>
 <body>
@@ -157,6 +165,7 @@
     </div>
     
     <button class="btn btn-primary" onclick="runAnalysis()">Analisar Agora</button>
+    <button class="btn btn-ai" id="btnCopilot" style="display:none;" onclick="runCopilotGPT()">🤖 Plano de Guerra GPT-4o</button>
     
     <div style="margin-left: auto;" class="flex-center">
       <div id="budgetStatus" style="display: none;"></div>
@@ -183,6 +192,17 @@
     </aside>
 
     <main class="main-content">
+      <!-- Painel Consolidado -->
+      <div id="consolidatedPanel" class="consolidated-bar" style="display:none;">
+        <div class="flex-center">
+          <span style="font-size: 12px; color: var(--text-dim); font-weight: 700;">CARTEIRA TOTAL:</span>
+          <span id="totalPrepaidBalance" style="font-size: 18px; font-weight: 800; color: var(--primary);">R$ 0,00</span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-dim);">
+          <span id="prepaidCount">0</span> Contas Pré-pagas | <span id="postpaidCount">0</span> Contas Cartão
+        </div>
+      </div>
+
       <div id="emptyState" style="text-align: center; padding: 100px 0;">
         <h2 style="font-size: 24px; color: var(--text-dim);">Aguardando Análise</h2>
         <p style="color: var(--text-muted);">Clique em "Analisar Agora" para processar os dados.</p>
@@ -253,13 +273,14 @@
   </div>
 </div>
 
+<!-- Modal IA/GPT -->
 <div id="iaModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center; padding:20px;">
-  <div class="card" style="max-width:600px; width:100%; max-height:90vh; overflow-y:auto;">
+  <div class="card" style="max-width:700px; width:100%; max-height:90vh; overflow-y:auto;">
     <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-      <h2 id="modalTitle">Análise da Campanha</h2>
+      <h2 id="modalTitle">Análise Estratégica</h2>
       <button onclick="closeModal()" style="background:none; border:none; color:white; cursor:pointer; font-size:24px;">&times;</button>
     </div>
-    <div id="modalBody"></div>
+    <div id="modalBody" style="line-height:1.6;"></div>
     <div style="margin-top:20px; text-align:right;">
       <button class="btn btn-primary" onclick="closeModal()">Fechar</button>
     </div>
@@ -267,6 +288,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
 <script>
   let state = { accounts:[], selectedAccountId:null, campaigns:[], insights:null, creatives:[], analysis:null, metrics:null, prevMetrics:null, charts:{} };
 
@@ -277,6 +299,7 @@
       document.getElementById('userName').textContent = me.user.name;
       document.getElementById('userPic').src = me.user.picture?.data?.url || me.user.picture;
       await loadAccounts();
+      await loadConsolidatedBalance();
     } catch(e){}
   }
 
@@ -286,6 +309,16 @@
     document.getElementById('accountSel').innerHTML = '<option value="">Escolha a conta...</option>' + 
       state.accounts.map(a => `<option value="${a.account_id}">${a.name}</option>`).join('');
     document.getElementById('accountSel').onchange = onAccountChange;
+  }
+
+  async function loadConsolidatedBalance() {
+    try {
+      const res = await fetch('/api/adaccounts/consolidated-balance').then(r=>r.json());
+      document.getElementById('totalPrepaidBalance').textContent = `R$ ${res.totalPrepaidBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+      document.getElementById('prepaidCount').textContent = res.prepaidCount;
+      document.getElementById('postpaidCount').textContent = res.postpaidCount;
+      document.getElementById('consolidatedPanel').style.display = 'flex';
+    } catch(e){}
   }
 
   async function onAccountChange() {
@@ -300,6 +333,7 @@
       state.campaigns = camps.data || [];
       const active = state.campaigns.filter(c=>c.status==='ACTIVE').slice(0,5);
       document.getElementById('activeCampsList').innerHTML = active.length ? active.map(c=>`<div style="color:var(--success)">• ${c.name.slice(0,20)}...</div>`).join('') : 'Sem campanhas ativas';
+      document.getElementById('btnCopilot').style.display = 'none';
     } finally { setLoading(false); }
   }
 
@@ -307,18 +341,9 @@
     const chip = document.getElementById('budgetStatus');
     const isPrepaid = bal.is_prepaid;
     const val = bal.readable_balance;
-    
     chip.className = 'badge ' + (isPrepaid ? (val < 100 ? 'badge-danger' : 'badge-success') : 'badge-primary');
     chip.innerHTML = isPrepaid ? `<b>PRÉ-PAGO:</b> R$ ${val.toFixed(2)}` : `<b>CARTÃO/PÓS:</b> OK`;
     chip.style.display = 'block';
-    
-    if(isPrepaid && val < 100) {
-        alert(`🚨 ALERTA: Saldo baixo na conta ${bal.name}! Apenas R$ ${val.toFixed(2)} restantes.`);
-    }
-  }
-
-  function toggleCustomDate() {
-    document.getElementById('customDateRange').style.display = document.getElementById('dateSel').value === 'custom' ? 'flex' : 'none';
   }
 
   async function runAnalysis() {
@@ -343,6 +368,7 @@
       
       state.metrics = res.metrics; state.prevMetrics = res.prevMetrics; state.analysis = res.analysis; state.creatives = cr.data || [];
       renderDashboard();
+      document.getElementById('btnCopilot').style.display = 'block';
     } finally { setLoading(false); }
   }
 
@@ -354,17 +380,30 @@
     return fetch(`/api/adaccounts/${state.selectedAccountId}/insights?date_preset=${prevPreset}`).then(r=>r.json()).catch(()=>null);
   }
 
+  async function runCopilotGPT() {
+    setLoading(true, 'GPT-4o analisando estratégia Andromeda...');
+    try {
+      const res = await fetch('/api/gpt-copilot', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ metrics: state.metrics, campaigns: state.analysis.campanhas_analise, accountName: state.accounts.find(a=>a.account_id===state.selectedAccountId).name })
+      }).then(r=>r.json());
+      
+      if(res.error) throw new Error(res.error);
+      
+      document.getElementById('modalTitle').textContent = '🤖 Plano de Guerra GPT-4o';
+      document.getElementById('modalBody').innerHTML = `<div class="card" style="background:rgba(0,0,0,0.2);">${marked.parse(res.strategy)}</div>`;
+      document.getElementById('iaModal').style.display = 'flex';
+    } catch(e){ alert('Erro GPT: Certifique-se de que a OPENAI_API_KEY está configurada.'); }
+    finally { setLoading(false); }
+  }
+
   function renderDashboard() {
     document.getElementById('emptyState').style.display='none'; document.getElementById('dashboardContent').style.display='block';
     const { metrics, prevMetrics, analysis } = state;
     const compare = document.getElementById('compareToggle').checked;
-    
     const score = analysis.resumo_geral.score_saude;
     const color = score > 80 ? 'var(--success)' : (score > 50 ? 'var(--warning)' : 'var(--danger)');
-    document.getElementById('iaSummaryHeader').innerHTML = `
-      <div class="score-circle" style="border-color:${color}; color:${color}">${score}</div>
-      <div><h2 style="color:${color}">${analysis.resumo_geral.nivel_saude}</h2><p style="color:var(--text-dim)">${analysis.resumo_geral.resumo_historico}</p></div>
-    `;
+    document.getElementById('iaSummaryHeader').innerHTML = `<div class="score-circle" style="border-color:${color}; color:${color}">${score}</div><div><h2 style="color:${color}">${analysis.resumo_geral.nivel_saude}</h2><p style="color:var(--text-dim)">${analysis.resumo_geral.resumo_historico}</p></div>`;
 
     const getTrend = (curr, prev) => {
       if(!compare || !prev) return '';
@@ -381,14 +420,13 @@
 
     document.getElementById('secondaryStatsGrid').innerHTML = `
       <div class="card"><p class="card-label">Mensagens</p><p class="card-value">${metrics.totalMsg}</p>${getTrend(metrics.totalMsg, prevMetrics?.totalMsg)}</div>
-      <div class="card"><p class="card-label">Custo/Mensagem</p><p class="card-value">R$ ${(metrics.totalMsg > 0 ? metrics.totalSpend/metrics.totalMsg : 0).toFixed(2)}</p></div>
       <div class="card"><p class="card-label">CTR Médio</p><p class="card-value">${metrics.avgCtr.toFixed(2)}%</p>${getTrend(metrics.avgCtr, prevMetrics?.avgCtr)}</div>
       <div class="card"><p class="card-label">Cliques</p><p class="card-value">${metrics.totalClicks}</p></div>
+      <div class="card"><p class="card-label">Connect Rate</p><p class="card-value">${metrics.connectRate.toFixed(1)}%</p></div>
     `;
 
     document.getElementById('analysisList').innerHTML = analysis.otimizacoes_prioritarias.map(o => `
       <div class="card" style="border-left: 4px solid ${o.prioridade===1?'var(--danger)':'var(--warning)'}">
-        <div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span class="badge ${o.prioridade===1?'badge-danger':'badge-warning'}">${o.categoria}</span></div>
         <h3>${o.titulo}</h3><p style="color:var(--text-dim); margin:8px 0 16px;">${o.descricao}</p>
         <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px; border:1px dashed var(--border); color:var(--primary)"><strong>AÇÃO:</strong> ${o.acao}</div>
       </div>
@@ -412,78 +450,46 @@
     `).join('');
   }
 
-  function filterCamps(type, btn) {
-    document.querySelectorAll('#tab-campaigns .btn-outline').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const filtered = type === 'active' ? state.analysis.campanhas_analise.filter(c => c.status === 'ACTIVE') : state.analysis.campanhas_analise;
-    renderCampTable(filtered);
-  }
-
   function openIAAnalysis(campId) {
     const camp = state.analysis.campanhas_analise.find(c => c.id === campId);
     if(!camp) return;
     document.getElementById('modalTitle').textContent = camp.name;
     document.getElementById('modalBody').innerHTML = `
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
-        <div class="card"><p class="card-label">Status Performance</p><span class="badge ${camp.status_performance.includes('Crítico')?'badge-danger':'badge-success'}">${camp.status_performance}</span></div>
+        <div class="card"><p class="card-label">Performance</p><span class="badge ${camp.status_performance.includes('Crítico')?'badge-danger':'badge-success'}">${camp.status_performance}</span></div>
         <div class="card"><p class="card-label">CTR</p><p class="card-value" style="font-size:20px;">${camp.ctr.toFixed(2)}%</p></div>
       </div>
       <div class="card" style="border-left:4px solid var(--primary); margin-bottom:16px;">
-        <p class="card-label">Diagnóstico IA</p>
-        <p style="font-size:16px; font-weight:600; margin:8px 0;">${camp.diagnostico}</p>
+        <p class="card-label">Diagnóstico IA</p><p style="font-size:16px; font-weight:600; margin:8px 0;">${camp.diagnostico}</p>
       </div>
-      <div class="card" style="border-left:4px solid var(--success);">
-        <p class="card-label">Sugestão de Escala</p>
-        <p style="font-size:16px; font-weight:600; margin:8px 0;">${camp.escala_sugestao}</p>
-      </div>
+      <div class="card" style="border-left:4px solid var(--success);"><p class="card-label">Sugestão de Escala</p><p style="font-size:16px; font-weight:600; margin:8px 0;">${camp.escala_sugestao}</p></div>
     `;
     document.getElementById('iaModal').style.display = 'flex';
   }
 
-  function closeModal() { document.getElementById('iaModal').style.display = 'none'; }
-
   function renderCreatives(sortType, btn) {
-    if(btn) {
-        document.querySelectorAll('#tab-creatives .btn-outline').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-    }
+    if(btn) { document.querySelectorAll('#tab-creatives .btn-outline').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
     const grid = document.getElementById('creativesGrid');
     const sorted = [...state.creatives].sort((a,b) => {
-        const iA = a.insights?.data?.[0] || { spend:0, ctr:0, actions:[], action_values:[] };
-        const iB = b.insights?.data?.[0] || { spend:0, ctr:0, actions:[], action_values:[] };
-        const getVal = (ins, type) => {
-            if(type==='spend') return parseFloat(ins.spend || 0);
-            if(type==='ctr') return parseFloat(ins.ctr || 0);
-            if(type==='roas') {
-                const rev = (ins.action_values||[]).find(x=>x.action_type==='purchase')?.value || 0;
-                return rev / (parseFloat(ins.spend) || 1);
-            }
-            if(type==='msg') return (ins.actions||[]).find(x=>x.action_type.includes('message') || x.action_type.includes('purchase'))?.value || 0;
-            return 0;
-        };
-        return getVal(iB, sortType) - getVal(iA, sortType);
+        const iA = a.insights?.data?.[0] || { spend:0, ctr:0 }; const iB = b.insights?.data?.[0] || { spend:0, ctr:0 };
+        return parseFloat(iB[sortType]||0) - parseFloat(iA[sortType]||0);
     });
-
     grid.innerHTML = sorted.map(c => {
       const ins = c.insights?.data?.[0] || { spend:0, ctr:0 };
       const img = c.creative?.image_url || c.creative?.thumbnail_url || 'https://via.placeholder.com/300';
-      return `<div class="creative-card"><img src="${img}" class="creative-img"><div class="creative-info"><div style="font-weight:700; margin-bottom:8px;">${c.name.slice(0,30)}</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px;"><div><span style="color:var(--text-dim)">Gasto:</span> R$ ${parseFloat(ins.spend).toFixed(2)}</div><div><span style="color:var(--text-dim)">CTR:</span> ${parseFloat(ins.ctr).toFixed(2)}%</div></div></div></div>`;
+      return `<div class="creative-card"><img src="${img}" class="creative-img"><div class="creative-info"><div style="font-weight:700; margin-bottom:8px;">${c.name.slice(0,30)}</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px;"><div>R$ ${parseFloat(ins.spend).toFixed(2)}</div><div>${parseFloat(ins.ctr).toFixed(2)}%</div></div></div></div>`;
     }).join('');
   }
 
   function switchTab(tab, btn) {
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    ['overview', 'analysis', 'campaigns', 'creatives', 'breakdown', 'trend'].forEach(t => {
-      document.getElementById('tab-'+t).style.display = t === tab ? 'block' : 'none';
-    });
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+    ['overview', 'analysis', 'campaigns', 'creatives', 'breakdown', 'trend'].forEach(t => document.getElementById('tab-'+t).style.display = t === tab ? 'block' : 'none');
   }
 
-  function setLoading(a, t='IA Sênior em ação...') {
-    document.getElementById('loadingText').textContent = t;
-    document.getElementById('loadingOverlay').classList[a?'add':'remove']('active');
-  }
-
+  function closeModal() { document.getElementById('iaModal').style.display = 'none'; }
+  function setLoading(a, t='IA Sênior em ação...') { document.getElementById('loadingText').textContent = t; document.getElementById('loadingOverlay').classList[a?'add':'remove']('active'); }
+  function toggleCustomDate() { document.getElementById('customDateRange').style.display = document.getElementById('dateSel').value === 'custom' ? 'flex' : 'none'; }
+  
   init();
 </script>
 </body>
