@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Meta Ads Analyzer - Premium Suite</title>
+  <title>Meta Ads Analyzer - Especialista Senior</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -15,18 +15,18 @@
     .logo{font-weight:800;font-size:14px;color:var(--text)} .logo span{color:var(--cyan)}
     .sel{background:var(--s2);border:1px solid var(--b1);color:var(--text);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;outline:none}
     .btn{padding:7px 15px;border-radius:8px;font-weight:700;cursor:pointer;border:none;font-size:12px;transition:0.2s}
-    .btn-primary{background:var(--blue);color:#fff} .btn-ghost{background:transparent;color:var(--dim);border:1px solid var(--b1)}
+    .btn-primary{background:var(--blue);color:#fff}
     .app-body{display:flex;flex:1;min-height:0}
     .sidebar{width:220px;background:var(--s1);border-right:1px solid var(--b1);padding:15px;overflow-y:auto}
     .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:var(--dim);cursor:pointer;width:100%;text-align:left;background:none;border:none;margin-bottom:4px;font-weight:700}
     .nav-item:hover, .nav-item.active{background:rgba(24,119,242,0.15);color:var(--blue)}
     .main{flex:1;padding:25px;overflow-y:auto;background:var(--bg)}
     .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px;margin-bottom:25px}
-    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:18px}
-    .mval{font-size:22px;font-weight:800;margin-top:5px} .mlabel{font-size:10px;color:var(--dim);text-transform:uppercase;font-weight:700}
+    .mcard{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:18px; position:relative}
+    .mval{font-size:24px;font-weight:800;margin-top:5px} .mlabel{font-size:10px;color:var(--dim);text-transform:uppercase;font-weight:700}
     table{width:100%;border-collapse:collapse;background:var(--s1);border-radius:12px;overflow:hidden;font-size:11px} 
-    th,td{padding:12px 10px;text-align:left;border-bottom:1px solid var(--b1); white-space:nowrap}
-    th{color:var(--dim);text-transform:uppercase;font-size:9px;font-weight:800}
+    th,td{padding:12px 15px;text-align:left;border-bottom:1px solid var(--b1); white-space:nowrap}
+    th{color:var(--dim);text-transform:uppercase;font-size:9px;font-weight:800; cursor:pointer}
     .loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,9,13,0.9);z-index:2000;flex-direction:column;align-items:center;justify-content:center}
     .loading-overlay.show{display:flex}
     .spinner{width:40px;height:40px;border:3px solid var(--b1);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite}
@@ -43,16 +43,17 @@
 
 <header class="topbar">
   <div class="logo">⚡ Meta Ads <span>Analyzer</span></div>
-  <select class="sel" id="accountSel" style="max-width:230px"><option value="">Carregando...</option></select>
+  <select class="sel" id="accountSel" style="max-width:230px"><option value="">Carregando contas...</option></select>
   <select class="sel" id="dateSel" onchange="onDateSelChange()">
     <option value="last_7d">7 dias</option><option value="last_30d" selected>30 dias</option>
-    <option value="this_month">Este mês</option><option value="custom">Personalizado...</option>
+    <option value="this_month">Este mês</option><option value="last_month">Mês passado</option>
+    <option value="custom">Personalizado...</option>
   </select>
   <div id="customDateWrap" style="display:none;align-items:center;gap:4px">
     <input type="date" id="customSince" class="sel"><input type="date" id="customUntil" class="sel">
   </div>
   <button class="btn btn-primary" onclick="runAnalysis()">Analisar Dados</button>
-  <div style="margin-left:auto; display:flex; align-items:center; gap:12px">
+  <div style="margin-left:auto; display:flex; align-items:center; gap:10px">
     <div id="budgetChip" class="budget-chip" style="display:none"></div>
     <span id="uName">Alex</span><img id="uAvatar" style="width:28px; border-radius:50%">
   </div>
@@ -67,26 +68,23 @@
     <button class="nav-item" onclick="showView('breakdown')">📉 Breakdown</button>
     <button class="nav-item" onclick="showView('trend')">📈 Tendências</button>
     <button class="nav-item" onclick="showView('competitors')">🕵️ Radar Concorrência</button>
-    <div id="campSidebar" style="margin-top:20px; font-size:11px; padding:0 12px; color:var(--dim)">Aguardando conta...</div>
+    <div id="campSidebar" style="margin-top:20px; font-size:11px; padding:0 12px; color:var(--dim)">Escolha conta...</div>
   </aside>
 
   <main class="main" id="mainContent">
     <div id="stateEmpty" style="text-align:center; padding-top:100px; opacity:0.6"><h2>Escolha uma conta e clique em Analisar</h2></div>
-    
     <div id="contentWrap" style="display:none">
       
       <div id="view-overview">
         <div id="analysisSummary" style="background:var(--s1); padding:20px; border-radius:12px; border:1px solid var(--b1); margin-bottom:20px; display:flex; align-items:center; gap:20px"></div>
-        <div class="stitle">MÉTRICAS DE ATENÇÃO (FUNIL)</div>
         <div class="mgrid" id="metricsGrid"></div>
-        <div class="stitle">CONVERSÕES E PERFORMANCE FINAL</div>
         <div class="mgrid" id="convGrid"></div>
       </div>
 
       <div id="view-campaigns" style="display:none">
         <div class="cfrow"><button class="cfbtn active" id="tf_all" onclick="filterCampTable('all')">Todas</button><button class="cfbtn" id="tf_running" onclick="filterCampTable('running')">Rodando</button></div>
-        <table id="campTable">
-          <thead><tr><th>Campanha</th><th>Gasto</th><th>Cliques</th><th>CTR</th><th>Msgs</th><th>Leads</th><th>Compras</th><th>Receita</th><th>Connect %</th><th>ROAS</th><th>Diagnóstico IA</th></tr></thead>
+        <table>
+          <thead><tr><th>Campanha</th><th>Gasto</th><th>Impr.</th><th>Cliques</th><th>Msgs</th><th>Compras</th><th>Receita</th><th>ROAS</th><th>Connect %</th><th>Diagnóstico IA</th></tr></thead>
           <tbody id="campTbody"></tbody>
         </table>
       </div>
@@ -105,9 +103,8 @@
       <div id="view-trend" style="display:none"><div class="chart-wrap"><canvas id="cHealth" height="100"></canvas></div></div>
       <div id="view-competitors" style="display:none; text-align:center; padding:40px">
         <input type="text" id="compName" class="sel" style="width:300px; margin-bottom:20px" placeholder="Nome da empresa...">
-        <button class="btn btn-primary" onclick="window.open('https://www.facebook.com/ads/library/?q='+encodeURIComponent(document.getElementById('compName').value), '_blank')">Abrir Biblioteca de Anúncios</button>
+        <button class="btn btn-primary" onclick="window.open('https://www.facebook.com/ads/library/?country=BR&q='+encodeURIComponent(document.getElementById('compName').value), '_blank')">Abrir Biblioteca</button>
       </div>
-
     </div>
   </main>
 </div>
@@ -119,10 +116,11 @@
 // --- GLOBAL ---
 let accounts=[], campaigns=[], metrics=null, analysis=null, selAccountId=null, insData=null, allCreatives=[];
 
+// --- HELPERS ---
+function sym(){ const a = accounts.find(x=>x.account_id===selAccountId); return a?.currency==='USD'?'$':'R$'; }
+function fmtN(n){ n=parseInt(n||0); return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(1)+'K':n.toString(); }
 function showLoad(t){ document.getElementById('loadingOverlay').classList.add('show'); document.getElementById('loadText').textContent=t; }
 function hideLoad(){ document.getElementById('loadingOverlay').classList.remove('show'); }
-function sym(){ return accounts.find(a=>a.account_id===selAccountId)?.currency==='USD'?'$':'R$'; }
-function fmtN(n){ n=parseInt(n||0); return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(1)+'K':n.toString(); }
 
 async function init(){
   try {
@@ -130,7 +128,7 @@ async function init(){
     if(!me.authenticated) return location.href='/';
     document.getElementById('uName').textContent = me.user.name;
     const av = me.user.picture?.data?.url || me.user.picture;
-    if(av) document.getElementById('uAvatar').src = av;
+    if(av && document.getElementById('uAvatar')) document.getElementById('uAvatar').src = av;
     await loadAccounts();
   } catch(e) {}
 }
@@ -145,7 +143,7 @@ async function loadAccounts(){
 
 async function onAccChange(){
   selAccountId = document.getElementById('accountSel').value; if(!selAccountId) return;
-  showLoad('Sincronizando...');
+  showLoad('Verificando Saldo...');
   try {
     const balRes = await fetch(`/api/adaccounts/${selAccountId}/balance`).then(r=>r.json());
     const chip = document.getElementById('budgetChip');
@@ -158,7 +156,7 @@ async function onAccChange(){
     const res = await fetch(`/api/adaccounts/${selAccountId}/campaigns`).then(r=>r.json());
     campaigns = res.data || [];
     document.getElementById('campSidebar').innerHTML = campaigns.filter(c=>c.status==='ACTIVE').map(c=>`🟢 ${c.name.slice(0,25)}...`).join('<br>');
-  } finally { hideLoad(); }
+  } catch(e) {} finally { hideLoad(); }
 }
 
 function showView(v){
@@ -172,12 +170,15 @@ function showView(v){
 
 async function runAnalysis(){
   if(!selAccountId) return alert('Selecione uma conta!');
-  showLoad('IA Sénior analisando funil e criativos...');
+  showLoad('IA Sénior analisando dados...');
   const d = document.getElementById('dateSel').value;
+  let params = `date_preset=${d}`;
+  if(d === 'custom') params = `since=${document.getElementById('customSince').value}&until=${document.getElementById('customUntil').value}`;
+
   try {
     const [ins, crRes] = await Promise.all([
-      fetch(`/api/adaccounts/${selAccountId}/insights?date_preset=${d}`).then(r=>r.json()),
-      fetch(`/api/adaccounts/${selAccountId}/creatives?date_preset=${d}`).then(r=>r.json())
+      fetch(`/api/adaccounts/${selAccountId}/insights?${params}`).then(r=>r.json()),
+      fetch(`/api/adaccounts/${selAccountId}/creatives?${params}`).then(r=>r.json())
     ]);
     insData = ins; allCreatives = crRes.data || [];
     const res = await fetch('/api/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ accountData: accounts.find(a=>a.account_id===selAccountId), campaigns, insights: ins, creatives: allCreatives, dateRange: d }) }).then(r=>r.json());
@@ -189,7 +190,7 @@ function renderAll(){
   document.getElementById('stateEmpty').style.display='none'; document.getElementById('contentWrap').style.display='block';
   const r = analysis.resumo_geral; const S = sym();
   
-  document.getElementById('analysisSummary').innerHTML = `<div style="width:60px;height:60px;border:4px solid var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:var(--green)">${r.score_saude}</div><div><div style="font-size:18px; font-weight:800">${r.nivel_saude}</div><div style="color:var(--dim)">${r.resumo_historico}</div></div>`;
+  document.getElementById('analysisSummary').innerHTML = `<div class="score-ring">${r.score_saude}</div><div><div style="font-size:18px; font-weight:800; color:var(--green)">${r.nivel_saude}</div><div style="color:var(--dim)">${r.resumo_historico}</div></div>`;
   
   document.getElementById('metricsGrid').innerHTML = `
     <div class="mcard"><div class="mlabel">Investimento</div><div class="mval c-blue">${S} ${metrics.totalSpend.toFixed(2)}</div></div>
@@ -200,31 +201,30 @@ function renderAll(){
 
   document.getElementById('convGrid').innerHTML = `
     <div class="mcard"><div class="mlabel">Mensagens</div><div class="mval c-cyan">${metrics.totalMsg}</div></div>
-    <div class="mcard"><div class="mlabel">Vendas</div><div class="mval c-purple">${metrics.totalPurchases}</div></div>
+    <div class="mcard"><div class="mlabel">Compras</div><div class="mval c-purple">${metrics.totalPurchases}</div></div>
     <div class="mcard"><div class="mlabel">Receita</div><div class="mval c-green">${S} ${metrics.totalRev.toFixed(2)}</div></div>
     <div class="mcard"><div class="mlabel">ROAS Total</div><div class="mval c-yellow">${metrics.roas.toFixed(2)}x</div></div>
     <div class="mcard"><div class="mlabel">Connect Rate</div><div class="mval c-orange">${metrics.connectRate.toFixed(1)}%</div></div>
   `;
 
   filterCampTable('all');
-  document.getElementById('optimList').innerHTML = analysis.otimizacoes_prioritarias.map(o => `<div style="background:var(--s2); padding:18px; border-radius:10px; border-left:4px solid var(--cyan)"><strong>#${o.prioridade} ${o.titulo}</strong><div style="font-size:12px; color:var(--dim)">${o.descricao}</div><div style="margin-top:10px; color:var(--orange); font-weight:700">${o.acao}</div></div>`).join('');
+  document.getElementById('optimList').innerHTML = analysis.otimizacoes_prioritarias.map(o => `<div style="background:var(--s2); padding:20px; border-radius:12px; border-left:4px solid var(--cyan)"><strong>#${o.prioridade} ${o.titulo}</strong><div style="font-size:12px; color:var(--dim); margin-top:5px">${o.descricao}</div><div style="margin-top:12px; color:var(--orange); font-weight:700">${o.acao}</div></div>`).join('');
 }
 
 function filterCampTable(mode) {
-  let list = analysis.campanhas_analise || [];
-  if(mode === 'running') list = list.filter(c => c.spendRaw > 0);
+  let list = (analysis.campanhas_analise || []);
+  if(mode === 'running') list = list.filter(c => parseFloat(c.spendRaw) > 0);
   const S = sym();
   document.getElementById('campTbody').innerHTML = list.map(c => `<tr>
     <td style="font-weight:700">${c.nome}</td>
     <td>${c.gasto}</td>
+    <td>${fmtN(c.impressoes)}</td>
     <td>${fmtN(c.cliques)}</td>
-    <td>${c.ctr}</td>
     <td>${c.mensagens}</td>
-    <td>${c.leads}</td>
-    <td style="font-weight:800; color:var(--purple)">${c.compras}</td>
-    <td style="color:var(--green)">${S} ${c.receita.toFixed(2)}</td>
+    <td>${c.purchases}</td>
+    <td style="color:var(--green)">${S} ${parseFloat(c.revenue||0).toFixed(2)}</td>
+    <td style="font-weight:800">${c.roas.toFixed(2)}x</td>
     <td>${c.connectRate}</td>
-    <td style="font-weight:800; color:var(--yellow)">${c.roas}</td>
     <td><button class="btn btn-ghost" style="padding:2px 8px; font-size:9px" onclick="alert('${c.diagnostico}')">🤖 Ver Analise</button></td>
   </tr>`).join('');
 }
@@ -236,11 +236,9 @@ async function loadCreatives() {
 function filterCreatives(mode) {
   ['all','sales','roas'].forEach(id => document.getElementById('cr_'+id).classList.toggle('active', id===mode));
   const S = sym();
-  
   let list = allCreatives.map(ad => {
       const ins = (ad.insights?.data || [])[0] || {};
-      const a = ins.actions || [];
-      const v = ins.action_values || [];
+      const a = ins.actions || []; const v = ins.action_values || [];
       const pur = (a.find(x=>x.action_type.includes('purchase'))?.value || 0);
       const rev = (v.find(x=>x.action_type.includes('purchase'))?.value || 0);
       const spend = parseFloat(ins.spend || 0);
@@ -250,12 +248,14 @@ function filterCreatives(mode) {
   if(mode==='sales') list.sort((a,b)=>b.pur - a.pur);
   if(mode==='roas') list.sort((a,b)=>b.roas - a.roas);
 
-  document.getElementById('crGrid').innerHTML = list.slice(0,16).map(c => `
-    <div class="mcard" style="text-align:center">
-      <img src="${c.creative?.thumbnail_url || ''}" style="width:100%; border-radius:10px; margin-bottom:10px">
-      <div style="font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${c.name}</div>
-      <div style="font-size:10px; color:var(--dim); margin-top:5px">Vendas: ${c.pur} | ROAS: ${c.roas.toFixed(2)}x</div>
-    </div>`).join('');
+  document.getElementById('crGrid').innerHTML = list.slice(0,16).map(c => {
+      const thumb = c.creative?.thumbnail_url || c.creative?.image_url || '';
+      return `<div class="mcard" style="text-align:center">
+          <img src="${thumb}" style="width:100%; border-radius:10px; margin-bottom:10px">
+          <div style="font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${c.name}</div>
+          <div style="font-size:10px; color:var(--dim); margin-top:5px">Vendas: ${c.pur} | ROAS: ${c.roas.toFixed(2)}x</div>
+      </div>`;
+  }).join('');
 }
 
 async function loadBreakdown(type){
@@ -267,7 +267,7 @@ async function loadTrend(){
   const res = await fetch(`/api/trend/${selAccountId}`).then(r=>r.json());
   const data = res.trend || [];
   if(data.length > 0) {
-      new Chart(document.getElementById('cHealth'), { type: 'line', data: { labels: data.map(d=>new Date(d.date).toLocaleDateString()), datasets: [{ label: 'Score', data: data.map(d=>d.avg_health), borderColor: '#00e676', tension: 0.4 }] } });
+      new Chart(document.getElementById('cHealth'), { type: 'line', data: { labels: data.map(d=>new Date(d.date).toLocaleDateString()), datasets: [{ label: 'Score de Saúde', data: data.map(d=>d.avg_health), borderColor: '#00e676', tension: 0.4 }] } });
   }
 }
 
