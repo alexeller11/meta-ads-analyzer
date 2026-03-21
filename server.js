@@ -7,12 +7,13 @@ const db = require('./db');
 
 const app = express();
 
+// Suporte para grandes volumes de dados (Contas com muitos anúncios)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'meta-ads-analyzer-ultra-v5',
+  secret: process.env.SESSION_SECRET || 'meta-analyzer-ultra-v6',
   resave: false,
   saveUninitialized: false,
   cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
@@ -94,6 +95,16 @@ app.get('/api/adaccounts/:id/creatives', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
+  try {
+    const params = { fields: 'impressions,clicks,spend,ctr', level: 'account', access_token: req.session.accessToken, date_preset: req.query.date_preset || 'last_30d' };
+    if (req.params.type === 'device') params.breakdowns = 'device_platform';
+    else if (req.params.type === 'placement') params.breakdowns = 'publisher_platform,platform_position';
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+    res.json(r.data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // --- MOTOR IA SÉNIOR ---
 const safeNum = (v) => Number(v) || 0;
 
@@ -103,13 +114,12 @@ app.post('/api/analyze', auth, async (req, res) => {
     const rows = insights?.data || [];
     const getAct = (arr, type) => { const f = (arr||[]).find(x=>x.action_type===type); return f ? parseFloat(f.value||0) : 0; };
     
-    let tSpend = 0, tImpr = 0, tClicks = 0, tPur = 0, tLds = 0, tMsg = 0, tSess = 0, tRev = 0, fSum = 0, fCount = 0;
+    let tSpend = 0, tImpr = 0, tClicks = 0, tPur = 0, tLds = 0, tMsg = 0, tSess = 0, tRev = 0;
     const byId = {};
     
     rows.forEach(m => {
       const sp = parseFloat(m.spend || 0); const cl = parseInt(m.clicks || 0); const impr = parseInt(m.impressions || 0);
       tSpend += sp; tImpr += impr; tClicks += cl;
-      if(m.frequency) { fSum += parseFloat(m.frequency); fCount++; }
       
       const pur = getAct(m.actions,'offsite_conversion.fb_pixel_purchase') || getAct(m.actions,'purchase');
       const lds = getAct(m.actions,'offsite_conversion.fb_pixel_lead') || getAct(m.actions,'lead');
@@ -131,18 +141,12 @@ app.post('/api/analyze', auth, async (req, res) => {
     const enriched = campaigns.map(c => {
       const m = byId[c.id] || { pur:0, lds:0, msg:0, sess:0, rev:0, sp:0, cl:0, impr:0, ctr:0 };
       
-      // Diagnóstico Individual da IA por Campanha
-      let diagIA = "Manter estável.";
+      let diagIA = "Campanha estável.";
       if (m.sp > 0) {
           const campRoas = m.sp > 0 ? m.rev / m.sp : 0;
-          const campCtr = m.impr > 0 ? (m.cl / m.impr) * 100 : 0;
-          const campConn = m.cl > 0 ? (m.sess / m.cl) * 100 : 0;
-
-          if (campRoas > 3) diagIA = "🚀 ROAS excelente! Aumentar verba em 20%.";
-          else if (campRoas > 0 && campRoas < 1.5) diagIA = "🛑 ROAS baixo. Rever oferta ou público.";
-          else if (campCtr < 0.8) diagIA = "🪝 CTR baixo. Trocar criativo urgentemente.";
-          else if (campConn < 40) diagIA = "⚡ Connect Rate baixo. Site lento ou fuga.";
-          else if (m.sp > 50 && m.pur === 0) diagIA = "💸 Gastando sem conversão. Pausar teste.";
+          if (campRoas > 3) diagIA = "🔥 Alta performance! Pode escalar o orçamento em 20%.";
+          else if (campRoas > 0 && campRoas < 1.2) diagIA = "⚠️ ROAS baixo. Criativo ou oferta não estão convertendo.";
+          else if (parseFloat(m.ctr) < 0.7) diagIA = "🪝 CTR Baixo. Público não está parando o scroll.";
       }
 
       return { 
@@ -167,11 +171,11 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
 
   if (avgCtr < 1.0) {
       score -= 20;
-      otimizacoes.push({ prioridade: 1, titulo: 'Fadiga Criativa', categoria: 'Criativo', descricao: 'O público está ignorando os anúncios.', acao: 'Troque os ganchos dos seus vídeos.' });
+      otimizacoes.push({ prioridade: 1, titulo: 'Fadiga Criativa', categoria: 'Criativo', descricao: 'Seu CTR está abaixo de 1%.', acao: 'Troque os ganchos dos seus vídeos.' });
   }
   if (connectRate < 50 && totalSpend > 50) {
       score -= 15;
-      otimizacoes.push({ prioridade: 2, titulo: 'Gargalo no Site', categoria: 'Funil', descricao: 'Metade dos cliques não chegam a carregar o site.', acao: 'Otimize a velocidade mobile.' });
+      otimizacoes.push({ prioridade: 2, titulo: 'Lentidão no Site', categoria: 'Funil', descricao: 'Connect Rate baixo.', acao: 'Verifique a velocidade do site.' });
   }
 
   return { 
@@ -182,6 +186,8 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
 }
 
 app.get('/api/trend/:accountId', auth, async (req, res) => { try { res.json({ trend: await db.getAccountTrend(req.params.accountId) }); } catch (e) { res.status(500).json({ error: e.message }); } });
+app.get('/dashboard', (req, res) => { if (!req.session.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => { if (process.env.DATABASE_URL) await db.initDB(); });
