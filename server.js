@@ -4,23 +4,13 @@ const session = require('express-session');
 const axios = require('axios');
 const path = require('path');
 const db = require('./db');
-const dns = require('dns');
 
 const app = express();
 
-// --- SOLUÇÃO PARA ERRO DE DNS NO HUGGING FACE (ENOTFOUND) ---
-// Forçamos o Node.js a resolver o graph.facebook.com para um IP válido se o DNS falhar
-const FB_IP = '157.240.22.13'; // Um dos IPs oficiais do Facebook Graph API
-const originalLookup = dns.lookup;
-dns.lookup = (hostname, options, callback) => {
-  if (hostname === 'graph.facebook.com') {
-    return callback(null, FB_IP, 4);
-  }
-  return originalLookup(hostname, options, callback);
-};
+// --- CONFIGURAÇÃO PARA RAILWAY (PROXY REVERSO) ---
+app.set('trust proxy', 1); // Essencial para que as sessões funcionem em HTTPS no Railway
 
-app.set('trust proxy', 1);
-
+// Suporte para grandes volumes de dados
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -30,9 +20,9 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: true, 
+    secure: true, // Deve ser true para HTTPS no Railway
     maxAge: 24 * 60 * 60 * 1000,
-    sameSite: 'none'
+    sameSite: 'lax' // 'lax' é o padrão recomendado para OAuth em domínios diferentes
   }
 }));
 
@@ -48,39 +38,34 @@ app.get('/auth/facebook', (req, res) => {
 
 app.get('/auth/facebook/callback', async (req, res) => {
   try {
-    console.log('Iniciando troca de token (DNS Hardcoded)...');
+    console.log('Iniciando troca de token no Railway...');
     
     // Troca de código por token
     const t1 = await axios.get('https://graph.facebook.com/v19.0/oauth/access_token', {
-      params: { client_id: FB_APP_ID, client_secret: FB_APP_SECRET, redirect_uri: REDIRECT_URI, code: req.query.code },
-      timeout: 15000
+      params: { client_id: FB_APP_ID, client_secret: FB_APP_SECRET, redirect_uri: REDIRECT_URI, code: req.query.code }
     } );
 
     // Troca por token de longa duração
     const t2 = await axios.get('https://graph.facebook.com/v19.0/oauth/access_token', {
-      params: { grant_type: 'fb_exchange_token', client_id: FB_APP_ID, client_secret: FB_APP_SECRET, fb_exchange_token: t1.data.access_token },
-      timeout: 15000
+      params: { grant_type: 'fb_exchange_token', client_id: FB_APP_ID, client_secret: FB_APP_SECRET, fb_exchange_token: t1.data.access_token }
     } );
 
     req.session.accessToken = t2.data.access_token;
     
     // Busca dados do usuário
-    const user = await axios.get('https://graph.facebook.com/v19.0/me', {
-      params: { fields: 'id,name,picture', access_token: req.session.accessToken },
-      timeout: 15000
+    const user = await axios.get('https://graph.facebook.com/v19.0/me', { 
+      params: { fields: 'id,name,picture', access_token: req.session.accessToken } 
     } );
 
     req.session.user = user.data;
     console.log('Login realizado com sucesso para:', user.data.name);
     res.redirect('/dashboard');
   } catch (err) { 
-    const errorMsg = err.response ? JSON.stringify(err.response.data) : err.message;
-    console.error('ERRO NO LOGIN:', errorMsg);
-    res.redirect(`/?error=auth_failed&details=${encodeURIComponent(errorMsg)}`); 
+    console.error('Erro no Callback do Facebook:', err.response ? JSON.stringify(err.response.data) : err.message);
+    res.redirect('/?error=auth_failed'); 
   }
 });
 
-// --- RESTO DO CÓDIGO IGUAL ---
 app.get('/api/me', (req, res) => res.json(req.session.user ? { authenticated: true, user: req.session.user } : { authenticated: false }));
 app.get('/auth/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
@@ -89,6 +74,7 @@ function auth(req, res, next) {
   next();
 }
 
+// --- API DATA ---
 app.get('/api/adaccounts', auth, async (req, res) => {
   try {
     const r = await axios.get('https://graph.facebook.com/v19.0/me/adaccounts', { params: { fields: 'name,account_id,currency', access_token: req.session.accessToken, limit: 100 } } );
@@ -141,13 +127,16 @@ app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// --- MOTOR IA SÉNIOR ---
 app.post('/api/analyze', auth, async (req, res) => {
   const { accountData, campaigns, insights, creatives, dateRange } = req.body;
   try {
     const rows = insights?.data || [];
     const getAct = (arr, type) => { const f = (arr||[]).find(x=>x.action_type===type); return f ? parseFloat(f.value||0) : 0; };
+    
     let tSpend = 0, tImpr = 0, tClicks = 0, tPur = 0, tLds = 0, tMsg = 0, tSess = 0, tRev = 0;
     const byId = {};
+    
     rows.forEach(m => {
       const sp = parseFloat(m.spend || 0); const cl = parseInt(m.clicks || 0); const impr = parseInt(m.impressions || 0);
       tSpend += sp; tImpr += impr; tClicks += cl;
@@ -159,7 +148,14 @@ app.post('/api/analyze', auth, async (req, res) => {
       tPur += pur; tLds += lds; tMsg += msg; tSess += sess; tRev += rev;
       byId[m.campaign_id] = { ...m, pur, lds, msg, sess, rev, sp, cl, impr };
     });
-    const metrics = { totalSpend: tSpend, totalImpressions: tImpr, totalClicks: tClicks, totalPurchases: tPur, totalLeads: tLds, totalMsg: tMsg, totalSessions: tSess, totalRev: tRev, avgCtr: tImpr > 0 ? (tClicks / tImpr) * 100 : 0, avgCpc: tClicks > 0 ? tSpend / tClicks : 0, connectRate: tClicks > 0 ? (tSess / tClicks) * 100 : 0, roas: tSpend > 0 ? tRev / tSpend : 0 };
+
+    const metrics = { 
+        totalSpend: tSpend, totalImpressions: tImpr, totalClicks: tClicks,
+        totalPurchases: tPur, totalLeads: tLds, totalMsg: tMsg, totalSessions: tSess, totalRev: tRev,
+        avgCtr: tImpr > 0 ? (tClicks / tImpr) * 100 : 0, avgCpc: tClicks > 0 ? tSpend / tClicks : 0,
+        connectRate: tClicks > 0 ? (tSess / tClicks) * 100 : 0, roas: tSpend > 0 ? tRev / tSpend : 0
+    };
+
     const enriched = campaigns.map(c => {
       const m = byId[c.id] || { pur:0, lds:0, msg:0, sess:0, rev:0, sp:0, cl:0, impr:0, ctr:0 };
       let diagIA = "Campanha estável.";
@@ -169,8 +165,14 @@ app.post('/api/analyze', auth, async (req, res) => {
           else if (campRoas > 0 && campRoas < 1.2) diagIA = "⚠️ ROAS baixo. Criativo ou oferta não estão convertendo.";
           else if (parseFloat(m.ctr) < 0.7) diagIA = "🪝 CTR Baixo. Público não está parando o scroll.";
       }
-      return { ...c, spend: m.sp, ctr: parseFloat(m.ctr || 0), impressions: m.impr, clicks: m.cl, purchases: m.pur, messages: m.msg, leads: m.lds, revenue: m.rev, roas: m.sp > 0 ? m.rev / m.sp : 0, connectRate: m.cl > 0 ? (m.sess / m.cl) * 100 : 0, diagnostico: diagIA };
+      return { 
+          ...c, spend: m.sp, ctr: parseFloat(m.ctr || 0), impressions: m.impr, clicks: m.cl, 
+          purchases: m.pur, messages: m.msg, leads: m.lds, revenue: m.rev, 
+          roas: m.sp > 0 ? m.rev / m.sp : 0, connectRate: m.cl > 0 ? (m.sess / m.cl) * 100 : 0,
+          diagnostico: diagIA
+      };
     });
+    
     const previousRun = await db.getLastRun(accountData.account_id);
     const aiAnalysis = runAnalysisEngine(accountData, enriched, metrics, previousRun);
     res.json({ success: true, analysis: aiAnalysis, metrics, previousRun });
@@ -181,9 +183,19 @@ function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
   const { avgCtr, totalSpend, connectRate, roas } = metrics;
   let score = totalSpend > 0 ? 100 : 0;
   const otimizacoes = [];
-  if (avgCtr < 1.0) { score -= 20; otimizacoes.push({ prioridade: 1, titulo: 'Fadiga Criativa', categoria: 'Criativo', descricao: 'Seu CTR está abaixo de 1%.', acao: 'Troque os ganchos dos seus vídeos.' }); }
-  if (connectRate < 50 && totalSpend > 50) { score -= 15; otimizacoes.push({ prioridade: 2, titulo: 'Lentidão no Site', categoria: 'Funil', descricao: 'Connect Rate baixo.', acao: 'Verifique a velocidade do site.' }); }
-  return { resumo_geral: { score_saude: Math.max(0, score), nivel_saude: score > 80 ? 'Excelente' : 'Atenção', resumo_historico: previousRun ? `Anterior: ${previousRun.health_score} pts` : 'Novo Histórico' }, campanhas_analise: campaigns, otimizacoes_prioritarias: otimizacoes };
+  if (avgCtr < 1.0) {
+      score -= 20;
+      otimizacoes.push({ prioridade: 1, titulo: 'Fadiga Criativa', categoria: 'Criativo', descricao: 'Seu CTR está abaixo de 1%.', acao: 'Troque os ganchos dos seus vídeos.' });
+  }
+  if (connectRate < 50 && totalSpend > 50) {
+      score -= 15;
+      otimizacoes.push({ prioridade: 2, titulo: 'Lentidão no Site', categoria: 'Funil', descricao: 'Connect Rate baixo.', acao: 'Verifique a velocidade do site.' });
+  }
+  return { 
+    resumo_geral: { score_saude: Math.max(0, score), nivel_saude: score > 80 ? 'Excelente' : 'Atenção', resumo_historico: previousRun ? `Anterior: ${previousRun.health_score} pts` : 'Novo Histórico' }, 
+    campanhas_analise: campaigns, 
+    otimizacoes_prioritarias: otimizacoes 
+  };
 }
 
 app.get('/api/trend/:accountId', auth, async (req, res) => { try { res.json({ trend: await db.getAccountTrend(req.params.accountId) }); } catch (e) { res.status(500).json({ error: e.message }); } });
