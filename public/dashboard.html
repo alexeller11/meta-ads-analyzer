@@ -176,6 +176,64 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Hierarquia: Conjuntos e Anúncios -->
+                <div id="hierarchy-section" class="hidden space-y-6">
+                    <div class="flex items-center space-x-4">
+                        <button onclick="backToCampaigns()" class="bg-slate-300 hover:bg-slate-400 px-4 py-2 rounded text-sm font-medium"><i class="fas fa-arrow-left mr-2"></i> Voltar</button>
+                        <h4 id="hierarchy-title" class="text-xl font-bold">Campanha: -</h4>
+                    </div>
+
+                    <!-- Conjuntos de Anúncios -->
+                    <div class="card overflow-hidden">
+                        <div class="p-4 bg-slate-50 border-b font-bold text-slate-700">Conjuntos de Anúncios</div>
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">Conjunto</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">Status</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">Gasto</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">CPM</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">CTR</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">Conversões</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">ROAS</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adsets-table-body" class="divide-y divide-slate-100">
+                                <!-- Adsets here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Anúncios por Conjunto -->
+                <div id="ads-section" class="hidden space-y-6">
+                    <div class="flex items-center space-x-4">
+                        <button onclick="backToAdsets()" class="bg-slate-300 hover:bg-slate-400 px-4 py-2 rounded text-sm font-medium"><i class="fas fa-arrow-left mr-2"></i> Voltar</button>
+                        <h4 id="ads-title" class="text-xl font-bold">Anúncios: -</h4>
+                    </div>
+
+                    <div class="card overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">Anúncio</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">Status</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">Gasto</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">CPM</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">CPC</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">CTR</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">Conversões</th>
+                                    <th class="p-4 text-xs font-bold text-slate-500 uppercase">ROAS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ads-table-body" class="divide-y divide-slate-100">
+                                <!-- Ads here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <!-- TAB: Creatives -->
@@ -429,8 +487,11 @@
                                 ${c.diagnostico}
                             </div>
                         </td>
-                        <td class="p-4 text-center">
-                            <button onclick="analyzeCampaign('${c.id}')" class="text-indigo-600 hover:text-indigo-800 p-2">
+                        <td class="p-4 text-center space-x-2 flex justify-center">
+                            <button onclick="exploreCampaign('${c.id}')" class="text-blue-600 hover:text-blue-800 p-2" title="Explorar Conjuntos">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <button onclick="analyzeCampaign('${c.id}')" class="text-indigo-600 hover:text-indigo-800 p-2" title="Análise IA">
                                 <i class="fas fa-brain"></i>
                             </button>
                         </td>
@@ -535,8 +596,113 @@
             });
         }
 
+        let currentCampaignId = null;
+        let currentAdsetId = null;
+        let currentDatePreset = 'last_30d';
+
+        // Explorar Conjuntos de uma Campanha
+        async function exploreCampaign(campaignId) {
+            currentCampaignId = campaignId;
+            const campaign = currentData.analysis.campanhas_analise.find(c => c.id === campaignId);
+            document.getElementById('hierarchy-title').innerText = `Campanha: ${campaign.name}`;
+            document.getElementById('hierarchy-section').classList.remove('hidden');
+            document.getElementById('campaign-table-body').parentElement.parentElement.classList.add('hidden');
+            
+            try {
+                const adsets = await fetch(`/api/campaigns/${campaignId}/adsets?date_preset=${currentDatePreset}`).then(r => r.json());
+                renderAdsets(adsets.data || []);
+            } catch (e) {
+                console.error('Erro ao buscar conjuntos:', e);
+                alert('Erro ao carregar conjuntos de anúncios.');
+            }
+        }
+
+        function renderAdsets(adsets) {
+            const body = document.getElementById('adsets-table-body');
+            body.innerHTML = '';
+            adsets.forEach(adset => {
+                const insights = adset.insights?.data?.[0] || {};
+                const spend = parseFloat(insights.spend || 0);
+                const impressions = parseInt(insights.impressions || 0);
+                const clicks = parseInt(insights.clicks || 0);
+                const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
+                const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+                const conversions = (insights.actions || []).reduce((sum, a) => sum + parseFloat(a.value || 0), 0);
+                const revenue = (insights.action_values || []).reduce((sum, a) => sum + parseFloat(a.value || 0), 0);
+                const roas = spend > 0 ? revenue / spend : 0;
+                
+                body.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-4 font-bold">${adset.name}</td>
+                        <td class="p-4"><span class="px-2 py-1 rounded text-[10px] font-bold ${adset.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}">${adset.status === 'ACTIVE' ? 'Ativo' : 'Pausado'}</span></td>
+                        <td class="p-4 font-semibold">R$ ${spend.toFixed(2)}</td>
+                        <td class="p-4">R$ ${cpm.toFixed(2)}</td>
+                        <td class="p-4">${ctr.toFixed(2)}%</td>
+                        <td class="p-4">${conversions.toFixed(0)}</td>
+                        <td class="p-4 font-bold">${roas.toFixed(2)}</td>
+                        <td class="p-4 text-center"><button onclick="exploreAdset('${adset.id}', '${adset.name}')" class="text-blue-600 hover:text-blue-800"><i class="fas fa-arrow-right"></i></button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function exploreAdset(adsetId, adsetName) {
+            currentAdsetId = adsetId;
+            document.getElementById('ads-title').innerText = `Anúncios: ${adsetName}`;
+            document.getElementById('ads-section').classList.remove('hidden');
+            document.getElementById('adsets-table-body').parentElement.parentElement.classList.add('hidden');
+            
+            try {
+                const ads = await fetch(`/api/adsets/${adsetId}/ads?date_preset=${currentDatePreset}`).then(r => r.json());
+                renderAds(ads.data || []);
+            } catch (e) {
+                console.error('Erro ao buscar anúncios:', e);
+                alert('Erro ao carregar anúncios.');
+            }
+        }
+
+        function renderAds(ads) {
+            const body = document.getElementById('ads-table-body');
+            body.innerHTML = '';
+            ads.forEach(ad => {
+                const insights = ad.insights?.data?.[0] || {};
+                const spend = parseFloat(insights.spend || 0);
+                const impressions = parseInt(insights.impressions || 0);
+                const clicks = parseInt(insights.clicks || 0);
+                const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
+                const cpc = clicks > 0 ? spend / clicks : 0;
+                const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+                const conversions = (insights.actions || []).reduce((sum, a) => sum + parseFloat(a.value || 0), 0);
+                const revenue = (insights.action_values || []).reduce((sum, a) => sum + parseFloat(a.value || 0), 0);
+                const roas = spend > 0 ? revenue / spend : 0;
+                
+                body.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-4 font-bold">${ad.name}</td>
+                        <td class="p-4"><span class="px-2 py-1 rounded text-[10px] font-bold ${ad.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}">${ad.status === 'ACTIVE' ? 'Ativo' : 'Pausado'}</span></td>
+                        <td class="p-4 font-semibold">R$ ${spend.toFixed(2)}</td>
+                        <td class="p-4">R$ ${cpm.toFixed(2)}</td>
+                        <td class="p-4">R$ ${cpc.toFixed(2)}</td>
+                        <td class="p-4">${ctr.toFixed(2)}%</td>
+                        <td class="p-4">${conversions.toFixed(0)}</td>
+                        <td class="p-4 font-bold">${roas.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function backToAdsets() {
+            document.getElementById('ads-section').classList.add('hidden');
+            document.getElementById('adsets-table-body').parentElement.parentElement.classList.remove('hidden');
+        }
+
+        function backToCampaigns() {
+            document.getElementById('hierarchy-section').classList.add('hidden');
+            document.getElementById('ads-section').classList.add('hidden');
+            document.getElementById('campaign-table-body').parentElement.parentElement.classList.remove('hidden');
+        }
+
         function renderCreatives(campaigns) {
-            // Simulação de criativos baseada nas campanhas para este exemplo
             const grid = document.getElementById('creatives-grid');
             grid.innerHTML = '';
             campaigns.slice(0, 6).forEach(c => {

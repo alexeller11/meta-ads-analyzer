@@ -121,7 +121,7 @@ app.get('/api/adaccounts/consolidated-balance', auth, async (req, res) => {
 
 app.get('/api/adaccounts/:id/balance', auth, async (req, res) => {
   try {
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}`, { params: { fields: 'name,balance,amount_spent,spend_cap,funding_source_details', access_token: req.session.accessToken } });
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}`, { params: { fields: 'name,balance,amount_spent,spend_cap,funding_source_details,account_status', access_token: req.session.accessToken } });
     const data = r.data;
     const funding = data.funding_source_details || {};
     data.is_prepaid = funding.type === 'PREPAID' || (data.balance && parseInt(data.balance) < 0);
@@ -133,15 +133,45 @@ app.get('/api/adaccounts/:id/balance', auth, async (req, res) => {
 
 app.get('/api/adaccounts/:id/campaigns', auth, async (req, res) => {
   try {
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/campaigns`, { params: { fields: 'id,name,status,objective', access_token: req.session.accessToken, limit: 100 } });
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/campaigns`, { params: { fields: 'id,name,status,objective', access_token: req.session.accessToken, limit: 200 } });
     res.json(r.data);
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Conjuntos de Anúncios por Campanha
+app.get('/api/campaigns/:id/adsets', auth, async (req, res) => {
+  try {
+    const { date_preset, since, until } = req.query;
+    const fields = 'id,name,status,targeting,insights.date_preset(' + (date_preset || 'last_30d') + '){impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values}';
+    const params = { fields, access_token: req.session.accessToken, limit: 100 };
+    if (since && until) params.fields = 'id,name,status,targeting,insights.time_range({"since":"' + since + '","until":"' + until + '"}){impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values}';
+    const r = await axios.get(`https://graph.facebook.com/v19.0/${req.params.id}/adsets`, { params });
+    res.json(r.data);
+  } catch (e) { 
+    console.error('Erro AdSets:', e.response ? e.response.data : e.message);
+    res.status(500).json({ error: e.message }); 
+  }
+});
+
+// Anúncios por Conjunto
+app.get('/api/adsets/:id/ads', auth, async (req, res) => {
+  try {
+    const { date_preset, since, until } = req.query;
+    const fields = 'id,name,status,creative,insights.date_preset(' + (date_preset || 'last_30d') + '){impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values}';
+    const params = { fields, access_token: req.session.accessToken, limit: 100 };
+    if (since && until) params.fields = 'id,name,status,creative,insights.date_preset(' + (date_preset || 'last_30d') + '){impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values}';
+    const r = await axios.get(`https://graph.facebook.com/v19.0/${req.params.id}/ads`, { params });
+    res.json(r.data);
+  } catch (e) { 
+    console.error('Erro Ads:', e.response ? e.response.data : e.message);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
 app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
   try {
     const { since, until, date_preset } = req.query;
-    const params = { fields: 'campaign_id,campaign_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values', level: 'campaign', access_token: req.session.accessToken, limit: 500 };
+    const params = { fields: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values', level: 'ad', access_token: req.session.accessToken, limit: 500 };
     if (since && until) params.time_range = JSON.stringify({ since, until });
     else params.date_preset = date_preset || 'last_30d';
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
@@ -155,8 +185,8 @@ app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
 app.get('/api/adaccounts/:id/creatives', auth, async (req, res) => {
   try {
     const { date_preset, since, until } = req.query;
-    const params = { fields: `id,name,status,creative{thumbnail_url,image_url},insights.date_preset(${date_preset || 'last_30d'}){impressions,clicks,spend,ctr,actions,action_values}`, access_token: req.session.accessToken, limit: 100 };
-    if (since && until) params.fields = `id,name,status,creative{thumbnail_url,image_url},insights.time_range({"since":"${since}","until":"${until}"}){impressions,clicks,spend,ctr,actions,action_values}`;
+    const params = { fields: `id,name,status,creative{thumbnail_url,image_url},insights.date_preset(${date_preset || 'last_30d'}){impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values}`, access_token: req.session.accessToken, limit: 100 };
+    if (since && until) params.fields = `id,name,status,creative{thumbnail_url,image_url},insights.date_preset(${date_preset || 'last_30d'}){impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values}`;
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, { params });
     res.json(r.data);
   } catch (e) { 
@@ -169,7 +199,7 @@ app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
   try {
     const { type } = req.params;
     const { date_preset, since, until } = req.query;
-    const params = { fields: 'impressions,clicks,spend,ctr,actions,action_values', level: 'account', access_token: req.session.accessToken };
+    const params = { fields: 'impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values', level: 'account', access_token: req.session.accessToken };
     if (since && until) params.time_range = JSON.stringify({ since, until });
     else params.date_preset = date_preset || 'last_30d';
     if (type === 'device') params.breakdowns = 'device_platform';
@@ -277,4 +307,7 @@ app.get('/dashboard', (req, res) => { if (!req.session.user) return res.redirect
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => { if (process.env.DATABASE_URL) await db.initDB(); });
+app.listen(PORT, async () => { 
+    console.log(`Servidor rodando na porta ${PORT}`);
+    if (process.env.DATABASE_URL) await db.initDB(); 
+});
