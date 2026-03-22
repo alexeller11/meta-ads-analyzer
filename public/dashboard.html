@@ -919,6 +919,9 @@ async function analyzeCampaignFull(id) {
     const html = markdownToHtml(analysisRes.analysis || 'Análise não disponível.');
     document.getElementById('modalBody').innerHTML = html;
 
+    // Adicionar recomendações Andromeda
+    document.getElementById('modalBody').innerHTML += generateAndromedaRecommendations(camp);
+
     // Adicionar funil visual
     if (adsets.length > 0) {
       document.getElementById('modalBody').innerHTML += renderFunnelHtml(adsets);
@@ -1414,6 +1417,46 @@ function switchTabById(tab) {
   if (tab === 'trend') loadTrend();
   if (tab === 'notes') loadNotes();
   if (tab === 'alerts') loadAlerts();
+}
+
+// ── RECOMENDAÇÕES ANDROMEDA POR CAMPANHA ──
+function generateAndromedaRecommendations(camp) {
+  let html = `<div style="margin-top: 24px; padding: 16px; background: rgba(139,92,246,0.1); border: 1px solid var(--purple); border-radius: 12px;">`;
+  html += `<h3 style="color: var(--purple); margin-bottom: 12px; font-size: 16px;">🤖 Recomendações Andromeda</h3>`;
+  
+  const roas = camp.roas || 0;
+  const ctr = camp.ctr || 0;
+  const freq = camp.frequency || 0;
+  const cpa = camp.costPerPur || 0;
+  const spend = camp.spend || 0;
+  
+  if (roas < 1.5) {
+    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(239,68,68,0.1); border-left: 3px solid var(--danger); border-radius: 4px;"><strong style="color: var(--danger);">⚠️ ROAS Crítico (${roas.toFixed(2)}x)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Expanda públicos • Use Lookalike 1-5% • Aumente orçamento 20-30% • Pause públicos com CPA alto</span></div>`;
+  } else if (roas < 2.5) {
+    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(245,158,11,0.1); border-left: 3px solid var(--warning); border-radius: 4px;"><strong style="color: var(--warning);">📊 ROAS Moderado (${roas.toFixed(2)}x)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Teste Advantage+ Shopping • Dynamic Ads • Aumente testes de públicos • Teste novos formatos</span></div>`;
+  } else {
+    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(16,185,129,0.1); border-left: 3px solid var(--success); border-radius: 4px;"><strong style="color: var(--success);">🔥 ROAS Excelente (${roas.toFixed(2)}x)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Escale 15-25% • Teste públicos similares • Documente estrutura • Replique em outras campanhas</span></div>`;
+  }
+  
+  if (ctr < 0.8) {
+    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(239,68,68,0.1); border-left: 3px solid var(--danger); border-radius: 4px;"><strong style="color: var(--danger);">🪝 CTR Muito Baixo (${ctr.toFixed(2)}%)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Criativo fraco • Teste copy com urgência • Revise segmentação • Teste formatos diferentes</span></div>`;
+  } else if (ctr < 1.2) {
+    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(245,158,11,0.1); border-left: 3px solid var(--warning); border-radius: 4px;"><strong style="color: var(--warning);">📈 CTR Abaixo da Média (${ctr.toFixed(2)}%)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Teste variações de copy • Teste imagens/vídeos • A/B testing com públicos similares</span></div>`;
+  }
+  
+  if (freq > 4) {
+    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(239,68,68,0.1); border-left: 3px solid var(--danger); border-radius: 4px;"><strong style="color: var(--danger);">😴 Fadiga (${freq.toFixed(2)}x)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Renove criativos 2-3 semanas • Teste formatos • Expanda público • Cap de frequência 3x/semana</span></div>`;
+  } else if (freq > 3) {
+    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(245,158,11,0.1); border-left: 3px solid var(--warning); border-radius: 4px;"><strong style="color: var(--warning);">⚠️ Frequência Elevada (${freq.toFixed(2)}x)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Prepare novos criativos • Teste expansão • Monitore CTR</span></div>`;
+  }
+  
+  if (cpa > 150) {
+    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(239,68,68,0.1); border-left: 3px solid var(--danger); border-radius: 4px;"><strong style="color: var(--danger);">💰 CPA Alto (R$ ${cpa.toFixed(2)})</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Otimize landing page • Teste públicos • Retargeting • Revise checkout</span></div>`;
+  }
+  
+  html += `<div style="margin-top: 12px; padding: 10px; background: rgba(59,130,246,0.1); border-left: 3px solid var(--primary); border-radius: 4px;"><strong style="color: var(--primary); font-size: 12px;">💡 Princípios Andromeda:</strong> Escala > Segmentação | Dados > Criatividade | Freq < 3x | 10-15% testes | Paciência 7-14 dias</div>`;
+  html += `</div>`;
+  return html;
 }
 
 // ── LOADING ──
