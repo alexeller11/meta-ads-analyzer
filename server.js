@@ -258,15 +258,32 @@ app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
     if (since && until) params.time_range = JSON.stringify({ since, until });
     else params.date_preset = date_preset || 'last_30d';
 
-    if (type === 'device') params.breakdowns = 'device_platform';
+    // Mapeamento correto de breakdowns conforme documentação oficial do Meta
+    if (type === 'device') params.breakdowns = 'device_type';
     else if (type === 'platform') params.breakdowns = 'publisher_platform';
     else if (type === 'position') params.breakdowns = 'platform_position';
     else if (type === 'gender') params.breakdowns = 'gender';
     else if (type === 'age') params.breakdowns = 'age';
     else if (type === 'region') params.breakdowns = 'region';
+    else if (type === 'country') params.breakdowns = 'country';
+    else if (type === 'dma') params.breakdowns = 'dma';
+    
+    // Adicionar janela de atribuição para precisão máxima
+    params.action_attribution_windows = req.query.attribution_window || '28d_click';
 
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
-    res.json(r.data);
+    try {
+      const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+      res.json(r.data);
+    } catch (apiError) {
+      // Se falhar com action_attribution_windows, tenta sem (compatibilidade)
+      if (apiError.response?.status === 400 && params.action_attribution_windows) {
+        delete params.action_attribution_windows;
+        const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+        res.json(r.data);
+      } else {
+        throw apiError;
+      }
+    }
   } catch (e) {
     console.error('Erro Breakdown:', e.response ? e.response.data : e.message);
     res.status(500).json({ error: e.message });
