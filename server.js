@@ -172,7 +172,7 @@ app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
   try {
     const { since, until, date_preset } = req.query;
     const params = { 
-      fields: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values', 
+      fields: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p100_watched_actions,video_avg_time_watched_actions', 
       level: 'ad', 
       access_token: req.session.accessToken, 
       limit: 500 
@@ -230,6 +230,9 @@ app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
     if (type === 'device') params.breakdowns = 'device_platform';
     else if (type === 'platform') params.breakdowns = 'publisher_platform';
     else if (type === 'position') params.breakdowns = 'platform_position';
+    else if (type === 'gender') params.breakdowns = 'gender';
+    else if (type === 'age') params.breakdowns = 'age';
+    else if (type === 'region') params.breakdowns = 'region';
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
     res.json(r.data);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -242,36 +245,97 @@ app.post('/api/analyze', auth, async (req, res) => {
     const getMetrics = (dataRows) => {
         const rows = dataRows || [];
         const getAct = (arr, type) => { const f = (arr||[]).find(x => x.action_type === type); return f ? parseFloat(f.value || 0) : 0; };
-        let tSpend = 0, tImpr = 0, tClicks = 0, tPur = 0, tLds = 0, tMsg = 0, tSess = 0, tRev = 0;
+        let tSpend = 0, tImpr = 0, tClicks = 0, tPur = 0, tLds = 0, tMsg = 0, tSess = 0, tRev = 0, tReach = 0, tFreq = 0, tAddCart = 0, tInitiateCheckout = 0;
         const byId = {};
         rows.forEach(m => {
-          const sp = parseFloat(m.spend || 0); const cl = parseInt(m.clicks || 0); const impr = parseInt(m.impressions || 0);
-          tSpend += sp; tImpr += impr; tClicks += cl;
+          const sp = parseFloat(m.spend || 0); 
+          const cl = parseInt(m.clicks || 0); 
+          const impr = parseInt(m.impressions || 0);
+          const reach = parseInt(m.reach || 0);
+          
+          tSpend += sp; tImpr += impr; tClicks += cl; tReach += reach;
+          
           const pur = getAct(m.actions,'offsite_conversion.fb_pixel_purchase') || getAct(m.actions,'purchase') || getAct(m.actions,'omni_purchase');
           const lds = getAct(m.actions,'offsite_conversion.fb_pixel_lead') || getAct(m.actions,'lead');
-          const msg = getAct(m.actions,'onsite_conversion.messaging_conversation_started_7d') || getAct(m.actions,'onsite_conversion.messaging_first_reply');
+          const msg = getAct(m.actions,'onsite_conversion.messaging_conversation_started_7d') || getAct(m.actions,'onsite_conversion.messaging_first_reply') || getAct(m.actions,'link_click'); // Fallback para mensagens
           const sess = getAct(m.actions,'landing_page_view');
+          const addCart = getAct(m.actions,'offsite_conversion.fb_pixel_add_to_cart') || getAct(m.actions,'add_to_cart');
+          const initCheck = getAct(m.actions,'offsite_conversion.fb_pixel_initiate_checkout') || getAct(m.actions,'initiate_checkout');
           const rev = getAct(m.action_values,'offsite_conversion.fb_pixel_purchase') || getAct(m.action_values, 'purchase') || getAct(m.action_values,'omni_purchase');
-          tPur += pur; tLds += lds; tMsg += msg; tSess += sess; tRev += rev;
-          byId[m.campaign_id] = { ...m, pur, lds, msg, sess, rev, sp, cl, impr };
+          
+          tPur += pur; tLds += lds; tMsg += msg; tSess += sess; tRev += rev; tAddCart += addCart; tInitiateCheckout += initCheck;
+          
+          if (!byId[m.campaign_id]) {
+            byId[m.campaign_id] = { sp: 0, cl: 0, impr: 0, reach: 0, pur: 0, lds: 0, msg: 0, sess: 0, rev: 0, addCart: 0, initCheck: 0 };
+          }
+          byId[m.campaign_id].sp += sp;
+          byId[m.campaign_id].cl += cl;
+          byId[m.campaign_id].impr += impr;
+          byId[m.campaign_id].reach += reach;
+          byId[m.campaign_id].pur += pur;
+          byId[m.campaign_id].lds += lds;
+          byId[m.campaign_id].msg += msg;
+          byId[m.campaign_id].sess += sess;
+          byId[m.campaign_id].rev += rev;
+          byId[m.campaign_id].addCart += addCart;
+          byId[m.campaign_id].initCheck += initCheck;
         });
-        return { totalSpend: tSpend, totalImpressions: tImpr, totalClicks: tClicks, totalPurchases: tPur, totalLeads: tLds, totalMsg: tMsg, totalSessions: tSess, totalRev: tRev, avgCtr: tImpr > 0 ? (tClicks / tImpr) * 100 : 0, avgCpc: tClicks > 0 ? tSpend / tClicks : 0, connectRate: tClicks > 0 ? (tSess / tClicks) * 100 : 0, roas: tSpend > 0 ? tRev / tSpend : 0, byId };
+        
+        tFreq = tReach > 0 ? tImpr / tReach : 0;
+        
+        return { 
+          totalSpend: tSpend, totalImpressions: tImpr, totalClicks: tClicks, 
+          totalPurchases: tPur, totalLeads: tLds, totalMessages: tMsg, 
+          totalSessions: tSess, totalRev: tRev, totalReach: tReach, 
+          totalAddCart: tAddCart, totalInitiateCheckout: tInitiateCheckout,
+          avgFrequency: tFreq,
+          roas: tSpend > 0 ? tRev / tSpend : 0, 
+          avgCtr: tImpr > 0 ? (tClicks / tImpr) * 100 : 0, 
+          connectRate: tClicks > 0 ? (tSess / tClicks) * 100 : 0, 
+          byId 
+        };tSpend > 0 ? tRev / tSpend : 0, byId };
     };
 
     const metrics = getMetrics(insights?.data);
     const prevMetrics = previousInsights ? getMetrics(previousInsights.data) : null;
 
     const enriched = campaigns.map(c => {
-      const m = metrics.byId[c.id] || { pur:0, lds:0, msg:0, sess:0, rev:0, sp:0, cl:0, impr:0, ctr:0 };
+      const m = metrics.byId[c.id] || { pur:0, lds:0, msg:0, sess:0, rev:0, sp:0, cl:0, impr:0, reach:0, addCart:0, initCheck:0 };
       let diagIA = "Aguardando dados."; let statusPerf = "Estável"; let escalaIA = "Monitorar.";
+      const campCtr = m.impr > 0 ? (m.cl / m.impr) * 100 : 0;
+      const campRoas = m.sp > 0 ? m.rev / m.sp : 0;
+      const costPerMsg = m.msg > 0 ? m.sp / m.msg : 0;
+      const costPerPur = m.pur > 0 ? m.sp / m.pur : 0;
+      const freq = m.reach > 0 ? m.impr / m.reach : 0;
+
       if (m.sp > 0) {
-          const campRoas = m.sp > 0 ? m.rev / m.sp : 0; const campCtr = parseFloat(m.ctr || 0); const campConnect = m.cl > 0 ? (m.sess / m.cl) * 100 : 0; const costPerMsg = m.msg > 0 ? m.sp / m.msg : 0;
           if (campRoas > 3 || (m.msg > 10 && costPerMsg < 5)) { diagIA = "🔥 Alta performance!"; statusPerf = "Excelente"; escalaIA = "Escalar verba."; }
           else if (campRoas > 1.5 || (m.msg > 5 && costPerMsg < 10)) { diagIA = "✅ Estável."; statusPerf = "Bom"; escalaIA = "Manter."; }
           else if (m.sp > 50 && m.msg === 0 && m.pur === 0) { diagIA = "🚨 Queima de verba!"; statusPerf = "Crítico"; escalaIA = "Pausar."; }
           else if (campCtr < 0.8) { diagIA = "🪝 CTR Baixo."; statusPerf = "Criativo Ruim"; escalaIA = "Trocar criativo."; }
       }
-      return { ...c, spend: m.sp, ctr: parseFloat(m.ctr || 0), impressions: m.impr, clicks: m.cl, purchases: m.pur, messages: m.msg, leads: m.lds, revenue: m.rev, roas: m.sp > 0 ? m.rev / m.sp : 0, connectRate: m.cl > 0 ? (m.sess / m.cl) * 100 : 0, diagnostico: diagIA, status_performance: statusPerf, escala_sugestao: escalaIA, costPerMsg: m.msg > 0 ? m.sp / m.msg : 0 };
+      return { 
+        ...c, 
+        spend: m.sp, 
+        ctr: campCtr, 
+        impressions: m.impr, 
+        reach: m.reach,
+        frequency: freq,
+        clicks: m.cl, 
+        purchases: m.pur, 
+        messages: m.msg, 
+        leads: m.lds, 
+        revenue: m.rev, 
+        addCart: m.addCart,
+        initCheck: m.initCheck,
+        roas: campRoas, 
+        connectRate: m.cl > 0 ? (m.sess / m.cl) * 100 : 0, 
+        diagnostico: diagIA, 
+        status_performance: statusPerf, 
+        escala_sugestao: escalaIA, 
+        costPerMsg: costPerMsg,
+        costPerPur: costPerPur
+      };
     });
 
     const aiAnalysis = runAnalysisEngine(accountData, enriched, metrics, prevMetrics);

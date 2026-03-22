@@ -184,6 +184,7 @@
           <div class="ia-summary" id="iaSummaryHeader"></div>
           <div class="stats-grid" id="mainStatsGrid"></div>
           <div class="stats-grid" id="secondaryStatsGrid"></div>
+          <div class="stats-grid" id="extraStatsGrid"></div>
         </div>
 
         <!-- Tab: Analysis -->
@@ -199,6 +200,7 @@
             <div class="flex-center">
               <button class="btn btn-primary" style="font-size: 12px; background: var(--card); border: 1px solid var(--border);" onclick="filterCamps('all')">Todas</button>
               <button class="btn btn-primary" style="font-size: 12px; background: var(--card); border: 1px solid var(--border);" onclick="filterCamps('active')">Ativas</button>
+              <button class="btn btn-primary" style="font-size: 12px; background: var(--card); border: 1px solid var(--border);" onclick="filterCamps('running')">Rodando</button>
             </div>
           </div>
           <div class="table-container">
@@ -207,12 +209,13 @@
                 <tr>
                   <th>Campanha</th>
                   <th>Gasto</th>
-                  <th>Impr.</th>
-                  <th>Cliques</th>
+                  <th>Alcance</th>
+                  <th>Freq.</th>
                   <th>ROAS</th>
-                  <th>CTR</th>
-                  <th>Connect %</th>
-                  <th>Status IA</th>
+                  <th>Mensagens</th>
+                  <th>Compras</th>
+                  <th>Custo/Comp.</th>
+                  <th>Ação</th>
                 </tr>
               </thead>
               <tbody id="campTableBody"></tbody>
@@ -222,14 +225,39 @@
 
         <!-- Tab: Creatives -->
         <div id="tab-creatives" style="display: none;">
-          <h2 style="margin-bottom: 24px;">Análise de Criativos</h2>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2>Análise de Criativos</h2>
+            <div class="flex-center">
+              <span class="text-xs text-slate-500">Ordenar por:</span>
+              <select id="creativeSort" class="input-sel" style="font-size: 12px; padding: 4px 8px;" onchange="renderCreatives()">
+                <option value="roas">Melhor ROAS</option>
+                <option value="clicks">Mais Cliques</option>
+                <option value="spend">Maior Gasto</option>
+                <option value="purchases">Mais Compras</option>
+                <option value="messages">Mais Mensagens</option>
+              </select>
+            </div>
+          </div>
           <div class="creative-grid" id="creativesGrid"></div>
         </div>
 
         <!-- Tab: Breakdown -->
         <div id="tab-breakdown" style="display: none;">
           <div style="display: flex; gap: 12px; margin-bottom: 24px;">
-            <button class="btn btn-primary" onclick="loadBreakdown('device')">Dispositivo</button>
+            <button class="btn btn-primary" style="font-size: 12px; background: var(--card); border: 1px solid var(--border);" onclick="loadBreakdown('device')">Dispositivo</button>
+            <button class="btn btn-primary" style="font-size: 12px; background: var(--card); border: 1px solid var(--border);" onclick="loadBreakdown('platform')">Plataforma</button>
+            <button class="btn btn-primary" style="font-size: 12px; background: var(--card); border: 1px solid var(--border);" onclick="loadBreakdown('position')">Posicionamento</button>
+            <button class="btn btn-primary" style="font-size: 12px; background: var(--card); border: 1px solid var(--border);" onclick="loadBreakdown('gender')">Gênero</button>
+            <button class="btn btn-primary" style="font-size: 12px; background: var(--card); border: 1px solid var(--border);" onclick="loadBreakdown('age')">Idade</button>
+            <button class="btn btn-primary" style="font-size: 12px; background: var(--card); border: 1px solid var(--border);" onclick="loadBreakdown('region')">Região</button>
+          </div>
+          <div class="card" style="height: 400px; margin-bottom: 24px;">
+            <canvas id="breakdownChart"></canvas>
+          </div>
+          <div class="table-container">
+            <table id="breakdownTable"></table>
+          </div>
+        </div>utton class="btn btn-primary" onclick="loadBreakdown('device')">Dispositivo</button>
             <button class="btn btn-primary" onclick="loadBreakdown('platform')">Plataforma</button>
             <button class="btn btn-primary" onclick="loadBreakdown('position')">Posicionamento</button>
           </div>
@@ -404,8 +432,16 @@
     // Secondary Stats
     document.getElementById('secondaryStatsGrid').innerHTML = `
       <div class="card"><p class="card-label">CTR Médio</p><p class="card-value">${metrics.avgCtr.toFixed(2)}%</p></div>
-      <div class="card"><p class="card-label">Cliques</p><p class="card-value">${metrics.totalClicks.toLocaleString()}</p></div>
-      <div class="card"><p class="card-label">Vendas</p><p class="card-value">${metrics.totalPurchases.toLocaleString()}</p></div>
+      <div class="card"><p class="card-label">Alcance</p><p class="card-value">${metrics.totalReach.toLocaleString()}</p></div>
+      <div class="card"><p class="card-label">Frequência</p><p class="card-value">${metrics.avgFrequency.toFixed(2)}</p></div>
+      <div class="card"><p class="card-label">Mensagens</p><p class="card-value">${metrics.totalMessages.toLocaleString()}</p></div>
+    `;
+
+    // Extra Stats
+    document.getElementById('extraStatsGrid').innerHTML = `
+      <div class="card"><p class="card-label">Carrinhos</p><p class="card-value">${metrics.totalAddCart.toLocaleString()}</p></div>
+      <div class="card"><p class="card-label">Checkouts</p><p class="card-value">${metrics.totalInitiateCheckout.toLocaleString()}</p></div>
+      <div class="card"><p class="card-label">Custo por Compra</p><p class="card-value">${currency} ${(metrics.totalPurchases > 0 ? metrics.totalSpend / metrics.totalPurchases : 0).toFixed(2)}</p></div>
       <div class="card"><p class="card-label">Connect Rate</p><p class="card-value">${metrics.connectRate.toFixed(1)}%</p></div>
     `;
     
@@ -442,18 +478,30 @@
           <div style="font-size: 10px; color: var(--text-muted);">${c.status}</div>
         </td>
         <td>${currency} ${c.spend.toFixed(2)}</td>
-        <td>${c.impressions.toLocaleString()}</td>
-        <td>${c.clicks.toLocaleString()}</td>
+        <td>${c.reach.toLocaleString()}</td>
+        <td>${c.frequency.toFixed(2)}</td>
         <td style="font-weight: 800; color: ${c.roas > 2 ? 'var(--success)' : 'var(--text)'}">${c.roas.toFixed(2)}x</td>
-        <td>${c.ctr.toFixed(2)}%</td>
-        <td>${c.connectRate.toFixed(1)}%</td>
+        <td>${c.messages.toLocaleString()}</td>
+        <td>${c.purchases.toLocaleString()}</td>
+        <td>${currency} ${c.costPerPur.toFixed(2)}</td>
         <td>
-          <span class="badge ${c.status_performance === 'Excelente' ? 'badge-success' : (c.status_performance === 'Estável' ? 'badge-warning' : 'badge-danger')}">
-            ${c.status_performance}
-          </span>
+          <button onclick="analyzeCampaign('${c.id}')" class="btn btn-primary" style="padding: 4px 8px; font-size: 10px;">IA</button>
         </td>
       </tr>
     `).join('');
+  }
+
+  function analyzeCampaign(id) {
+    const c = state.analysis.campanhas_analise.find(x => x.id === id);
+    alert(`Análise IA para: ${c.name}\n\nDiagnóstico: ${c.diagnostico}\nPerformance: ${c.status_performance}\nSugestão: ${c.escala_sugestao}`);
+  }
+
+  function filterCamps(type) {
+    if (!state.analysis) return;
+    let filtered = state.analysis.campanhas_analise;
+    if (type === 'active') filtered = filtered.filter(c => c.status === 'ACTIVE');
+    if (type === 'running') filtered = filtered.filter(c => c.status === 'ACTIVE' && c.spend > 0);
+    renderCampTable(filtered);
   }
 
   function renderCreatives() {
@@ -462,18 +510,43 @@
       grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">Nenhum criativo com dados no período.</p>';
       return;
     }
+
+    const sortType = document.getElementById('creativeSort')?.value || 'roas';
+    const sorted = [...state.creatives].sort((a, b) => {
+      const getVal = (item, type) => {
+        const ins = item.insights?.data?.[0] || { spend: 0, clicks: 0, actions: [], action_values: [] };
+        if (type === 'spend') return parseFloat(ins.spend || 0);
+        if (type === 'clicks') return parseInt(ins.clicks || 0);
+        if (type === 'purchases') return (ins.actions || []).find(a => a.action_type.includes('purchase'))?.value || 0;
+        if (type === 'messages') return (ins.actions || []).find(a => a.action_type.includes('message'))?.value || 0;
+        if (type === 'roas') {
+          const rev = (ins.action_values || []).find(a => a.action_type.includes('purchase'))?.value || 0;
+          const sp = parseFloat(ins.spend || 0);
+          return sp > 0 ? rev / sp : 0;
+        }
+        return 0;
+      };
+      return getVal(b, sortType) - getVal(a, sortType);
+    });
     
-    grid.innerHTML = state.creatives.map(c => {
-      const ins = c.insights?.data?.[0] || { spend: 0, ctr: 0, actions: [] };
+    grid.innerHTML = sorted.map(c => {
+      const ins = c.insights?.data?.[0] || { spend: 0, ctr: 0, actions: [], action_values: [] };
       const img = c.creative?.image_url || c.creative?.thumbnail_url || 'https://via.placeholder.com/300?text=Sem+Imagem';
+      const pur = (ins.actions || []).find(a => a.action_type.includes('purchase'))?.value || 0;
+      const msg = (ins.actions || []).find(a => a.action_type.includes('message'))?.value || 0;
+      const rev = (ins.action_values || []).find(a => a.action_type.includes('purchase'))?.value || 0;
+      const roas = parseFloat(ins.spend) > 0 ? rev / parseFloat(ins.spend) : 0;
+
       return `
         <div class="creative-card">
           <img src="${img}" class="creative-img">
           <div class="creative-info">
-            <div style="font-weight: 700; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-              <div><span style="color: var(--text-dim);">Gasto:</span> ${ins.spend}</div>
-              <div><span style="color: var(--text-dim);">CTR:</span> ${parseFloat(ins.ctr).toFixed(2)}%</div>
+            <div style="font-weight: 700; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 11px;">
+              <div><span style="color: var(--text-dim);">Gasto:</span> ${parseFloat(ins.spend).toFixed(2)}</div>
+              <div><span style="color: var(--text-dim);">ROAS:</span> ${roas.toFixed(2)}x</div>
+              <div><span style="color: var(--text-dim);">Compras:</span> ${pur}</div>
+              <div><span style="color: var(--text-dim);">Mensagens:</span> ${msg}</div>
             </div>
           </div>
         </div>
@@ -497,7 +570,7 @@
       const ctx = document.getElementById('breakdownChart').getContext('2d');
       if (state.charts.breakdown) state.charts.breakdown.destroy();
       
-      const labels = data.map(d => d[Object.keys(d).find(k => k.includes('platform') || k.includes('position'))] || 'Outros');
+      const labels = data.map(d => d.device_platform || d.publisher_platform || d.platform_position || d.gender || d.age || d.region || 'Outros');
       const spends = data.map(d => parseFloat(d.spend));
       
       state.charts.breakdown = new Chart(ctx, {
@@ -530,7 +603,7 @@
         <tbody>
           ${data.map(d => `
             <tr>
-              <td>${d[Object.keys(d).find(k => k.includes('platform') || k.includes('position'))] || 'Outros'}</td>
+              <td>${d.device_platform || d.publisher_platform || d.platform_position || d.gender || d.age || d.region || 'Outros'}</td>
               <td>${parseFloat(d.spend).toFixed(2)}</td>
               <td>${parseInt(d.impressions).toLocaleString()}</td>
               <td>${parseInt(d.clicks).toLocaleString()}</td>
