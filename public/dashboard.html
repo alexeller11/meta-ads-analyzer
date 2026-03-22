@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
   <style>
     :root {
+      /* Dark Mode (padrao) */
       --bg: #0a0f1e;
       --bg2: #0f172a;
       --card: #1e293b;
@@ -27,6 +28,30 @@
       --text: #f1f5f9;
       --text-dim: #94a3b8;
       --text-muted: #64748b;
+    }
+    
+    /* Light Mode */
+    body.light-mode {
+      --bg: #f8fafc;
+      --bg2: #f1f5f9;
+      --card: #ffffff;
+      --card2: #f8fafc;
+      --border: #cbd5e1;
+      --border2: #e2e8f0;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-glow: rgba(59,130,246,0.1);
+      --success: #059669;
+      --success-bg: rgba(5,150,105,0.1);
+      --warning: #d97706;
+      --warning-bg: rgba(217,119,6,0.1);
+      --danger: #dc2626;
+      --danger-bg: rgba(220,38,38,0.1);
+      --purple: #7c3aed;
+      --purple-bg: rgba(124,58,237,0.1);
+      --text: #1e293b;
+      --text-dim: #475569;
+      --text-muted: #94a3b8;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -145,6 +170,33 @@
     @media (max-width: 1200px) {
       .stats-grid-4 { grid-template-columns: repeat(2, 1fr); }
       .stats-grid-5 { grid-template-columns: repeat(3, 1fr); }
+      .sidebar { width: 180px; }
+    }
+    
+    @media (max-width: 768px) {
+      .app-container { height: auto; }
+      .topbar { height: auto; flex-wrap: wrap; padding: 12px; gap: 8px; }
+      .content-area { flex-direction: column; }
+      .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; overflow-x: auto; padding: 8px; }
+      .main-content { padding: 16px 12px; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .stats-grid-4 { grid-template-columns: 1fr; }
+      .stats-grid-5 { grid-template-columns: 1fr; }
+      .ia-summary { flex-direction: column; gap: 16px; }
+      .creative-grid { grid-template-columns: 1fr; }
+      .modal { max-width: 95vw; padding: 16px; }
+      table { font-size: 12px; }
+      th, td { padding: 8px 12px; }
+    }
+    
+    @media (max-width: 480px) {
+      .topbar { height: auto; }
+      .logo { font-size: 14px; }
+      .btn { padding: 6px 12px; font-size: 12px; }
+      .btn-sm { padding: 4px 8px; font-size: 10px; }
+      .input-sel { padding: 6px 10px; font-size: 12px; }
+      .card-value { font-size: 20px; }
+      .modal-body { font-size: 13px; }
     }
 
     /* ── IA SUMMARY ── */
@@ -321,6 +373,62 @@
     .form-label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; }
     .form-input { background: var(--bg2); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; }
     .form-input:focus { border-color: var(--primary); }
+    
+    /* ── DARK MODE TOGGLE ── */
+    .theme-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .theme-toggle:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    
+    /* ── TOOLTIPS ── */
+    .tooltip-container {
+      position: relative;
+      display: inline-block;
+      cursor: help;
+    }
+    .tooltip-text {
+      visibility: hidden;
+      background-color: var(--card2);
+      color: var(--text);
+      text-align: center;
+      border-radius: 6px;
+      padding: 8px 12px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -60px;
+      width: 120px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .tooltip-container:hover .tooltip-text {
+      visibility: visible;
+      opacity: 1;
+    }
+    .tooltip-text::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: var(--card2) transparent transparent transparent;
+    }
   </style>
 </head>
 <body>
@@ -374,6 +482,7 @@
 
     <div style="margin-left: auto;" class="flex-center">
       <div id="budgetStatus" style="display: none;"></div>
+      <button class="theme-toggle" onclick="toggleDarkMode()" title="Alternar modo escuro/claro">🌙 Tema</button>
       <div class="flex-center" style="gap: 8px;">
         <img id="userPic" style="width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--border);" onerror="this.style.display='none'">
         <span id="userName" style="font-weight: 700; font-size: 13px;"></span>
@@ -600,9 +709,29 @@ let state = {
   currentTab: 'overview'
 };
 
+// ── DARK MODE ──
+function toggleDarkMode() {
+  const isDarkMode = document.body.classList.contains('light-mode');
+  if (isDarkMode) {
+    document.body.classList.remove('light-mode');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    document.body.classList.add('light-mode');
+    localStorage.setItem('theme', 'light');
+  }
+}
+
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  if (savedTheme === 'light') {
+    document.body.classList.add('light-mode');
+  }
+}
+
 // ── INIT ──
 async function init() {
   try {
+    initTheme();
     const me = await fetch('/api/me').then(r => r.json());
     if (!me.authenticated) return location.href = '/';
     document.getElementById('userName').textContent = me.user.name;
