@@ -171,9 +171,17 @@ app.get('/api/adsets/:id/ads', auth, async (req, res) => {
 app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
   try {
     const { since, until, date_preset } = req.query;
-    const params = { fields: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values', level: 'ad', access_token: req.session.accessToken, limit: 500 };
-    if (since && until) params.time_range = JSON.stringify({ since, until });
-    else params.date_preset = date_preset || 'last_30d';
+    const params = { 
+      fields: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values', 
+      level: 'ad', 
+      access_token: req.session.accessToken, 
+      limit: 500 
+    };
+    if (since && until) {
+      params.time_range = JSON.stringify({ since, until });
+    } else {
+      params.date_preset = date_preset || 'last_30d';
+    }
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
     res.json(r.data);
   } catch (e) { 
@@ -185,14 +193,31 @@ app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
 app.get('/api/adaccounts/:id/creatives', auth, async (req, res) => {
   try {
     const { date_preset, since, until } = req.query;
-    const params = { fields: `id,name,status,creative{thumbnail_url,image_url},insights.date_preset(${date_preset || 'last_30d'}){impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values}`, access_token: req.session.accessToken, limit: 100 };
-    if (since && until) params.fields = `id,name,status,creative{thumbnail_url,image_url},insights.date_preset(${date_preset || 'last_30d'}){impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values}`;
+    let time_range = null;
+    if (since && until) {
+      time_range = JSON.stringify({ since, until });
+    }
+    
+    const params = { 
+      fields: `id,name,status,creative{thumbnail_url,image_url,video_id},insights${time_range ? `.time_range(${time_range})` : `.date_preset(${date_preset || 'last_30d'})`}{impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values}`, 
+      access_token: req.session.accessToken, 
+      limit: 100 
+    };
+    
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, { params });
     res.json(r.data);
   } catch (e) { 
     console.error('Erro Creatives:', e.response ? e.response.data : e.message);
     res.status(500).json({ error: e.message }); 
   }
+});
+
+app.get('/api/trend/:id', auth, async (req, res) => {
+  try {
+    if (!process.env.DATABASE_URL) return res.json({ trend: [] });
+    const trend = await db.getAccountTrend(req.params.id);
+    res.json({ trend });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
@@ -250,6 +275,22 @@ app.post('/api/analyze', auth, async (req, res) => {
     });
 
     const aiAnalysis = runAnalysisEngine(accountData, enriched, metrics, prevMetrics);
+    
+    // Salvar no banco para tendências se configurado
+    if (process.env.DATABASE_URL) {
+      try {
+        await db.saveRun({
+          fbAccountId: req.body.accountData.account_id,
+          fbUserId: req.session.user.id,
+          accountName: req.body.accountData.name,
+          dateRange: req.body.dateRange,
+          metrics,
+          campaigns: enriched,
+          aiAnalysis
+        });
+      } catch (dbErr) { console.error('Erro ao salvar no banco:', dbErr.message); }
+    }
+
     res.json({ success: true, analysis: { ...aiAnalysis, campanhas_analise: enriched }, metrics, prevMetrics });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
