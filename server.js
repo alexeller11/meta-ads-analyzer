@@ -121,7 +121,7 @@ app.get('/api/adaccounts/consolidated-balance', auth, async (req, res) => {
 
 app.get('/api/adaccounts/:id/balance', auth, async (req, res) => {
   try {
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}`, { params: { fields: 'name,balance,amount_spent,spend_cap,funding_source_details', access_token: req.session.accessToken } });
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}`, { params: { fields: 'name,balance,amount_spent,spend_cap,funding_source_details,account_status', access_token: req.session.accessToken } });
     const data = r.data;
     const funding = data.funding_source_details || {};
     data.is_prepaid = funding.type === 'PREPAID' || (data.balance && parseInt(data.balance) < 0);
@@ -133,7 +133,7 @@ app.get('/api/adaccounts/:id/balance', auth, async (req, res) => {
 
 app.get('/api/adaccounts/:id/campaigns', auth, async (req, res) => {
   try {
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/campaigns`, { params: { fields: 'id,name,status,objective', access_token: req.session.accessToken, limit: 100 } });
+    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/campaigns`, { params: { fields: 'id,name,status,objective', access_token: req.session.accessToken, limit: 200 } });
     res.json(r.data);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -141,18 +141,32 @@ app.get('/api/adaccounts/:id/campaigns', auth, async (req, res) => {
 app.get('/api/adaccounts/:id/insights', auth, async (req, res) => {
   try {
     const { since, until, date_preset } = req.query;
-    const params = { fields: 'campaign_id,campaign_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values', level: 'campaign', access_token: req.session.accessToken, limit: 200 };
+    const params = { 
+        fields: 'campaign_id,campaign_name,impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values', 
+        level: 'campaign', 
+        access_token: req.session.accessToken, 
+        limit: 500,
+        filtering: JSON.stringify([{field: "spend", operator: "GREATER_THAN", value: 0}])
+    };
     if (since && until) params.time_range = JSON.stringify({ since, until });
     else params.date_preset = date_preset || 'last_30d';
+    
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
     res.json(r.data);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { 
+    console.error('Erro Insights:', e.response ? e.response.data : e.message);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
 app.get('/api/adaccounts/:id/creatives', auth, async (req, res) => {
   try {
     const { date_preset, since, until } = req.query;
-    const params = { fields: `id,name,status,creative{thumbnail_url,image_url},insights.date_preset(${date_preset || 'last_30d'}){impressions,clicks,spend,ctr,actions,action_values}`, access_token: req.session.accessToken, limit: 50 };
+    const params = { 
+        fields: `id,name,status,creative{thumbnail_url,image_url},insights.date_preset(${date_preset || 'last_30d'}){impressions,clicks,spend,ctr,actions,action_values}`, 
+        access_token: req.session.accessToken, 
+        limit: 100 
+    };
     if (since && until) params.fields = `id,name,status,creative{thumbnail_url,image_url},insights.time_range({"since":"${since}","until":"${until}"}){impressions,clicks,spend,ctr,actions,action_values}`;
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, { params });
     res.json(r.data);
@@ -180,17 +194,24 @@ app.post('/api/analyze', auth, async (req, res) => {
   try {
     const getMetrics = (dataRows) => {
         const rows = dataRows || [];
-        const getAct = (arr, type) => { const f = (arr||[]).find(x => x.action_type === type); return f ? parseFloat(f.value || 0) : 0; };
+        const getAct = (arr, type) => { 
+            if (!arr) return 0;
+            const f = arr.find(x => x.action_type === type); 
+            return f ? parseFloat(f.value || 0) : 0; 
+        };
         let tSpend = 0, tImpr = 0, tClicks = 0, tPur = 0, tLds = 0, tMsg = 0, tSess = 0, tRev = 0;
         const byId = {};
         rows.forEach(m => {
           const sp = parseFloat(m.spend || 0); const cl = parseInt(m.clicks || 0); const impr = parseInt(m.impressions || 0);
           tSpend += sp; tImpr += impr; tClicks += cl;
-          const pur = getAct(m.actions,'offsite_conversion.fb_pixel_purchase') || getAct(m.actions,'purchase') || getAct(m.actions,'omni_purchase');
-          const lds = getAct(m.actions,'offsite_conversion.fb_pixel_lead') || getAct(m.actions,'lead');
-          const msg = getAct(m.actions,'onsite_conversion.messaging_conversation_started_7d') || getAct(m.actions,'onsite_conversion.messaging_first_reply');
+          
+          // Captura robusta de conversões
+          const pur = getAct(m.actions,'offsite_conversion.fb_pixel_purchase') + getAct(m.actions,'purchase') + getAct(m.actions,'omni_purchase');
+          const lds = getAct(m.actions,'offsite_conversion.fb_pixel_lead') + getAct(m.actions,'lead');
+          const msg = getAct(m.actions,'onsite_conversion.messaging_conversation_started_7d') + getAct(m.actions,'onsite_conversion.messaging_first_reply');
           const sess = getAct(m.actions,'landing_page_view');
-          const rev = getAct(m.action_values,'offsite_conversion.fb_pixel_purchase') || getAct(m.action_values, 'purchase') || getAct(m.action_values,'omni_purchase');
+          const rev = getAct(m.action_values,'offsite_conversion.fb_pixel_purchase') + getAct(m.action_values, 'purchase') + getAct(m.action_values,'omni_purchase');
+          
           tPur += pur; tLds += lds; tMsg += msg; tSess += sess; tRev += rev;
           byId[m.campaign_id] = { ...m, pur, lds, msg, sess, rev, sp, cl, impr };
         });
@@ -200,7 +221,10 @@ app.post('/api/analyze', auth, async (req, res) => {
     const metrics = getMetrics(insights?.data);
     const prevMetrics = previousInsights ? getMetrics(previousInsights.data) : null;
 
-    const enriched = campaigns.map(c => {
+    // Filtrar campanhas: apenas as que estão no insights (ou seja, tiveram gasto no período)
+    const activeInPeriod = (campaigns || []).filter(c => metrics.byId[c.id]);
+
+    const enriched = activeInPeriod.map(c => {
       const m = metrics.byId[c.id] || { pur:0, lds:0, msg:0, sess:0, rev:0, sp:0, cl:0, impr:0, ctr:0 };
       let diagIA = "Aguardando dados."; let statusPerf = "Estável"; let escalaIA = "Monitorar.";
       if (m.sp > 0) {
@@ -214,17 +238,18 @@ app.post('/api/analyze', auth, async (req, res) => {
     });
 
     const aiAnalysis = runAnalysisEngine(accountData, enriched, metrics, prevMetrics);
-    res.json({ success: true, analysis: aiAnalysis, metrics, prevMetrics });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    res.json({ success: true, analysis: aiAnalysis, metrics, prevMetrics, campanhas_analise: enriched });
+  } catch (err) { 
+    console.error('Erro Analyze:', err);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 function runAnalysisEngine(accountData, campaigns, metrics, prevMetrics) {
     let score = 100;
     const otimizacoes = [];
     
-    if (metrics.roas < 1.5) { score -= 20; otimizacoes.push({ prioridade: 1, titulo: 'ROAS Baixo', categoria: 'Financeiro', descricao: 'Seu retorno sobre investimento está abaixo do ideal.', acao: 'Foque nos criativos com maior CTR.' }); }
-    if (metrics.connectRate < 60 && metrics.totalSpend > 50) { score -= 15; otimizacoes.push({ prioridade: 2, titulo: 'Lentidão no Site', categoria: 'Funil', descricao: 'Muitas pessoas clicam mas não esperam o site carregar.', acao: 'Otimize a velocidade da sua landing page.' }); }
-    
+    if (metrics.roas < 1.5) { score -= 20; otimizacoes.push({ prioridade: 1, titulo: 'ROAS Baixo', categoria: 'Financeiro', descricao: 'Seu retorno sobre investimento está abaixo do ideal.', acao: 'Foque nos criativos de melhor performance.' }); }
     if (prevMetrics) {
         if (metrics.roas < prevMetrics.roas) otimizacoes.push({ prioridade: 2, titulo: 'Queda de ROAS', categoria: 'Tendência', descricao: `Seu ROAS caiu de ${prevMetrics.roas.toFixed(2)} para ${metrics.roas.toFixed(2)}.`, acao: 'Verifique se houve fadiga de criativo ou aumento de CPM.' });
     }
@@ -271,4 +296,7 @@ app.get('/dashboard', (req, res) => { if (!req.session.user) return res.redirect
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => { if (process.env.DATABASE_URL) await db.initDB(); });
+app.listen(PORT, async () => { 
+    console.log(`Servidor rodando na porta ${PORT}`);
+    if (process.env.DATABASE_URL) await db.initDB(); 
+});
