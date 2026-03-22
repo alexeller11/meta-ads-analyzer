@@ -562,6 +562,8 @@
               <button id="filter-all" class="btn btn-ghost btn-sm active" onclick="filterCamps('all', this)">Todas</button>
               <button id="filter-active" class="btn btn-ghost btn-sm" onclick="filterCamps('active', this)">Ativas</button>
               <button id="filter-running" class="btn btn-ghost btn-sm" onclick="filterCamps('running', this)">🟢 Rodando</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportCampaignsCSV()" title="Exportar como CSV">📥 CSV</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportCampaignsJSON()" title="Exportar como JSON">📥 JSON</button>
             </div>
           </div>
           <div class="table-container">
@@ -755,10 +757,31 @@ async function onAccountChange() {
   if (!state.selectedAccountId) return;
   setLoading(true, 'Carregando conta...');
   try {
+    // Verificar cache
+    const cacheKey = `account_${state.selectedAccountId}`;
+    const cached = localStorage.getItem(cacheKey);
+    const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+    const now = Date.now();
+    const cacheExpiry = 5 * 60 * 1000; // 5 minutos
+    
+    if (cached && cacheTime && (now - parseInt(cacheTime)) < cacheExpiry) {
+      const data = JSON.parse(cached);
+      renderBudget(data.balance);
+      state.campaigns = data.campaigns || [];
+      renderActiveCampsSidebar();
+      setLoading(false);
+      return;
+    }
+    
     const [bal, camps] = await Promise.all([
       fetch(`/api/adaccounts/${state.selectedAccountId}/balance`).then(r => r.json()),
       fetch(`/api/adaccounts/${state.selectedAccountId}/campaigns`).then(r => r.json())
     ]);
+    
+    // Salvar em cache
+    localStorage.setItem(cacheKey, JSON.stringify({ balance: bal, campaigns: camps.data }));
+    localStorage.setItem(`${cacheKey}_time`, now.toString());
+    
     renderBudget(bal);
     state.campaigns = camps.data || [];
     renderActiveCampsSidebar();
@@ -1546,6 +1569,67 @@ function switchTabById(tab) {
   if (tab === 'trend') loadTrend();
   if (tab === 'notes') loadNotes();
   if (tab === 'alerts') loadAlerts();
+}
+
+// ── EXPORTAÇÃO DE DADOS ──
+function exportCampaignsCSV() {
+  if (!state.analysis || !state.analysis.campanhas_analise) {
+    alert('Nenhum dado de campanha para exportar.');
+    return;
+  }
+  
+  const campaigns = state.analysis.campanhas_analise;
+  const headers = ['Campanha', 'Status', 'Gasto', 'ROAS', 'CTR', 'Impressoes', 'Cliques', 'Alcance', 'Frequencia', 'Compras', 'Mensagens', 'Leads', 'Custo/Compra', 'Performance', 'Diagnostico'];
+  
+  const rows = campaigns.map(c => [
+    c.name,
+    c.status,
+    (c.spend || 0).toFixed(2),
+    (c.roas || 0).toFixed(2),
+    (c.ctr || 0).toFixed(2),
+    c.impressions || 0,
+    c.clicks || 0,
+    c.reach || 0,
+    (c.frequency || 0).toFixed(2),
+    c.purchases || 0,
+    c.messages || 0,
+    c.leads || 0,
+    (c.costPerPur || 0).toFixed(2),
+    c.status_performance || 'N/A',
+    c.diagnostico || 'N/A'
+  ]);
+  
+  const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `campanhas_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+function exportCampaignsJSON() {
+  if (!state.analysis || !state.analysis.campanhas_analise) {
+    alert('Nenhum dado de campanha para exportar.');
+    return;
+  }
+  
+  const data = {
+    exportDate: new Date().toISOString(),
+    metrics: state.metrics,
+    analysis: state.analysis.resumo_geral,
+    campaigns: state.analysis.campanhas_analise
+  };
+  
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `analise_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  window.URL.revokeObjectURL(url);
 }
 
 // ── RECOMENDAÇÕES ANDROMEDA POR CAMPANHA ──
