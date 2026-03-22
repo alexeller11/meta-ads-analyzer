@@ -245,6 +245,48 @@ app.get('/api/trend/:id', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// COMPARAÇÃO COM PERÍODO ANTERIOR
+app.get('/api/adaccounts/:id/comparison', auth, async (req, res) => {
+  try {
+    const { date_preset, since, until } = req.query;
+    const params = {
+      fields: 'impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values',
+      level: 'account',
+      access_token: req.session.accessToken
+    };
+    
+    // Período atual
+    if (since && until) params.time_range = JSON.stringify({ since, until });
+    else params.date_preset = date_preset || 'last_30d';
+    
+    const currentRes = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
+    const currentMetrics = getMetrics(currentRes.data?.data);
+    
+    // Período anterior (mesmo tamanho)
+    let prevParams = { ...params };
+    if (date_preset === 'last_7d') prevParams.date_preset = 'last_7d_excluding_today';
+    else if (date_preset === 'last_30d') prevParams.date_preset = 'last_30d_excluding_today';
+    else if (date_preset === 'last_90d') prevParams.date_preset = 'last_90d_excluding_today';
+    
+    const prevRes = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params: prevParams }).catch(() => ({ data: { data: [] } }));
+    const prevMetrics = getMetrics(prevRes.data?.data);
+    
+    res.json({
+      current: currentMetrics,
+      previous: prevMetrics,
+      comparison: {
+        spendChange: ((currentMetrics.totalSpend - prevMetrics.totalSpend) / (prevMetrics.totalSpend || 1)) * 100,
+        roasChange: ((currentMetrics.roas - prevMetrics.roas) / (prevMetrics.roas || 1)) * 100,
+        ctrChange: ((currentMetrics.avgCtr - prevMetrics.avgCtr) / (prevMetrics.avgCtr || 1)) * 100,
+        purchasesChange: ((currentMetrics.totalPurchases - prevMetrics.totalPurchases) / (prevMetrics.totalPurchases || 1)) * 100
+      }
+    });
+  } catch (e) {
+    console.error('Erro Comparison:', e.response ? e.response.data : e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // BREAKDOWN detalhado
 app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
   try {
