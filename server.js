@@ -430,32 +430,47 @@ app.get('/api/history/:accountId', auth, async (req, res) => {
 
 // --- MOTOR DE ANÁLISE E IA ---
 
-// Helper: extrair valor de actions
+// Helper: extrair valor de actions com validação
 function getAct(arr, type) {
-  const f = (arr || []).find(x => x.action_type === type);
-  return f ? parseFloat(f.value || 0) : 0;
+  if (!Array.isArray(arr) || !type) return 0;
+  const f = arr.find(x => x && x.action_type === type);
+  if (!f) return 0;
+  const val = parseFloat(f.value || 0);
+  return isNaN(val) ? 0 : Math.max(0, val); // Evitar valores negativos
 }
 
-// Helper: extrair múltiplos tipos de action
+// Helper: extrair múltiplos tipos de action com deduplicação
 function getActMulti(arr, types) {
+  if (!Array.isArray(arr) || !Array.isArray(types)) return 0;
+  const seen = new Set();
   let total = 0;
-  for (const type of types) total += getAct(arr, type);
+  for (const type of types) {
+    if (!seen.has(type)) {
+      seen.add(type);
+      total += getAct(arr, type);
+    }
+  }
   return total;
 }
 
 function getMetrics(dataRows) {
-  const rows = dataRows || [];
+  const rows = Array.isArray(dataRows) ? dataRows : [];
   let tSpend = 0, tImpr = 0, tClicks = 0, tPur = 0, tLds = 0, tMsg = 0;
   let tSess = 0, tRev = 0, tReach = 0, tFreq = 0, tAddCart = 0, tInitiateCheckout = 0;
   let tCalls = 0, tVideoViews = 0, tCpv = 0;
   const byId = {};
 
   rows.forEach(m => {
-    const sp = parseFloat(m.spend || 0);
-    const cl = parseInt(m.clicks || 0);
-    const impr = parseInt(m.impressions || 0);
-    const reach = parseInt(m.reach || 0);
+    if (!m || typeof m !== 'object') return; // Validar objeto
+    
+    const sp = Math.max(0, parseFloat(m.spend || 0) || 0);
+    const cl = Math.max(0, parseInt(m.clicks || 0) || 0);
+    const impr = Math.max(0, parseInt(m.impressions || 0) || 0);
+    const reach = Math.max(0, parseInt(m.reach || 0) || 0);
 
+    // Validar que os valores sao numeros validos
+    if (isNaN(sp) || isNaN(cl) || isNaN(impr) || isNaN(reach)) return;
+    
     tSpend += sp; tImpr += impr; tClicks += cl; tReach += reach;
 
     // Compras - múltiplos tipos
@@ -499,13 +514,15 @@ function getMetrics(dataRows) {
     tRev += rev; tAddCart += addCart; tInitiateCheckout += initCheck;
     tCalls += calls; tVideoViews += videoViews;
 
-    if (!byId[m.campaign_id]) {
-      byId[m.campaign_id] = {
+    // Validar campaign_id
+    const campId = m.campaign_id || 'unknown';
+    if (!byId[campId]) {
+      byId[campId] = {
         sp: 0, cl: 0, impr: 0, reach: 0, pur: 0, lds: 0, msg: 0,
         sess: 0, rev: 0, addCart: 0, initCheck: 0, calls: 0, videoViews: 0
       };
     }
-    const b = byId[m.campaign_id];
+    const b = byId[campId];
     b.sp += sp; b.cl += cl; b.impr += impr; b.reach += reach;
     b.pur += pur; b.lds += lds; b.msg += msg; b.sess += sess;
     b.rev += rev; b.addCart += addCart; b.initCheck += initCheck;
@@ -515,30 +532,36 @@ function getMetrics(dataRows) {
   tFreq = tReach > 0 ? tImpr / tReach : 0;
   tCpv = tVideoViews > 0 ? tSpend / tVideoViews : 0;
 
+  // Sanitizar valores infinitos ou NaN
+  const sanitize = (val) => {
+    const num = parseFloat(val) || 0;
+    return isFinite(num) ? num : 0;
+  };
+
   return {
-    totalSpend: tSpend,
-    totalImpressions: tImpr,
-    totalClicks: tClicks,
-    totalPurchases: tPur,
-    totalLeads: tLds,
-    totalMessages: tMsg,
-    totalSessions: tSess,
-    totalRev: tRev,
-    totalReach: tReach,
-    totalAddCart: tAddCart,
-    totalInitiateCheckout: tInitiateCheckout,
-    totalCalls: tCalls,
-    totalVideoViews: tVideoViews,
-    avgFrequency: tFreq,
-    avgCpv: tCpv,
-    roas: tSpend > 0 ? tRev / tSpend : 0,
-    avgCtr: tImpr > 0 ? (tClicks / tImpr) * 100 : 0,
-    avgCpc: tClicks > 0 ? tSpend / tClicks : 0,
-    avgCpm: tImpr > 0 ? (tSpend / tImpr) * 1000 : 0,
-    connectRate: tClicks > 0 ? (tSess / tClicks) * 100 : 0,
-    costPerPurchase: tPur > 0 ? tSpend / tPur : 0,
-    costPerMessage: tMsg > 0 ? tSpend / tMsg : 0,
-    costPerLead: tLds > 0 ? tSpend / tLds : 0,
+    totalSpend: sanitize(tSpend),
+    totalImpressions: sanitize(tImpr),
+    totalClicks: sanitize(tClicks),
+    totalPurchases: sanitize(tPur),
+    totalLeads: sanitize(tLds),
+    totalMessages: sanitize(tMsg),
+    totalSessions: sanitize(tSess),
+    totalRev: sanitize(tRev),
+    totalReach: sanitize(tReach),
+    totalAddCart: sanitize(tAddCart),
+    totalInitiateCheckout: sanitize(tInitiateCheckout),
+    totalCalls: sanitize(tCalls),
+    totalVideoViews: sanitize(tVideoViews),
+    avgFrequency: sanitize(tFreq),
+    avgCpv: sanitize(tCpv),
+    roas: sanitize(tSpend > 0 ? tRev / tSpend : 0),
+    avgCtr: sanitize(tImpr > 0 ? (tClicks / tImpr) * 100 : 0),
+    avgCpc: sanitize(tClicks > 0 ? tSpend / tClicks : 0),
+    avgCpm: sanitize(tImpr > 0 ? (tSpend / tImpr) * 1000 : 0),
+    connectRate: sanitize(tClicks > 0 ? (tSess / tClicks) * 100 : 0),
+    costPerPurchase: sanitize(tPur > 0 ? tSpend / tPur : 0),
+    costPerMessage: sanitize(tMsg > 0 ? tSpend / tMsg : 0),
+    costPerLead: sanitize(tLds > 0 ? tSpend / tLds : 0),
     byId
   };
 }
@@ -546,6 +569,11 @@ function getMetrics(dataRows) {
 app.post('/api/analyze', auth, async (req, res) => {
   const { accountData, campaigns, insights, creatives, dateRange, previousInsights } = req.body;
   try {
+    // Validar entrada
+    if (!accountData || !campaigns || !insights) {
+      return res.status(400).json({ error: 'Dados incompletos: accountData, campaigns e insights sao obrigatorios.' });
+    }
+    
     const metrics = getMetrics(insights?.data);
     const prevMetrics = previousInsights ? getMetrics(previousInsights.data) : null;
 
