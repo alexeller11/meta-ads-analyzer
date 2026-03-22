@@ -17,7 +17,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'meta-analyzer-ultra-v6',
+  secret: process.env.SESSION_SECRET || 'meta-analyzer-ultra-v7',
   resave: false,
   saveUninitialized: false,
   cookie: { 
@@ -97,7 +97,6 @@ app.get('/api/adaccounts', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Nova rota para consolidar saldos de todas as contas
 app.get('/api/adaccounts/consolidated-balance', auth, async (req, res) => {
   try {
     const r = await axios.get('https://graph.facebook.com/v19.0/me/adaccounts', { params: { fields: 'name,balance,funding_source_details', access_token: req.session.accessToken, limit: 100 } });
@@ -187,11 +186,11 @@ app.post('/api/analyze', auth, async (req, res) => {
         rows.forEach(m => {
           const sp = parseFloat(m.spend || 0); const cl = parseInt(m.clicks || 0); const impr = parseInt(m.impressions || 0);
           tSpend += sp; tImpr += impr; tClicks += cl;
-          const pur = getAct(m.actions,'offsite_conversion.fb_pixel_purchase') || getAct(m.actions,'purchase');
+          const pur = getAct(m.actions,'offsite_conversion.fb_pixel_purchase') || getAct(m.actions,'purchase') || getAct(m.actions,'omni_purchase');
           const lds = getAct(m.actions,'offsite_conversion.fb_pixel_lead') || getAct(m.actions,'lead');
           const msg = getAct(m.actions,'onsite_conversion.messaging_conversation_started_7d') || getAct(m.actions,'onsite_conversion.messaging_first_reply');
           const sess = getAct(m.actions,'landing_page_view');
-          const rev = getAct(m.action_values,'offsite_conversion.fb_pixel_purchase') || getAct(m.action_values, 'purchase');
+          const rev = getAct(m.action_values,'offsite_conversion.fb_pixel_purchase') || getAct(m.action_values, 'purchase') || getAct(m.action_values,'omni_purchase');
           tPur += pur; tLds += lds; tMsg += msg; tSess += sess; tRev += rev;
           byId[m.campaign_id] = { ...m, pur, lds, msg, sess, rev, sp, cl, impr };
         });
@@ -214,42 +213,60 @@ app.post('/api/analyze', auth, async (req, res) => {
       return { ...c, spend: m.sp, ctr: parseFloat(m.ctr || 0), impressions: m.impr, clicks: m.cl, purchases: m.pur, messages: m.msg, leads: m.lds, revenue: m.rev, roas: m.sp > 0 ? m.rev / m.sp : 0, connectRate: m.cl > 0 ? (m.sess / m.cl) * 100 : 0, diagnostico: diagIA, status_performance: statusPerf, escala_sugestao: escalaIA, costPerMsg: m.msg > 0 ? m.sp / m.msg : 0 };
     });
 
-    const previousRun = await db.getLastRun(accountData.account_id);
-    const aiAnalysis = runAnalysisEngine(accountData, enriched, metrics, previousRun);
-    await db.saveRun({ fbAccountId: accountData.account_id, fbUserId: req.session.user.id, accountName: accountData.name, dateRange: dateRange || 'last_30d', metrics: { ...metrics, activeCampaigns: enriched.filter(x=>x.status==='ACTIVE').length, totalCampaigns: enriched.length }, campaigns: enriched, aiAnalysis: aiAnalysis });
-    res.json({ success: true, analysis: aiAnalysis, metrics, prevMetrics, previousRun });
+    const aiAnalysis = runAnalysisEngine(accountData, enriched, metrics, prevMetrics);
+    res.json({ success: true, analysis: aiAnalysis, metrics, prevMetrics });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Nova rota para o Copilot GPT-4o
-app.post('/api/gpt-copilot', auth, async (req, res) => {
-  if (!openai) return res.status(400).json({ error: 'Chave da OpenAI não configurada no Railway.' });
-  const { metrics, campaigns, accountName } = req.body;
-  try {
-    const prompt = `Aja como um Diretor de Tráfego Pago Sênior especialista no algoritmo Andromeda da Meta.
-Analise os dados da conta "${accountName}" e gere um "Plano de Guerra" estratégico.
-DADOS GERAIS: Gasto R$ ${metrics.totalSpend}, ROAS ${metrics.roas.toFixed(2)}, CTR ${metrics.avgCtr.toFixed(2)}%, Conversões ${metrics.totalPurchases || metrics.totalMsg}.
-CAMPANHAS: ${JSON.stringify(campaigns.map(c => ({ name: c.name, spend: c.spend, roas: c.roas, ctr: c.ctr, status: c.status }))) }
-REGRAS: Seja direto, técnico e foque em escala e liquidez. Use markdown.`;
+function runAnalysisEngine(accountData, campaigns, metrics, prevMetrics) {
+    let score = 100;
+    const otimizacoes = [];
     
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "system", content: "Você é um especialista em Meta Ads." }, { role: "user", content: prompt }]
-    });
-    res.json({ strategy: response.choices[0].message.content });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
+    if (metrics.roas < 1.5) { score -= 20; otimizacoes.push({ prioridade: 1, titulo: 'ROAS Baixo', categoria: 'Financeiro', descricao: 'Seu retorno sobre investimento está abaixo do ideal.', acao: 'Foque nos criativos com maior CTR.' }); }
+    if (metrics.connectRate < 60 && metrics.totalSpend > 50) { score -= 15; otimizacoes.push({ prioridade: 2, titulo: 'Lentidão no Site', categoria: 'Funil', descricao: 'Muitas pessoas clicam mas não esperam o site carregar.', acao: 'Otimize a velocidade da sua landing page.' }); }
+    
+    if (prevMetrics) {
+        if (metrics.roas < prevMetrics.roas) otimizacoes.push({ prioridade: 2, titulo: 'Queda de ROAS', categoria: 'Tendência', descricao: `Seu ROAS caiu de ${prevMetrics.roas.toFixed(2)} para ${metrics.roas.toFixed(2)}.`, acao: 'Verifique se houve fadiga de criativo ou aumento de CPM.' });
+    }
 
-function runAnalysisEngine(accountData, campaigns, metrics, previousRun) {
-  const { avgCtr, totalSpend, connectRate, roas, totalMsg, totalPurchases } = metrics;
-  let score = totalSpend > 0 ? 100 : 0; const otimizacoes = [];
-  if (avgCtr < 1.0) { score -= 20; otimizacoes.push({ prioridade: 1, titulo: 'Fadiga Criativa', categoria: 'Criativo', descricao: `CTR baixo (${avgCtr.toFixed(2)}%).`, acao: 'Trocar criativos.' }); }
-  if (connectRate < 60 && totalSpend > 50) { score -= 15; otimizacoes.push({ prioridade: 2, titulo: 'Gargalo no Site', categoria: 'Site', descricao: `Baixo Connect Rate (${connectRate.toFixed(1)}%).`, acao: 'Otimizar velocidade.' }); }
-  if (roas < 1.5 && totalSpend > 100) { score -= 25; otimizacoes.push({ prioridade: 1, titulo: 'ROI Baixo', categoria: 'Oferta', descricao: 'Retorno insustentável.', acao: 'Revisar oferta.' }); }
-  return { resumo_geral: { score_saude: Math.max(0, score), nivel_saude: score > 80 ? 'Excelente' : (score > 50 ? 'Atenção' : 'Crítico'), resumo_historico: previousRun ? `Anterior: ${previousRun.health_score} pts.` : 'Novo histórico.' }, campanhas_analise: campaigns.sort((a,b) => b.spend - a.spend), otimizacoes_prioritarias: otimizacoes };
+    return { resumo_geral: { score_saude: Math.max(0, score), nivel_saude: score > 80 ? 'Excelente' : (score > 50 ? 'Atenção' : 'Crítico') }, otimizacoes_prioritarias: otimizacoes };
 }
 
-app.get('/api/trend/:accountId', auth, async (req, res) => { try { res.json({ trend: await db.getAccountTrend(req.params.accountId) }); } catch (e) { res.status(500).json({ error: e.message }); } });
+app.post('/api/gpt-copilot', auth, async (req, res) => {
+  const { data } = req.body;
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey || apiKey === 'sua-chave-aqui' || !openai) {
+    return res.json({ strategy: generateInternalStrategy(data) });
+  }
+
+  try {
+    const prompt = `Você é um Diretor de Tráfego Sênior especialista em algoritmo da Meta (Andromeda). Analise os seguintes dados e gere um "Plano de Guerra" estratégico em Markdown:
+    DADOS: ${JSON.stringify(data)}
+    Foque em: Escala de orçamento, Fadiga de Criativo, Liquidez da conta e Otimização de ROAS.`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "system", content: "Você é um estrategista de tráfego pago sênior." }, { role: "user", content: prompt }],
+    });
+
+    res.json({ strategy: completion.choices[0].message.content });
+  } catch (e) {
+    console.error('Erro OpenAI:', e.message);
+    res.json({ strategy: generateInternalStrategy(data) });
+  }
+});
+
+function generateInternalStrategy(data) {
+  const { metrics, analysis } = data;
+  let s = `### 🧠 Plano de Guerra (Motor Interno Sênior)\n\n`;
+  s += `Sua conta está com uma pontuação de saúde de **${analysis.resumo_geral.score_saude} pts**. Aqui estão as ações prioritárias:\n\n`;
+  if (metrics.roas < 2) s += `⚠️ **Ação de ROAS:** Seu retorno está baixo (${metrics.roas.toFixed(2)}). Recomendamos testar novos criativos de "topo de funil" para atrair público mais barato.\n\n`;
+  if (metrics.connectRate < 70) s += `🚀 **Otimização de Site:** Sua taxa de carregamento está em ${metrics.connectRate.toFixed(1)}%. Você está perdendo dinheiro com site lento.\n\n`;
+  s += `💡 **Dica Andromeda:** O algoritmo da Meta performa melhor com públicos mais amplos quando a verba é limitada. Evite segmentações muito fechadas.`;
+  return s;
+}
+
 app.get('/dashboard', (req, res) => { if (!req.session.user) return res.redirect('/'); res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
