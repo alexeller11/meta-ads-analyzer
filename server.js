@@ -301,7 +301,8 @@ app.get('/api/adaccounts/:id/breakdown/:type', auth, async (req, res) => {
     else params.date_preset = date_preset || 'last_30d';
 
     // Mapeamento correto de breakdowns conforme documentação oficial do Meta
-    if (type === 'device') params.breakdowns = 'device_type';
+    // IMPORTANTE: device_platform é o campo correto, NÃO device_type
+    if (type === 'device') params.breakdowns = 'device_platform';
     else if (type === 'platform') params.breakdowns = 'publisher_platform';
     else if (type === 'position') params.breakdowns = 'platform_position';
     else if (type === 'gender') params.breakdowns = 'gender';
@@ -440,17 +441,18 @@ function getAct(arr, type) {
 }
 
 // Helper: extrair múltiplos tipos de action com deduplicação
+// IMPORTANTE: Retorna apenas o PRIMEIRO tipo encontrado (não soma múltiplos)
+// Isso evita duplicação de contagens quando múltiplos tipos podem representar a mesma ação
 function getActMulti(arr, types) {
   if (!Array.isArray(arr) || !Array.isArray(types)) return 0;
-  const seen = new Set();
-  let total = 0;
+  // Tentar cada tipo em ordem de prioridade e retornar o primeiro com valor
   for (const type of types) {
-    if (!seen.has(type)) {
-      seen.add(type);
-      total += getAct(arr, type);
+    const val = getAct(arr, type);
+    if (val > 0) {
+      return val; // Retorna o primeiro tipo com valor encontrado
     }
   }
-  return total;
+  return 0;
 }
 
 function getMetrics(dataRows) {
@@ -473,15 +475,18 @@ function getMetrics(dataRows) {
     
     tSpend += sp; tImpr += impr; tClicks += cl; tReach += reach;
 
-    // Compras - múltiplos tipos
+    // Compras - usar apenas o tipo primário (não somar múltiplos)
+    // Ordem de prioridade: pixel_purchase > purchase > omni_purchase
     const pur = getActMulti(m.actions, [
       'offsite_conversion.fb_pixel_purchase', 'purchase', 'omni_purchase'
     ]);
-    // Leads
+    // Leads - usar apenas o tipo primário
+    // Ordem de prioridade: pixel_lead > lead > lead_grouped
     const lds = getActMulti(m.actions, [
       'offsite_conversion.fb_pixel_lead', 'lead', 'onsite_conversion.lead_grouped'
     ]);
-    // Mensagens
+    // Mensagens - usar apenas o tipo primário
+    // Ordem de prioridade: messaging_conversation_started_7d > messaging_first_reply > total_messaging_connection
     const msg = getActMulti(m.actions, [
       'onsite_conversion.messaging_conversation_started_7d',
       'onsite_conversion.messaging_first_reply',
@@ -489,23 +494,24 @@ function getMetrics(dataRows) {
     ]);
     // Sessões / Landing Page Views
     const sess = getAct(m.actions, 'landing_page_view');
-    // Carrinho
+    // Carrinho - usar apenas o tipo primario
     const addCart = getActMulti(m.actions, [
       'offsite_conversion.fb_pixel_add_to_cart', 'add_to_cart'
     ]);
-    // Checkout
+    // Checkout - usar apenas o tipo primario
     const initCheck = getActMulti(m.actions, [
       'offsite_conversion.fb_pixel_initiate_checkout', 'initiate_checkout'
     ]);
-    // Ligações
+    // Ligacoes - usar apenas o tipo primario
     const calls = getActMulti(m.actions, [
       'onsite_conversion.call_now_click_mobile', 'click_to_call_call_confirm'
     ]);
-    // Visualizações de vídeo
+    // Visualizacoes de video - usar apenas o tipo primario
     const videoViews = getActMulti(m.actions, [
       'video_view', 'video_plays_unique'
     ]);
-    // Receita
+    // Receita (em action_values) - usar apenas o tipo primario
+    // Ordem de prioridade: pixel_purchase > purchase > omni_purchase
     const rev = getActMulti(m.action_values, [
       'offsite_conversion.fb_pixel_purchase', 'purchase', 'omni_purchase'
     ]);
