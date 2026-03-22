@@ -1,6 +1,6 @@
 const { Pool } = require('pg');
 
-// Neon.tech exige SSL sempre — mesmo em desenvolvimento local
+// Neon.tech exige SSL sempre
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -30,10 +30,15 @@ const SCHEMA = `
     total_impressions BIGINT,
     total_clicks BIGINT,
     total_reach BIGINT,
+    total_purchases NUMERIC(14,2),
+    total_messages NUMERIC(14,2),
+    total_leads NUMERIC(14,2),
+    total_revenue NUMERIC(14,2),
     avg_ctr NUMERIC(8,4),
     avg_cpc NUMERIC(10,4),
     avg_cpm NUMERIC(10,4),
     avg_frequency NUMERIC(8,4),
+    roas NUMERIC(10,4),
     active_campaigns INT,
     total_campaigns INT,
     health_score INT,
@@ -61,10 +66,15 @@ const SCHEMA = `
     cpc NUMERIC(10,4),
     cpm NUMERIC(10,4),
     frequency NUMERIC(8,4),
+    purchases NUMERIC(14,2),
+    messages NUMERIC(14,2),
+    leads NUMERIC(14,2),
+    revenue NUMERIC(14,2),
+    roas NUMERIC(10,4),
     actions JSONB,
-    ai_performance_status VARCHAR(32),
-    ai_problem TEXT,
-    ai_action TEXT,
+    ai_performance_status VARCHAR(64),
+    ai_diagnostico TEXT,
+    ai_escala TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
   );
 
@@ -117,16 +127,29 @@ async function saveRun({ fbAccountId, fbUserId, accountName, dateRange, metrics,
     INSERT INTO analysis_runs (
       fb_account_id, fb_user_id, account_name, date_range,
       total_spend, total_impressions, total_clicks, total_reach,
-      avg_ctr, avg_cpc, avg_cpm, avg_frequency,
+      total_purchases, total_messages, total_leads, total_revenue,
+      avg_ctr, avg_cpc, avg_cpm, avg_frequency, roas,
       active_campaigns, total_campaigns,
       health_score, health_level, ai_analysis
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
     RETURNING id
   `, [
     fbAccountId, fbUserId, accountName, dateRange,
-    metrics.totalSpend, metrics.totalImpressions, metrics.totalClicks, metrics.totalReach,
-    metrics.avgCtr, metrics.avgCpc, metrics.avgCpm, metrics.avgFrequency,
-    metrics.activeCampaigns, metrics.totalCampaigns,
+    metrics.totalSpend || 0,
+    metrics.totalImpressions || 0,
+    metrics.totalClicks || 0,
+    metrics.totalReach || 0,
+    metrics.totalPurchases || 0,
+    metrics.totalMessages || 0,
+    metrics.totalLeads || 0,
+    metrics.totalRev || 0,
+    metrics.avgCtr || 0,
+    metrics.avgCpc || 0,
+    metrics.avgCpm || 0,
+    metrics.avgFrequency || 0,
+    metrics.roas || 0,
+    metrics.activeCampaigns || 0,
+    metrics.totalCampaigns || 0,
     aiAnalysis?.resumo_geral?.score_saude || null,
     aiAnalysis?.resumo_geral?.nivel_saude || null,
     JSON.stringify(aiAnalysis)
@@ -136,24 +159,27 @@ async function saveRun({ fbAccountId, fbUserId, accountName, dateRange, metrics,
 
   if (campaigns && campaigns.length > 0) {
     for (const c of campaigns) {
-      const aiCamp = (aiAnalysis?.campanhas_analise || []).find(a =>
-        a.nome && c.name && a.nome.toLowerCase().includes(c.name.toLowerCase().slice(0, 20))
-      );
-      await pool.query(`
-        INSERT INTO campaign_snapshots (
-          run_id, fb_account_id, fb_campaign_id, campaign_name, status, objective,
-          spend, impressions, clicks, reach, ctr, cpc, cpm, frequency, actions,
-          ai_performance_status, ai_problem, ai_action
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
-      `, [
-        runId, fbAccountId, c.id, c.name, c.status, c.objective,
-        c.spend || 0, c.impressions || 0, c.clicks || 0, c.reach || 0,
-        c.ctr || 0, c.cpc || 0, c.cpm || 0, c.frequency || 0,
-        JSON.stringify(c.actions || []),
-        aiCamp?.status_performance || null,
-        aiCamp?.problema_principal || null,
-        aiCamp?.acao_imediata || null
-      ]);
+      try {
+        await pool.query(`
+          INSERT INTO campaign_snapshots (
+            run_id, fb_account_id, fb_campaign_id, campaign_name, status, objective,
+            spend, impressions, clicks, reach, ctr, cpc, cpm, frequency,
+            purchases, messages, leads, revenue, roas,
+            actions, ai_performance_status, ai_diagnostico, ai_escala
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+        `, [
+          runId, fbAccountId, c.id, c.name, c.status, c.objective || null,
+          c.spend || 0, c.impressions || 0, c.clicks || 0, c.reach || 0,
+          c.ctr || 0, 0, 0, c.frequency || 0,
+          c.purchases || 0, c.messages || 0, c.leads || 0, c.revenue || 0, c.roas || 0,
+          JSON.stringify([]),
+          c.status_performance || null,
+          c.diagnostico || null,
+          c.escala_sugestao || null
+        ]);
+      } catch (snapErr) {
+        console.error('Erro ao salvar snapshot de campanha:', snapErr.message);
+      }
     }
   }
 
@@ -163,8 +189,9 @@ async function saveRun({ fbAccountId, fbUserId, accountName, dateRange, metrics,
 async function getRunHistory(fbAccountId, limit = 60) {
   const { rows } = await pool.query(`
     SELECT id, created_at, date_range, account_name,
-           total_spend, total_impressions, total_clicks,
-           avg_ctr, avg_cpc, avg_cpm, avg_frequency,
+           total_spend, total_impressions, total_clicks, total_reach,
+           total_purchases, total_messages, total_revenue,
+           avg_ctr, avg_cpc, avg_cpm, avg_frequency, roas,
            active_campaigns, total_campaigns,
            health_score, health_level
     FROM analysis_runs
@@ -203,6 +230,8 @@ async function getAccountTrend(fbAccountId, days = 90) {
       AVG(avg_cpc)::NUMERIC(10,4) as avg_cpc,
       AVG(avg_cpm)::NUMERIC(10,4) as avg_cpm,
       SUM(total_spend)::NUMERIC(14,2) as total_spend,
+      SUM(total_revenue)::NUMERIC(14,2) as total_revenue,
+      AVG(roas)::NUMERIC(10,4) as avg_roas,
       AVG(health_score)::INT as avg_health,
       AVG(avg_frequency)::NUMERIC(8,4) as avg_frequency,
       COUNT(*) as run_count
@@ -219,7 +248,7 @@ async function compareRuns(runId1, runId2, fbUserId) {
   const { rows } = await pool.query(`
     SELECT id, created_at, date_range, total_spend, total_impressions,
            total_clicks, avg_ctr, avg_cpc, avg_cpm, avg_frequency,
-           health_score, health_level, active_campaigns
+           health_score, health_level, active_campaigns, roas
     FROM analysis_runs
     WHERE id = ANY($1) AND fb_user_id = $2
     ORDER BY created_at ASC
@@ -292,7 +321,7 @@ module.exports = {
     const { rows } = await pool.query(
       `INSERT INTO campaign_notes (fb_user_id, fb_account_id, fb_campaign_id, campaign_name, note, type)
        VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [fbUserId, fbAccountId, fbCampaignId||null, campaignName||null, note, type||'geral']
+      [fbUserId, fbAccountId, fbCampaignId || null, campaignName || null, note, type || 'geral']
     );
     return rows[0];
   },
