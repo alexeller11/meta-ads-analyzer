@@ -973,11 +973,24 @@ function generateInternalStrategy(data) {
   return s;
 }
 
+// Rota do Dashboard com proteção de sessão
 app.get('/dashboard', (req, res) => {
-  if (!req.session.user) return res.redirect('/');
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+  if (!req.session.user) {
+    return res.redirect('/');
+  }
+  res.sendFile(path.resolve(__dirname, 'public', 'dashboard.html'));
 });
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+// Rota raiz
+app.get('/', (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
+});
+
+// Fallback para SPA ou rotas não encontradas
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/auth') || req.path.includes('.')) return next();
+  res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
