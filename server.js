@@ -4,6 +4,7 @@ const session = require('express-session');
 const axios = require('axios');
 const path = require('path');
 const db = require('./db');
+const benchmarks = require('./benchmarks');
 const nodemailer = require('nodemailer');
 const { OpenAI } = require('openai');
 
@@ -573,7 +574,7 @@ function getMetrics(dataRows) {
 }
 
 app.post('/api/analyze', auth, async (req, res) => {
-  const { accountData, campaigns, insights, creatives, dateRange, previousInsights } = req.body;
+  const { accountData, campaigns, insights, creatives, dateRange, previousInsights, niche = 'Geral' } = req.body;
   try {
     // Validar entrada
     if (!accountData || !campaigns || !insights) {
@@ -660,7 +661,7 @@ app.post('/api/analyze', auth, async (req, res) => {
       };
     });
 
-    const aiAnalysis = runAnalysisEngine(accountData, enriched, metrics, prevMetrics);
+    const aiAnalysis = runAnalysisEngine(accountData, enriched, metrics, prevMetrics, niche);
 
     // Salvar no banco para tendências se configurado
     if (process.env.DATABASE_URL) {
@@ -693,65 +694,105 @@ app.post('/api/analyze', auth, async (req, res) => {
   }
 });
 
-function runAnalysisEngine(accountData, campaigns, metrics, prevMetrics) {
+function runAnalysisEngine(accountData, campaigns, metrics, prevMetrics, niche = 'Geral') {
   let score = 100;
   const otimizacoes = [];
+  const b = benchmarks[niche] || benchmarks['Geral'];
 
   // Análise de ROAS
-  if (metrics.roas < 1) {
+  if (metrics.roas < b.minRoas * 0.5) {
     score -= 30;
     otimizacoes.push({
-      prioridade: 1, titulo: 'ROAS Negativo', categoria: 'Financeiro',
-      descricao: `Seu ROAS está em ${metrics.roas.toFixed(2)}x — você está perdendo dinheiro.`,
-      acao: 'Pause campanhas com ROAS < 1 e redirecione verba para as que performam.'
+      prioridade: 1, titulo: 'ROAS Crítico', categoria: 'Financeiro',
+      descricao: `Seu ROAS está em ${metrics.roas.toFixed(2)}x, muito abaixo do benchmark de ${b.minRoas}x para o nicho ${niche}.`,
+      acao: 'Identifique os "ralos de dinheiro" e pause imediatamente as campanhas sem conversão.'
     });
-  } else if (metrics.roas < 1.5) {
-    score -= 20;
-    otimizacoes.push({
-      prioridade: 1, titulo: 'ROAS Baixo', categoria: 'Financeiro',
-      descricao: `Seu retorno está em ${metrics.roas.toFixed(2)}x, abaixo do ideal (mínimo 1.5x).`,
-      acao: 'Foque nos criativos com maior CTR e revise as páginas de destino.'
-    });
-  }
-
-  // Análise de CTR
-  if (metrics.avgCtr < 0.8 && metrics.totalSpend > 50) {
+  } else if (metrics.roas < b.minRoas) {
     score -= 15;
     otimizacoes.push({
-      prioridade: 2, titulo: 'CTR Baixo', categoria: 'Criativo',
-      descricao: `Seu CTR médio está em ${metrics.avgCtr.toFixed(2)}%, indicando criativos pouco atrativos.`,
-      acao: 'Teste novos formatos de criativo: vídeos curtos, carrosséis e UGC tendem a ter CTR mais alto.'
+      prioridade: 1, titulo: 'ROAS Abaixo do Ideal', categoria: 'Financeiro',
+      descricao: `Seu retorno está em ${metrics.roas.toFixed(2)}x, enquanto o ideal para ${niche} seria ${b.minRoas}x.`,
+      acao: 'Otimize a taxa de conversão do site e revise a oferta.'
     });
   }
 
-  // Análise de Connect Rate (taxa de carregamento do site)
-  if (metrics.connectRate < 60 && metrics.totalSpend > 50) {
+  // Análise de CTR (Atratividade do Criativo)
+  if (metrics.avgCtr < b.minCtr && metrics.totalSpend > 50) {
     score -= 15;
     otimizacoes.push({
-      prioridade: 2, titulo: 'Lentidão no Site', categoria: 'Funil',
-      descricao: `Apenas ${metrics.connectRate.toFixed(1)}% dos cliques chegam à página. Você está desperdiçando verba.`,
-      acao: 'Otimize a velocidade da landing page. Use Google PageSpeed Insights para diagnóstico.'
+      prioridade: 2, titulo: 'Atratividade Baixa (CTR)', categoria: 'Criativo',
+      descricao: `Seu CTR médio de ${metrics.avgCtr.toFixed(2)}% está abaixo do esperado (${b.minCtr}%) para ${niche}.`,
+      acao: 'Seus criativos não estão "parando o scroll". Teste novos ganchos (headlines) e miniaturas.'
     });
   }
 
-  // Análise de Frequência
-  if (metrics.avgFrequency > 4) {
-    score -= 10;
+  // Análise de Connect Rate (Saúde do Funil/Site)
+  if (metrics.connectRate < b.minConnectRate && metrics.totalSpend > 50) {
+    score -= 15;
     otimizacoes.push({
-      prioridade: 2, titulo: 'Fadiga de Audiência', categoria: 'Alcance',
-      descricao: `Frequência média de ${metrics.avgFrequency.toFixed(2)} — seu público está vendo o mesmo anúncio muitas vezes.`,
-      acao: 'Renove os criativos ou expanda o público-alvo para reduzir a fadiga.'
+      prioridade: 2, titulo: 'Perda de Tráfego (Site Lento)', categoria: 'Funil',
+      descricao: `Apenas ${metrics.connectRate.toFixed(1)}% dos cliques chegam ao site. O ideal é acima de ${b.minConnectRate}%.`,
+      acao: 'Você está perdendo dinheiro antes do cliente ver sua oferta. Otimize a velocidade da página.'
     });
   }
 
-  // Análise de CPM alto
-  if (metrics.avgCpm > 50 && metrics.totalSpend > 100) {
+  // Análise de Frequência (Saturação)
+  if (metrics.avgFrequency > b.maxFrequency) {
     score -= 10;
     otimizacoes.push({
-      prioridade: 3, titulo: 'CPM Elevado', categoria: 'Custo',
-      descricao: `Seu CPM está em R$ ${metrics.avgCpm.toFixed(2)}, acima da média do mercado.`,
-      acao: 'Teste públicos mais amplos ou lookalike audiences para reduzir o CPM.'
+      prioridade: 2, titulo: 'Saturação de Público', categoria: 'Alcance',
+      descricao: `Frequência média de ${metrics.avgFrequency.toFixed(2)} sugere que seu público está saturado do anúncio.`,
+      acao: 'Aumente o tamanho do público ou insira novos criativos com abordagens diferentes.'
     });
+  }
+
+  // Análise de CPM (Custo de Leilão)
+  if (metrics.avgCpm > b.maxCpm && metrics.totalSpend > 100) {
+    score -= 10;
+    otimizacoes.push({
+      prioridade: 3, titulo: 'Custo de Leilão Elevado (CPM)', categoria: 'Custo',
+      descricao: `Seu CPM de R$ ${metrics.avgCpm.toFixed(2)} está acima da média de R$ ${b.maxCpm} para ${niche}.`,
+      acao: 'Tente segmentações mais amplas ou melhore a qualidade do anúncio para ganhar relevância no leilão.'
+    });
+  }
+
+  // Análise de Funil Profunda (Gargalos)
+  if (metrics.totalClicks > 100) {
+    const checkoutRate = metrics.totalInitiateCheckout / metrics.totalClicks * 100;
+    const purchaseRate = metrics.totalPurchases / metrics.totalInitiateCheckout * 100;
+
+    if (checkoutRate < 5 && metrics.totalPurchases === 0) {
+      score -= 15;
+      otimizacoes.push({
+        prioridade: 1, titulo: 'Gargalo no Carrinho/Checkout', categoria: 'Funil',
+        descricao: `Apenas ${checkoutRate.toFixed(1)}% dos cliques iniciam checkout. O problema pode ser o preço ou a oferta na página.`,
+        acao: 'Revise a copy da sua página de vendas e teste uma oferta mais agressiva.'
+      });
+    }
+
+    if (metrics.totalInitiateCheckout > 10 && purchaseRate < 20) {
+      score -= 10;
+      otimizacoes.push({
+        prioridade: 1, titulo: 'Abandono de Checkout Alto', categoria: 'Funil',
+        descricao: `${(100 - purchaseRate).toFixed(1)}% das pessoas que iniciam o checkout não compram.`,
+        acao: 'Verifique se o frete está alto, se faltam métodos de pagamento ou se há erros no checkout.'
+      });
+    }
+  }
+
+  // Detecção de Fadiga Preditiva
+  if (prevMetrics && metrics.avgFrequency > 2.5) {
+    const ctrChange = ((metrics.avgCtr - prevMetrics.avgCtr) / prevMetrics.avgCtr) * 100;
+    const cpmChange = ((metrics.avgCpm - prevMetrics.avgCpm) / prevMetrics.avgCpm) * 100;
+
+    if (ctrChange < -20 && cpmChange > 10) {
+      score -= 15;
+      otimizacoes.push({
+        prioridade: 2, titulo: 'Fadiga de Criativo Detectada', categoria: 'Tendência',
+        descricao: `O CTR caiu ${Math.abs(ctrChange).toFixed(0)}% e o CPM subiu ${cpmChange.toFixed(0)}%. Seu anúncio parou de performar.`,
+        acao: 'Substitua os criativos atuais por novas versões imediatamente para evitar prejuízo.'
+      });
+    }
   }
 
   // Análise de tendência (comparação com período anterior)
@@ -809,19 +850,28 @@ app.post('/api/gpt-copilot', auth, async (req, res) => {
   }
 
   try {
-    const prompt = `Você é um Diretor de Tráfego Sênior especialista em algoritmo da Meta (Andromeda) com 10+ anos de experiência. Analise os seguintes dados e gere um "Plano de Guerra" estratégico detalhado em Markdown:
+    const niche = data.niche || 'Geral';
+    const b = benchmarks[niche] || benchmarks['Geral'];
+    
+    const prompt = `Você é um Diretor de Tráfego Sênior especialista em algoritmo da Meta (Andromeda) com 10+ anos de experiência. Analise os seguintes dados e gere um "Plano de Guerra" estratégico detalhado em Markdown para o nicho ${niche}:
 
 DADOS DA CONTA:
 ${JSON.stringify(data, null, 2)}
 
-Forneça:
-1. **Diagnóstico Rápido** (3-5 linhas sobre o estado atual)
-2. **Top 3 Ações Imediatas** (o que fazer AGORA)
-3. **Estratégia de Escala** (como crescer nos próximos 30 dias)
-4. **Alertas de Risco** (o que pode dar errado)
-5. **KPIs para Monitorar** (métricas-chave para acompanhar)
+BENCHMARKS DO NICHO (${niche}):
+- ROAS Ideal: ${b.minRoas}x
+- CTR Ideal: ${b.minCtr}%
+- CPM Máximo Sugerido: R$ ${b.maxCpm}
+- Connect Rate Ideal: ${b.minConnectRate}%
 
-Seja direto, específico e use dados concretos dos números fornecidos.`;
+Instruções:
+1. **Diagnóstico Estratégico** (Compare os números reais com os benchmarks do nicho. Onde está o gargalo? No anúncio, na página ou na oferta?)
+2. **Plano de Guerra (3 Ações Imediatas)** (O que fazer AGORA para estancar perda ou escalar lucro?)
+3. **Análise de Escala** (Como dobrar o investimento mantendo a eficiência?)
+4. **Insight de Criativo** (Baseado no CTR e CPC, que tipo de criativo o algoritmo está favorecendo?)
+5. **KPIs de Foco** (Quais 3 métricas o gestor deve olhar todo dia para esta conta?)
+
+Seja extremamente direto, use os dados reais fornecidos e mantenha um tom de consultoria de alto nível.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
