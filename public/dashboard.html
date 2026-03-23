@@ -1059,42 +1059,6 @@ function filterCamps(type, btn) {
   if (type === 'active') filtered = filtered.filter(c => c.status === 'ACTIVE');
   if (type === 'running') filtered = filtered.filter(c => c.status === 'ACTIVE' && c.spend > 0);
   renderCampTable(filtered);
-async function runAnalysis() {
-  if (!state.selectedAccountId) return alert('Selecione uma conta!');
-  setLoading(true, 'Analisando dados...');
-  const params = getDateParams();
-
-  try {
-    const [insRes, crRes] = await Promise.all([
-      fetch(`/api/adaccounts/${state.selectedAccountId}/insights?${params}`).then(r => r.json()),
-      fetch(`/api/adaccounts/${state.selectedAccountId}/creatives?${params}`).then(r => r.json())
-    ]);
-
-    state.insights = insRes;
-    state.creatives = crRes.data || [];
-
-    const analysisRes = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        accountData: state.accounts.find(a => a.account_id === state.selectedAccountId),
-        campaigns: state.campaigns,
-        insights: insRes,
-        creatives: state.creatives,
-        dateRange: document.getElementById('dateSel').value,
-        niche: document.getElementById('nicheSel').value
-      })
-    }).then(r => r.json());
-
-    state.metrics = analysisRes.metrics;
-    state.analysis = analysisRes.analysis;
-
-    renderDashboard();
-    switchTabById('overview');
-  } catch (e) {
-    console.error('Analysis error:', e);
-    alert('Erro ao analisar dados. Verifique os logs do console.');
-  } finally { setLoading(false); }
 }
 
 async function analyzeCampaignFull(id) {

@@ -1,10 +1,24 @@
 const { Pool } = require('pg');
 
 // Neon.tech exige SSL sempre
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+let pool;
+if (process.env.DATABASE_URL) {
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
+  
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+  });
+} else {
+  console.log('⚠️ DATABASE_URL não configurada. Funcionalidades de histórico estarão desativadas.');
+  // Mock pool para evitar erros de undefined
+  pool = {
+    query: async () => ({ rows: [] }),
+    on: () => {}
+  };
+}
 
 // ─── SCHEMA ──────────────────────────────────────────────────────────────────
 
