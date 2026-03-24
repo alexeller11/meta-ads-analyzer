@@ -3,1695 +3,258 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚡ Meta Ads Analyzer — Inteligência Sênior</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <title>Meta Ads Analyzer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
-    :root {
-      /* Dark Mode (padrao) */
-      --bg: #0a0f1e;
-      --bg2: #0f172a;
-      --card: #1e293b;
-      --card2: #162032;
-      --border: #2d3f55;
-      --border2: #1e3050;
-      --primary: #3b82f6;
-      --primary-hover: #2563eb;
-      --primary-glow: rgba(59,130,246,0.15);
-      --success: #10b981;
-      --success-bg: rgba(16,185,129,0.1);
-      --warning: #f59e0b;
-      --warning-bg: rgba(245,158,11,0.1);
-      --danger: #ef4444;
-      --danger-bg: rgba(239,68,68,0.1);
-      --purple: #8b5cf6;
-      --purple-bg: rgba(139,92,246,0.1);
-      --text: #f1f5f9;
-      --text-dim: #94a3b8;
-      --text-muted: #64748b;
-    }
-    
-    /* Light Mode */
-    body.light-mode {
-      --bg: #f8fafc;
-      --bg2: #f1f5f9;
-      --card: #ffffff;
-      --card2: #f8fafc;
-      --border: #cbd5e1;
-      --border2: #e2e8f0;
-      --primary: #3b82f6;
-      --primary-hover: #2563eb;
-      --primary-glow: rgba(59,130,246,0.1);
-      --success: #059669;
-      --success-bg: rgba(5,150,105,0.1);
-      --warning: #d97706;
-      --warning-bg: rgba(217,119,6,0.1);
-      --danger: #dc2626;
-      --danger-bg: rgba(220,38,38,0.1);
-      --purple: #7c3aed;
-      --purple-bg: rgba(124,58,237,0.1);
-      --text: #1e293b;
-      --text-dim: #475569;
-      --text-muted: #94a3b8;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      font-size: 14px;
-      line-height: 1.5;
-      min-height: 100vh;
-    }
-
-    /* ── LAYOUT ── */
-    .app-container { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-
-    .topbar {
-      height: 60px;
-      background: var(--card);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      padding: 0 20px;
-      gap: 12px;
-      z-index: 100;
-      flex-shrink: 0;
-    }
-    .logo { font-weight: 900; font-size: 17px; color: var(--text); letter-spacing: -0.5px; white-space: nowrap; }
-    .logo span { color: var(--primary); }
-
-    .content-area { display: flex; flex: 1; overflow: hidden; }
-
-    .sidebar {
-      width: 220px;
-      background: var(--card);
-      border-right: 1px solid var(--border);
-      padding: 16px 12px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      flex-shrink: 0;
-    }
-
-    .main-content {
-      flex: 1;
-      padding: 24px 28px;
-      overflow-y: auto;
-      background: var(--bg);
-    }
-
-    /* ── COMPONENTS ── */
-    .btn {
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: all 0.15s;
-      font-size: 13px;
-      font-family: 'Inter', sans-serif;
-      white-space: nowrap;
-    }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
-    .btn-ghost { background: var(--card); border: 1px solid var(--border); color: var(--text-dim); }
-    .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
-    .btn-ghost.active { background: var(--primary-glow); border-color: var(--primary); color: var(--primary); }
-    .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
-    .btn-danger { background: var(--danger-bg); border: 1px solid var(--danger); color: var(--danger); }
-    .btn-success { background: var(--success-bg); border: 1px solid var(--success); color: var(--success); }
-
-    .input-sel {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 7px 12px;
-      border-radius: 8px;
-      font-size: 13px;
-      outline: none;
-      font-family: 'Inter', sans-serif;
-      transition: border-color 0.15s;
-    }
-    .input-sel:focus { border-color: var(--primary); }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 9px 12px;
-      border-radius: 8px;
-      color: var(--text-dim);
-      cursor: pointer;
-      width: 100%;
-      text-align: left;
-      background: none;
-      border: none;
-      font-weight: 600;
-      font-size: 13px;
-      transition: all 0.15s;
-      font-family: 'Inter', sans-serif;
-    }
-    .nav-item:hover { background: var(--primary-glow); color: var(--text); }
-    .nav-item.active { background: var(--primary-glow); color: var(--primary); border-left: 3px solid var(--primary); padding-left: 9px; }
-
-    .nav-section { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; padding: 12px 12px 4px; }
-
-    /* ── CARDS ── */
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
-    .card-label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .card-value { font-size: 26px; font-weight: 800; line-height: 1.2; }
-    .card-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
-
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
-    .stats-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-    .stats-grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 20px; }
-
-    @media (max-width: 1200px) {
-      .stats-grid-4 { grid-template-columns: repeat(2, 1fr); }
-      .stats-grid-5 { grid-template-columns: repeat(3, 1fr); }
-      .sidebar { width: 180px; }
-    }
-    
-    @media (max-width: 768px) {
-      .app-container { height: auto; }
-      .topbar { height: auto; flex-wrap: wrap; padding: 12px; gap: 8px; }
-      .content-area { flex-direction: column; }
-      .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; overflow-x: auto; padding: 8px; }
-      .main-content { padding: 16px 12px; }
-      .stats-grid { grid-template-columns: 1fr; }
-      .stats-grid-4 { grid-template-columns: 1fr; }
-      .stats-grid-5 { grid-template-columns: 1fr; }
-      .ia-summary { flex-direction: column; gap: 16px; }
-      .creative-grid { grid-template-columns: 1fr; }
-      .modal { max-width: 95vw; padding: 16px; }
-      table { font-size: 12px; }
-      th, td { padding: 8px 12px; }
-    }
-    
-    @media (max-width: 480px) {
-      .topbar { height: auto; }
-      .logo { font-size: 14px; }
-      .btn { padding: 6px 12px; font-size: 12px; }
-      .btn-sm { padding: 4px 8px; font-size: 10px; }
-      .input-sel { padding: 6px 10px; font-size: 12px; }
-      .card-value { font-size: 20px; }
-      .modal-body { font-size: 13px; }
-    }
-
-    /* ── IA SUMMARY ── */
-    .ia-summary {
-      background: linear-gradient(135deg, var(--card) 0%, var(--card2) 100%);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px 28px;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 28px;
-    }
-    .score-ring {
-      position: relative;
-      width: 90px;
-      height: 90px;
-      flex-shrink: 0;
-    }
-    .score-ring svg { transform: rotate(-90deg); }
-    .score-ring .score-text {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    .score-num { font-size: 26px; font-weight: 900; line-height: 1; }
-    .score-label { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-
-    /* ── TABLE ── */
-    .table-container { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
-    table { width: 100%; border-collapse: collapse; text-align: left; }
-    th { background: rgba(0,0,0,0.15); padding: 12px 16px; font-size: 10px; text-transform: uppercase; color: var(--text-dim); font-weight: 800; letter-spacing: 0.5px; white-space: nowrap; }
-    td { padding: 12px 16px; border-top: 1px solid var(--border2); font-size: 13px; }
-    tr:hover td { background: rgba(255,255,255,0.02); }
-
-    /* ── BADGES ── */
-    .badge { padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
-    .badge-success { background: var(--success-bg); color: var(--success); }
-    .badge-warning { background: var(--warning-bg); color: var(--warning); }
-    .badge-danger { background: var(--danger-bg); color: var(--danger); }
-    .badge-primary { background: var(--primary-glow); color: var(--primary); }
-    .badge-purple { background: var(--purple-bg); color: var(--purple); }
-
-    /* ── LOADING ── */
-    .loading-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(10,15,30,0.85);
-      backdrop-filter: blur(6px);
-      z-index: 1000;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-    }
-    .loading-overlay.active { display: flex; }
-    .spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-weight: 700; color: var(--text-dim); font-size: 15px; }
-
-    /* ── CREATIVES ── */
-    .creative-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
-    .creative-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-    .creative-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-    .creative-img { width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--bg2); }
-    .creative-info { padding: 14px; }
-    .creative-name { font-weight: 700; font-size: 12px; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .creative-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .creative-metric { font-size: 11px; }
-    .creative-metric span { color: var(--text-muted); }
-    .champion-badge { position: absolute; top: 8px; right: 8px; }
-
-    /* ── MODAL ── */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(10,15,30,0.9);
-      backdrop-filter: blur(8px);
-      z-index: 500;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .modal-overlay.active { display: flex; }
-    .modal {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      width: 100%;
-      max-width: 700px;
-      max-height: 85vh;
-      overflow-y: auto;
-      padding: 28px;
-    }
-    .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-    .modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px; }
-    .modal-close:hover { color: var(--text); }
-    .modal-body { font-size: 14px; line-height: 1.7; color: var(--text-dim); }
-    .modal-body h3 { color: var(--text); margin: 16px 0 8px; }
-    .modal-body strong { color: var(--primary); }
-    .modal-body ul { padding-left: 20px; }
-    .modal-body li { margin-bottom: 4px; }
-
-    /* ── FUNNEL CARDS ── */
-    .funnel-container { display: flex; flex-direction: column; gap: 12px; }
-    .funnel-level { background: var(--card2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-    .funnel-level-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-    .funnel-level-title { font-weight: 700; font-size: 13px; }
-    .funnel-level-badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; }
-    .funnel-items { display: flex; flex-direction: column; gap: 8px; }
-    .funnel-item { background: var(--card); border: 1px solid var(--border2); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
-    .funnel-item-name { font-weight: 600; font-size: 12px; }
-    .funnel-item-metrics { display: flex; gap: 16px; font-size: 11px; color: var(--text-dim); }
-
-    /* ── UTILS ── */
-    .flex-center { display: flex; align-items: center; gap: 8px; }
-    .flex-between { display: flex; justify-content: space-between; align-items: center; }
-    .text-success { color: var(--success); }
-    .text-warning { color: var(--warning); }
-    .text-danger { color: var(--danger); }
-    .text-primary { color: var(--primary); }
-    .text-muted { color: var(--text-muted); }
-    .text-dim { color: var(--text-dim); }
-    .font-bold { font-weight: 700; }
-    .font-black { font-weight: 900; }
-    .mb-4 { margin-bottom: 16px; }
-    .mb-6 { margin-bottom: 24px; }
-    .mt-4 { margin-top: 16px; }
-    .gap-2 { gap: 8px; }
-    .section-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; }
-
-    /* ── SCROLLBAR ── */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-
-    /* ── TREND CHART ── */
-    .chart-container { position: relative; height: 320px; }
-
-    /* ── EMPTY STATE ── */
-    .empty-state { text-align: center; padding: 80px 20px; }
-    .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
-    .empty-state h2 { font-size: 22px; font-weight: 800; color: var(--text-dim); margin-bottom: 8px; }
-    .empty-state p { color: var(--text-muted); max-width: 400px; margin: 0 auto; }
-
-    /* ── NOTES ── */
-    .note-card { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
-    .note-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
-    .note-text { font-size: 13px; color: var(--text-dim); }
-    .note-date { font-size: 10px; color: var(--text-muted); }
-    .note-input { width: 100%; background: var(--bg2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; font-size: 13px; font-family: 'Inter', sans-serif; resize: vertical; min-height: 80px; outline: none; }
-    .note-input:focus { border-color: var(--primary); }
-
-    /* ── BREAKDOWN TABLE ── */
-    .breakdown-row-bar { height: 4px; background: var(--primary); border-radius: 2px; margin-top: 4px; transition: width 0.5s ease; }
-
-    /* ── ALERT FORM ── */
-    .alert-form { background: var(--card2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; }
-    .form-input { background: var(--bg2); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; }
-    .form-input:focus { border-color: var(--primary); }
-    
-    /* ── DARK MODE TOGGLE ── */
-    .theme-toggle {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      padding: 6px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-    .theme-toggle:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-    }
-    
-    /* ── TOOLTIPS ── */
-    .tooltip-container {
-      position: relative;
-      display: inline-block;
-      cursor: help;
-    }
-    .tooltip-text {
-      visibility: hidden;
-      background-color: var(--card2);
-      color: var(--text);
-      text-align: center;
-      border-radius: 6px;
-      padding: 8px 12px;
-      position: absolute;
-      z-index: 1;
-      bottom: 125%;
-      left: 50%;
-      margin-left: -60px;
-      width: 120px;
-      opacity: 0;
-      transition: opacity 0.3s;
-      font-size: 12px;
-      border: 1px solid var(--border);
-      white-space: nowrap;
-    }
-    .tooltip-container:hover .tooltip-text {
-      visibility: visible;
-      opacity: 1;
-    }
-    .tooltip-text::after {
-      content: "";
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      margin-left: -5px;
-      border-width: 5px;
-      border-style: solid;
-      border-color: var(--card2) transparent transparent transparent;
-    }
+    :root{--bg:#0b1220;--card:#131c31;--muted:#91a0b7;--text:#eef3ff;--line:#26324d;--primary:#4f8cff;--success:#1ec98b;--warning:#ffb649;--danger:#ff647c}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .top{display:flex;gap:10px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,18,32,.95);backdrop-filter:blur(10px);z-index:9}
+    .logo{font-weight:900}.logo span{color:var(--primary)}
+    select,input,button,textarea{font:inherit;border-radius:10px;border:1px solid var(--line);background:#11192c;color:var(--text);padding:10px 12px}
+    button{cursor:pointer}.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:700}
+    .wrap{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 61px)}
+    .side{border-right:1px solid var(--line);padding:16px}.navbtn{display:block;width:100%;text-align:left;margin-bottom:8px;background:transparent}.navbtn.active{background:#1a2540;border-color:#38548d;color:#fff}
+    .main{padding:22px}.grid{display:grid;gap:14px}.grid.cards{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:18px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}.label{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.4px}.value{font-size:28px;font-weight:900;margin-top:6px}
+    .sub{font-size:12px;color:var(--muted);margin-top:4px}.section{display:none}.section.active{display:block}
+    table{width:100%;border-collapse:collapse}.table{overflow:auto}.table-wrap{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px}
+    th,td{padding:12px 10px;border-bottom:1px solid var(--line);font-size:13px;text-align:left}.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800}
+    .s{background:rgba(30,201,139,.12);color:var(--success)}.w{background:rgba(255,182,73,.12);color:var(--warning)}.d{background:rgba(255,100,124,.12);color:var(--danger)}.p{background:rgba(79,140,255,.12);color:var(--primary)}
+    .split{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}.hero{display:flex;justify-content:space-between;gap:18px;align-items:center}
+    .hero h2{margin:0 0 8px}.muted{color:var(--muted)}.pill{padding:8px 12px;border-radius:999px;background:#11192c;border:1px solid var(--line)}
+    .actions li{margin-bottom:8px}.decision-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+    .decision-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}.decision-card h4{margin:0 0 8px}
+    .chart-box{height:300px}.small{font-size:12px}.empty{padding:60px 20px;text-align:center;color:var(--muted)}
+    .modalbg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:20px}.modalbg.open{display:flex}
+    .modal{background:var(--card);border:1px solid var(--line);border-radius:18px;max-width:760px;width:100%;max-height:85vh;overflow:auto;padding:20px}
+    .top-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+    @media(max-width:900px){.wrap{grid-template-columns:1fr}.side{display:flex;overflow:auto;gap:8px}.navbtn{min-width:160px}.split{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-
-<!-- Loading Overlay -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-  <p class="loading-text" id="loadingText">Analisando dados...</p>
-</div>
-
-<!-- Modal IA -->
-<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
-  <div class="modal" id="modalContent">
-    <div class="modal-header">
-      <div>
-        <h2 id="modalTitle" style="font-size: 18px; font-weight: 800;"></h2>
-        <p id="modalSubtitle" style="color: var(--text-dim); font-size: 13px; margin-top: 4px;"></p>
-      </div>
-      <button class="modal-close" onclick="document.getElementById('modalOverlay').classList.remove('active')">✕</button>
-    </div>
-    <div class="modal-body" id="modalBody"></div>
+  <div class="top">
+    <div class="logo">Meta<span>Analyzer</span></div>
+    <select id="accountSel"><option>Carregando contas...</option></select>
+    <select id="nicheSel">
+      <option value="Geral">Geral</option><option value="E-commerce">E-commerce</option><option value="Infoprodutos">Infoprodutos</option><option value="Negócios Locais">Negócios Locais</option><option value="Serviços B2B">Serviços B2B</option><option value="Imobiliário">Imobiliário</option>
+    </select>
+    <select id="dateSel">
+      <option value="last_7d">Últimos 7 dias</option><option value="last_14d">Últimos 14 dias</option><option value="last_30d" selected>Últimos 30 dias</option><option value="last_90d">Últimos 90 dias</option>
+    </select>
+    <button class="btn-primary" onclick="runAnalysis()">Analisar</button>
+    <div class="top-right"><span id="userName" class="muted"></span><a href="/auth/logout" class="pill muted" style="text-decoration:none">Sair</a></div>
   </div>
-</div>
 
-<div class="app-container">
-  <!-- TOPBAR -->
-  <header class="topbar">
-    <div class="logo">⚡ Meta<span>Analyzer</span></div>
-
-    <select id="accountSel" class="input-sel" style="width: 240px;">
-      <option value="">Carregando contas...</option>
-    </select>
-
-    <select id="nicheSel" class="input-sel" style="width: 160px;">
-      <option value="Geral">Nicho: Geral</option>
-      <option value="E-commerce">E-commerce</option>
-      <option value="Infoprodutos">Infoprodutos</option>
-      <option value="Negócios Locais">Negócios Locais</option>
-      <option value="Serviços B2B">Serviços B2B</option>
-      <option value="Imobiliário">Imobiliário</option>
-    </select>
-
-    <select id="dateSel" class="input-sel" onchange="toggleCustomDate()">
-      <option value="last_7d">Últimos 7 dias</option>
-      <option value="last_14d">Últimos 14 dias</option>
-      <option value="last_30d" selected>Últimos 30 dias</option>
-      <option value="this_month">Este mês</option>
-      <option value="last_month">Mês passado</option>
-      <option value="last_90d">Últimos 90 dias</option>
-      <option value="custom">Personalizado</option>
-    </select>
-
-    <div id="customDateRange" style="display: none;" class="flex-center">
-      <input type="date" id="sinceDate" class="input-sel">
-      <span style="color: var(--text-muted);">até</span>
-      <input type="date" id="untilDate" class="input-sel">
-    </div>
-
-    <button class="btn btn-primary" onclick="runAnalysis()">⚡ Analisar</button>
-
-    <div style="margin-left: auto;" class="flex-center">
-      <div id="budgetStatus" style="display: none;"></div>
-      <button class="theme-toggle" onclick="toggleDarkMode()" title="Alternar modo escuro/claro">🌙 Tema</button>
-      <div class="flex-center" style="gap: 8px;">
-        <img id="userPic" style="width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--border);" onerror="this.style.display='none'">
-        <span id="userName" style="font-weight: 700; font-size: 13px;"></span>
-        <a href="/auth/logout" style="color: var(--text-muted); font-size: 12px; text-decoration: none; margin-left: 4px;">Sair</a>
-      </div>
-    </div>
-  </header>
-
-  <div class="content-area">
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div class="nav-section">Principal</div>
-      <button class="nav-item active" onclick="switchTab('overview', this)">📊 Visão Geral</button>
-      <button class="nav-item" onclick="switchTab('analysis', this)">🧠 Insights IA</button>
-      <button class="nav-item" onclick="switchTab('campaigns', this)">📋 Campanhas</button>
-
-      <div class="nav-section">Análise</div>
-      <button class="nav-item" onclick="switchTab('creatives', this)">🖼️ Criativos</button>
-      <button class="nav-item" onclick="switchTab('breakdown', this)">📉 Breakdown</button>
-      <button class="nav-item" onclick="switchTab('trend', this)">📈 Tendências</button>
-
-      <div class="nav-section">Ferramentas</div>
-      <button class="nav-item" onclick="switchTab('notes', this)">📝 Notas</button>
-      <button class="nav-item" onclick="switchTab('alerts', this)">🔔 Alertas</button>
-
-      <div style="margin-top: auto; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 10px; font-size: 11px;">
-        <p style="color: var(--text-muted); margin-bottom: 8px; font-weight: 700; font-size: 10px; text-transform: uppercase;">Campanhas Ativas</p>
-        <div id="activeCampsList" style="display: flex; flex-direction: column; gap: 4px;">
-          <span style="color: var(--text-muted);">Nenhuma conta selecionada</span>
-        </div>
-      </div>
+  <div class="wrap">
+    <aside class="side">
+      <button class="navbtn active" onclick="showSection('overview', this)">Visão geral</button>
+      <button class="navbtn" onclick="showSection('decision', this)">Central de decisão</button>
+      <button class="navbtn" onclick="showSection('analysis', this)">Insights IA</button>
+      <button class="navbtn" onclick="showSection('campaigns', this)">Campanhas</button>
+      <button class="navbtn" onclick="showSection('creatives', this)">Criativos</button>
+      <button class="navbtn" onclick="showSection('breakdown', this)">Breakdown</button>
+      <button class="navbtn" onclick="showSection('trend', this)">Tendência</button>
+      <button class="navbtn" onclick="showSection('notes', this)">Notas</button>
     </aside>
 
-    <!-- MAIN CONTENT -->
-    <main class="main-content">
+    <main class="main">
+      <div id="empty" class="empty">Selecione uma conta e rode a análise.</div>
 
-      <!-- Empty State -->
-      <div id="emptyState" class="empty-state">
-        <div class="empty-state-icon">⚡</div>
-        <h2>Selecione uma conta para começar</h2>
-        <p>A IA Sênior analisará seus dados e fornecerá recomendações estratégicas para maximizar seu ROAS.</p>
-      </div>
+      <section id="overview" class="section active">
+        <div id="hero"></div>
+        <div id="overviewCards" class="grid cards"></div>
+      </section>
 
-      <div id="dashboardContent" style="display: none;">
-
-        <!-- ── TAB: OVERVIEW ── -->
-        <div id="tab-overview">
-          <div class="ia-summary" id="iaSummaryHeader"></div>
-
-          <div class="section-title" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Investimento & Retorno</div>
-          <div class="stats-grid-4" id="mainStatsGrid"></div>
-
-          <div class="section-title" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Alcance & Engajamento</div>
-          <div class="stats-grid-4" id="secondaryStatsGrid"></div>
-
-          <div class="section-title" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Funil de Conversão</div>
-          <div class="stats-grid-5" id="funnelStatsGrid"></div>
-
-          <div class="section-title" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Custos por Ação</div>
-          <div class="stats-grid-4" id="costStatsGrid"></div>
-        </div>
-
-        <!-- ── TAB: ANALYSIS ── -->
-        <div id="tab-analysis" style="display: none;">
-          <div class="flex-between mb-6">
-            <h2 class="section-title" style="margin-bottom: 0;">🧠 Recomendações da IA Sênior</h2>
-            <button class="btn btn-primary" onclick="openGptCopilot()">🤖 Plano de Guerra GPT</button>
+      <section id="decision" class="section">
+        <div id="decisionSummary" class="grid cards"></div>
+        <div class="split" style="margin-top:16px">
+          <div class="card">
+            <div class="label">Ações imediatas</div>
+            <ul id="immediateActions" class="actions"></ul>
           </div>
-          <div id="analysisList" style="display: flex; flex-direction: column; gap: 14px;"></div>
-        </div>
-
-        <!-- ── TAB: CAMPAIGNS ── -->
-        <div id="tab-campaigns" style="display: none;">
-          <div class="flex-between mb-6">
-            <h2 class="section-title" style="margin-bottom: 0;">📋 Performance por Campanha</h2>
-            <div class="flex-center gap-2">
-              <button id="filter-all" class="btn btn-ghost btn-sm active" onclick="filterCamps('all', this)">Todas</button>
-              <button id="filter-active" class="btn btn-ghost btn-sm" onclick="filterCamps('active', this)">Ativas</button>
-              <button id="filter-running" class="btn btn-ghost btn-sm" onclick="filterCamps('running', this)">🟢 Rodando</button>
-              <button class="btn btn-ghost btn-sm" onclick="exportCampaignsCSV()" title="Exportar como CSV">📥 CSV</button>
-              <button class="btn btn-ghost btn-sm" onclick="exportCampaignsJSON()" title="Exportar como JSON">📥 JSON</button>
-            </div>
-          </div>
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Campanha</th>
-                  <th>Gasto</th>
-                  <th>Alcance</th>
-                  <th>Freq.</th>
-                  <th>Impressões</th>
-                  <th>CTR</th>
-                  <th>ROAS</th>
-                  <th>Mensagens</th>
-                  <th>Compras</th>
-                  <th>Leads</th>
-                  <th>Custo/Comp.</th>
-                  <th>Performance</th>
-                  <th>Ação IA</th>
-                </tr>
-              </thead>
-              <tbody id="campTableBody"></tbody>
-            </table>
+          <div class="card">
+            <div class="label">Redistribuição de verba</div>
+            <div id="allocationBox" class="small muted" style="margin-top:10px"></div>
           </div>
         </div>
+        <div id="decisionCards" class="decision-list" style="margin-top:16px"></div>
+      </section>
 
-        <!-- ── TAB: CREATIVES ── -->
-        <div id="tab-creatives" style="display: none;">
-          <div class="flex-between mb-6">
-            <h2 class="section-title" style="margin-bottom: 0;">🖼️ Criativos Campeões</h2>
-            <div class="flex-center gap-2">
-              <span style="font-size: 12px; color: var(--text-muted);">Ordenar por:</span>
-              <select id="creativeSort" class="input-sel" style="padding: 5px 10px; font-size: 12px;" onchange="renderCreatives()">
-                <option value="roas">🏆 Melhor ROAS</option>
-                <option value="clicks">👆 Mais Cliques</option>
-                <option value="spend">💰 Maior Gasto</option>
-                <option value="purchases">🛒 Mais Compras</option>
-                <option value="messages">💬 Mais Mensagens</option>
-              </select>
-            </div>
-          </div>
-          <div class="creative-grid" id="creativesGrid"></div>
-        </div>
+      <section id="analysis" class="section">
+        <div class="hero card"><div><h2>Insights da IA</h2><div class="muted">Resumo e prioridades da conta</div></div><button class="btn-primary" onclick="openCopilot()">Plano de Guerra</button></div>
+        <div id="analysisList" class="grid" style="margin-top:16px"></div>
+      </section>
 
-        <!-- ── TAB: BREAKDOWN ── -->
-        <div id="tab-breakdown" style="display: none;">
-          <div class="flex-between mb-6">
-            <h2 class="section-title" style="margin-bottom: 0;">📉 Breakdown Detalhado</h2>
-          </div>
-          <div class="flex-center gap-2 mb-6" style="flex-wrap: wrap;">
-            <button class="btn btn-ghost btn-sm active" id="bd-device" onclick="loadBreakdown('device', this)">📱 Dispositivo</button>
-            <button class="btn btn-ghost btn-sm" id="bd-platform" onclick="loadBreakdown('platform', this)">📡 Plataforma</button>
-            <button class="btn btn-ghost btn-sm" id="bd-position" onclick="loadBreakdown('position', this)">📍 Posicionamento</button>
-            <button class="btn btn-ghost btn-sm" id="bd-gender" onclick="loadBreakdown('gender', this)">👥 Gênero</button>
-            <button class="btn btn-ghost btn-sm" id="bd-age" onclick="loadBreakdown('age', this)">🎂 Idade</button>
-            <button class="btn btn-ghost btn-sm" id="bd-region" onclick="loadBreakdown('region', this)">🗺️ Região</button>
-          </div>
-          <div class="card mb-4" style="padding: 20px;">
-            <div class="chart-container">
-              <canvas id="breakdownChart"></canvas>
-            </div>
-          </div>
-          <div class="table-container">
-            <table id="breakdownTable"></table>
-          </div>
-        </div>
-
-        <!-- ── TAB: TREND ── -->
-        <div id="tab-trend" style="display: none;">
-          <div class="flex-between mb-6">
-            <h2 class="section-title" style="margin-bottom: 0;">📈 Tendências da Conta</h2>
-          </div>
-          <div class="card mb-4" style="padding: 20px;">
-            <div class="chart-container">
-              <canvas id="trendChart"></canvas>
-            </div>
-          </div>
-          <div id="trendEmpty" style="display: none; text-align: center; padding: 40px; color: var(--text-muted);">
-            <p>Nenhum dado de tendência disponível ainda. Execute análises ao longo do tempo para ver o histórico.</p>
-          </div>
-          <div id="historyTable" style="margin-top: 20px;"></div>
-        </div>
-
-        <!-- ── TAB: NOTES ── -->
-        <div id="tab-notes" style="display: none;">
-          <div class="flex-between mb-6">
-            <h2 class="section-title" style="margin-bottom: 0;">📝 Notas de Campanha</h2>
-          </div>
-          <div class="card mb-4">
-            <p class="card-label mb-4">Nova Nota</p>
-            <textarea id="noteInput" class="note-input" placeholder="Adicione uma observação sobre a conta ou campanha..."></textarea>
-            <div class="flex-center" style="margin-top: 12px; gap: 8px;">
-              <select id="noteType" class="input-sel" style="font-size: 12px; padding: 6px 10px;">
-                <option value="geral">Geral</option>
-                <option value="criativo">Criativo</option>
-                <option value="publico">Público</option>
-                <option value="orcamento">Orçamento</option>
-                <option value="resultado">Resultado</option>
-              </select>
-              <button class="btn btn-primary btn-sm" onclick="saveNote()">Salvar Nota</button>
-            </div>
-          </div>
-          <div id="notesList"></div>
-        </div>
-
-        <!-- ── TAB: ALERTS ── -->
-        <div id="tab-alerts" style="display: none;">
-          <div class="flex-between mb-6">
-            <h2 class="section-title" style="margin-bottom: 0;">🔔 Alertas de Saldo</h2>
-          </div>
-          <div class="alert-form">
-            <p class="card-label mb-4">Configurar Alerta de Saldo Baixo</p>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">E-mail para Alerta</label>
-                <input type="email" id="alertEmail" class="form-input" placeholder="seu@email.com">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Limite de Saldo (R$)</label>
-                <input type="number" id="alertThreshold" class="form-input" placeholder="100" value="100">
-              </div>
-            </div>
-            <button class="btn btn-primary btn-sm" onclick="saveAlert()">Salvar Alerta</button>
-          </div>
-          <div id="alertStatus"></div>
-        </div>
-
-      </div>
+      <section id="campaigns" class="section"><div class="table-wrap table"><table><thead><tr><th>Campanha</th><th>Gasto</th><th>CTR</th><th>ROAS</th><th>Freq.</th><th>Mensagens</th><th>Compras</th><th>Status</th><th>Ação</th></tr></thead><tbody id="campaignRows"></tbody></table></div></section>
+      <section id="creatives" class="section"><div id="creativeGrid" class="decision-list"></div></section>
+      <section id="breakdown" class="section"><div class="card"><div class="label">Breakdown por dispositivo</div><div class="chart-box"><canvas id="breakdownChart"></canvas></div></div></section>
+      <section id="trend" class="section"><div class="card"><div class="label">Score de saúde e gasto</div><div class="chart-box"><canvas id="trendChart"></canvas></div></div></section>
+      <section id="notes" class="section"><div class="card"><div class="label">Nova nota</div><textarea id="noteInput" style="width:100%;min-height:100px;margin-top:10px"></textarea><div style="margin-top:10px"><button class="btn-primary" onclick="saveNote()">Salvar nota</button></div></div><div id="notesList" class="grid" style="margin-top:16px"></div></section>
     </main>
   </div>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <div id="modalBg" class="modalbg" onclick="if(event.target===this)this.classList.remove('open')"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center"><h3 id="modalTitle" style="margin:0"></h3><button onclick="document.getElementById('modalBg').classList.remove('open')">Fechar</button></div><div id="modalBody" class="small" style="margin-top:16px;line-height:1.7"></div></div></div>
+
 <script>
-// ── STATE ──
-let state = {
-  accounts: [],
-  selectedAccountId: null,
-  campaigns: [],
-  insights: null,
-  creatives: [],
-  analysis: null,
-  metrics: null,
-  charts: {},
-  currentTab: 'overview'
-};
+let state = { accounts: [], selectedAccountId: '', campaigns: [], insights: null, creatives: [], analysis: null, metrics: null, comparison: null, charts: {} };
 
-// ── DARK MODE ──
-function toggleDarkMode() {
-  const isDarkMode = document.body.classList.contains('light-mode');
-  if (isDarkMode) {
-    document.body.classList.remove('light-mode');
-    localStorage.setItem('theme', 'dark');
-  } else {
-    document.body.classList.add('light-mode');
-    localStorage.setItem('theme', 'light');
-  }
-}
-
-function initTheme() {
-  const savedTheme = localStorage.getItem('theme') || 'dark';
-  if (savedTheme === 'light') {
-    document.body.classList.add('light-mode');
-  }
-}
-
-// ── INIT ──
-async function init() {
-  try {
-    initTheme();
-    const me = await fetch('/api/me').then(r => r.json());
-    if (!me.authenticated) return location.href = '/';
-    document.getElementById('userName').textContent = me.user.name;
-    const pic = me.user.picture?.data?.url || me.user.picture;
-    if (pic) document.getElementById('userPic').src = pic;
-    await loadAccounts();
-  } catch (e) { console.error('Init error:', e); }
-}
-
-async function loadAccounts() {
-  const res = await fetch('/api/adaccounts').then(r => r.json());
-  state.accounts = res.data || [];
+async function init(){
+  const me = await fetch('/api/me').then(r=>r.json());
+  if(!me.authenticated){ location.href = '/'; return; }
+  document.getElementById('userName').textContent = me.user.name;
+  const accounts = await fetch('/api/adaccounts').then(r=>r.json());
+  state.accounts = accounts.data || [];
   const sel = document.getElementById('accountSel');
-  sel.innerHTML = '<option value="">Escolha a conta...</option>' +
-    state.accounts.map(a => `<option value="${a.account_id}">${a.name}</option>`).join('');
-  sel.onchange = onAccountChange;
-}
-
-async function onAccountChange() {
-  state.selectedAccountId = document.getElementById('accountSel').value;
-  if (!state.selectedAccountId) return;
-  setLoading(true, 'Carregando conta...');
-  try {
-    // Verificar cache
-    const cacheKey = `account_${state.selectedAccountId}`;
-    const cached = localStorage.getItem(cacheKey);
-    const cacheTime = localStorage.getItem(`${cacheKey}_time`);
-    const now = Date.now();
-    const cacheExpiry = 5 * 60 * 1000; // 5 minutos
-    
-    if (cached && cacheTime && (now - parseInt(cacheTime)) < cacheExpiry) {
-      const data = JSON.parse(cached);
-      renderBudget(data.balance);
-      state.campaigns = data.campaigns || [];
-      renderActiveCampsSidebar();
-      setLoading(false);
-      return;
-    }
-    
-    const [bal, camps] = await Promise.all([
-      fetch(`/api/adaccounts/${state.selectedAccountId}/balance`).then(r => r.json()),
-      fetch(`/api/adaccounts/${state.selectedAccountId}/campaigns`).then(r => r.json())
-    ]);
-    
-    // Salvar em cache
-    localStorage.setItem(cacheKey, JSON.stringify({ balance: bal, campaigns: camps.data }));
-    localStorage.setItem(`${cacheKey}_time`, now.toString());
-    
-    renderBudget(bal);
-    state.campaigns = camps.data || [];
-    renderActiveCampsSidebar();
-  } catch (e) { console.error('Account change error:', e); }
-  finally { setLoading(false); }
-}
-
-function renderBudget(balRes) {
-  const chip = document.getElementById('budgetStatus');
-  if (balRes.balance !== undefined) {
-    const bal = parseFloat(balRes.balance) / 100;
-    const currency = getCurrency();
-    const isPositive = bal > 0;
-    chip.className = 'badge ' + (isPositive ? 'badge-warning' : 'badge-success');
-    chip.textContent = isPositive ? `Fatura: ${currency} ${bal.toFixed(2)}` : `Saldo: ${currency} ${Math.abs(bal).toFixed(2)}`;
-    chip.style.display = 'inline-block';
-  } else {
-    chip.style.display = 'none';
-  }
-}
-
-function renderActiveCampsSidebar() {
-  const list = document.getElementById('activeCampsList');
-  const active = state.campaigns.filter(c => c.status === 'ACTIVE').slice(0, 6);
-  if (active.length === 0) {
-    list.innerHTML = '<span style="color: var(--text-muted); font-size: 11px;">Nenhuma campanha ativa</span>';
-  } else {
-    list.innerHTML = active.map(c => `
-      <div style="color: var(--success); font-weight: 600; font-size: 11px; display: flex; align-items: center; gap: 4px;">
-        <span style="width: 6px; height: 6px; background: var(--success); border-radius: 50%; flex-shrink: 0;"></span>
-        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.name}</span>
-      </div>
-    `).join('');
-  }
-}
-
-function toggleCustomDate() {
-  const isCustom = document.getElementById('dateSel').value === 'custom';
-  document.getElementById('customDateRange').style.display = isCustom ? 'flex' : 'none';
-}
-
-function getCurrency() {
-  return state.accounts.find(a => a.account_id === state.selectedAccountId)?.currency === 'USD' ? '$' : 'R$';
-}
-
-function getDateParams() {
-  const preset = document.getElementById('dateSel').value;
-  if (preset === 'custom') {
-    return `since=${document.getElementById('sinceDate').value}&until=${document.getElementById('untilDate').value}`;
-  }
-  return `date_preset=${preset}`;
-}
-
-// ── ANALYSIS ──
-async function runAnalysis() {
-  if (!state.selectedAccountId) return alert('Selecione uma conta!');
-  setLoading(true, '⚡ IA analisando performance e métricas...');
-  const params = getDateParams();
-
-  try {
-    const [insRes, crRes] = await Promise.all([
-      fetch(`/api/adaccounts/${state.selectedAccountId}/insights?${params}`).then(r => r.json()),
-      fetch(`/api/adaccounts/${state.selectedAccountId}/creatives?${params}`).then(r => r.json())
-    ]);
-
-    state.insights = insRes;
-    state.creatives = crRes.data || [];
-
-    const analysisRes = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        accountData: state.accounts.find(a => a.account_id === state.selectedAccountId),
-        campaigns: state.campaigns,
-        insights: insRes,
-        creatives: state.creatives,
-        dateRange: document.getElementById('dateSel').value,
-        niche: document.getElementById('nicheSel').value
-      })
-    }).then(r => r.json());
-
-    state.metrics = analysisRes.metrics;
-    state.analysis = analysisRes.analysis;
-
-    renderDashboard();
-    switchTabById('overview');
-  } catch (e) {
-    console.error('Analysis error:', e);
-    alert('Erro ao analisar dados. Verifique os logs do console.');
-  } finally { setLoading(false); }
-}
-
-// ── RENDER DASHBOARD ──
-function renderDashboard() {
-  document.getElementById('emptyState').style.display = 'none';
-  document.getElementById('dashboardContent').style.display = 'block';
-
-  const { metrics, analysis } = state;
-  const c = getCurrency();
-
-  // IA Summary Header
-  const score = analysis.resumo_geral.score_saude;
-  const scoreColor = score > 80 ? 'var(--success)' : (score > 50 ? 'var(--warning)' : 'var(--danger)');
-  const circumference = 2 * Math.PI * 36;
-  const offset = circumference - (score / 100) * circumference;
-
-  document.getElementById('iaSummaryHeader').innerHTML = `
-    <div class="score-ring">
-      <svg width="90" height="90" viewBox="0 0 90 90">
-        <circle cx="45" cy="45" r="36" fill="none" stroke="var(--border)" stroke-width="7"/>
-        <circle cx="45" cy="45" r="36" fill="none" stroke="${scoreColor}" stroke-width="7"
-          stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
-      </svg>
-      <div class="score-text">
-        <span class="score-num" style="color: ${scoreColor}">${score}</span>
-        <span class="score-label">Score</span>
-      </div>
-    </div>
-    <div style="flex: 1;">
-      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-        <h2 style="font-size: 20px; font-weight: 900; color: ${scoreColor}">${analysis.resumo_geral.nivel_saude}</h2>
-        <span class="badge ${score > 80 ? 'badge-success' : score > 50 ? 'badge-warning' : 'badge-danger'}">${score > 80 ? 'Excelente' : score > 50 ? 'Atenção' : 'Crítico'}</span>
-      </div>
-      <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 12px;">${analysis.resumo_geral.resumo_historico}</p>
-      <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-        <div><span style="color: var(--text-muted); font-size: 11px;">INVESTIMENTO</span><br><strong>${c} ${metrics.totalSpend.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></div>
-        <div><span style="color: var(--text-muted); font-size: 11px;">ROAS</span><br><strong style="color: ${metrics.roas > 2 ? 'var(--success)' : 'var(--text)'}">${metrics.roas.toFixed(2)}x</strong></div>
-        <div><span style="color: var(--text-muted); font-size: 11px;">RECEITA</span><br><strong>${c} ${metrics.totalRev.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></div>
-        <div><span style="color: var(--text-muted); font-size: 11px;">CAMPANHAS ATIVAS</span><br><strong>${state.campaigns.filter(c => c.status === 'ACTIVE').length}</strong></div>
-      </div>
-    </div>
-    <button class="btn btn-primary" onclick="openGptCopilot()" style="flex-shrink: 0;">🤖 Plano de Guerra</button>
-  `;
-
-  // Investimento & Retorno
-  document.getElementById('mainStatsGrid').innerHTML = `
-    <div class="card"><p class="card-label">Investimento Total</p><p class="card-value">${c} ${metrics.totalSpend.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p><p class="card-sub">Gasto no período</p></div>
-    <div class="card"><p class="card-label">Receita Gerada</p><p class="card-value" style="color: var(--success)">${c} ${metrics.totalRev.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p><p class="card-sub">Conversões rastreadas</p></div>
-    <div class="card"><p class="card-label">ROAS Geral</p><p class="card-value" style="color: ${metrics.roas > 2 ? 'var(--success)' : metrics.roas > 1 ? 'var(--warning)' : 'var(--danger)'}">${metrics.roas.toFixed(2)}x</p><p class="card-sub">Retorno sobre investimento</p></div>
-    <div class="card"><p class="card-label">Lucro Estimado</p><p class="card-value" style="color: ${metrics.totalRev - metrics.totalSpend > 0 ? 'var(--success)' : 'var(--danger)'}">${c} ${(metrics.totalRev - metrics.totalSpend).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p><p class="card-sub">Receita - Investimento</p></div>
-  `;
-
-  // Alcance & Engajamento
-  document.getElementById('secondaryStatsGrid').innerHTML = `
-    <div class="card"><p class="card-label">Alcance</p><p class="card-value">${metrics.totalReach.toLocaleString('pt-BR')}</p><p class="card-sub">Pessoas únicas</p></div>
-    <div class="card"><p class="card-label">Impressões</p><p class="card-value">${metrics.totalImpressions.toLocaleString('pt-BR')}</p><p class="card-sub">Total de exibições</p></div>
-    <div class="card"><p class="card-label">Frequência</p><p class="card-value" style="color: ${metrics.avgFrequency > 4 ? 'var(--warning)' : 'var(--text)'}">${metrics.avgFrequency.toFixed(2)}</p><p class="card-sub">Média por pessoa</p></div>
-    <div class="card"><p class="card-label">CTR Médio</p><p class="card-value" style="color: ${metrics.avgCtr > 1.5 ? 'var(--success)' : metrics.avgCtr > 0.8 ? 'var(--text)' : 'var(--danger)'}">${metrics.avgCtr.toFixed(2)}%</p><p class="card-sub">Taxa de clique</p></div>
-  `;
-
-  // Funil de Conversão
-  document.getElementById('funnelStatsGrid').innerHTML = `
-    <div class="card"><p class="card-label">Mensagens</p><p class="card-value text-primary">${metrics.totalMessages.toLocaleString('pt-BR')}</p><p class="card-sub">Conversas iniciadas</p></div>
-    <div class="card"><p class="card-label">Compras</p><p class="card-value text-success">${metrics.totalPurchases.toLocaleString('pt-BR')}</p><p class="card-sub">Conversões de venda</p></div>
-    <div class="card"><p class="card-label">Leads</p><p class="card-value text-purple">${metrics.totalLeads.toLocaleString('pt-BR')}</p><p class="card-sub">Cadastros gerados</p></div>
-    <div class="card"><p class="card-label">Carrinhos</p><p class="card-value">${metrics.totalAddCart.toLocaleString('pt-BR')}</p><p class="card-sub">Add to cart</p></div>
-    <div class="card"><p class="card-label">Checkouts</p><p class="card-value">${metrics.totalInitiateCheckout.toLocaleString('pt-BR')}</p><p class="card-sub">Início de checkout</p></div>
-  `;
-
-  // Custos por Ação
-  document.getElementById('costStatsGrid').innerHTML = `
-    <div class="card"><p class="card-label">CPC Médio</p><p class="card-value">${c} ${metrics.avgCpc.toFixed(2)}</p><p class="card-sub">Custo por clique</p></div>
-    <div class="card"><p class="card-label">CPM Médio</p><p class="card-value">${c} ${metrics.avgCpm.toFixed(2)}</p><p class="card-sub">Custo por mil impressões</p></div>
-    <div class="card"><p class="card-label">Custo/Compra</p><p class="card-value">${c} ${metrics.costPerPurchase.toFixed(2)}</p><p class="card-sub">CPA de vendas</p></div>
-    <div class="card"><p class="card-label">Custo/Mensagem</p><p class="card-value">${c} ${metrics.costPerMessage.toFixed(2)}</p><p class="card-sub">CPM de mensagens</p></div>
-  `;
-
-  // Analysis
-  renderAnalysis();
-  // Campaigns
-  renderCampTable(analysis.campanhas_analise);
-  // Creatives
-  renderCreatives();
-}
-
-// ── ANALYSIS TAB ──
-function renderAnalysis() {
-  const { analysis, metrics } = state;
-  const list = document.getElementById('analysisList');
-
-  if (!analysis.otimizacoes_prioritarias || analysis.otimizacoes_prioritarias.length === 0) {
-    list.innerHTML = `
-      <div class="card" style="text-align: center; padding: 40px;">
-        <div style="font-size: 32px; margin-bottom: 12px;">🎉</div>
-        <h3 style="color: var(--success); margin-bottom: 8px;">Conta em Excelente Estado!</h3>
-        <p style="color: var(--text-dim);">Nenhuma otimização crítica identificada. Continue monitorando.</p>
-      </div>
-    `;
-    return;
-  }
-
-  list.innerHTML = analysis.otimizacoes_prioritarias.map((o, i) => {
-    const color = o.prioridade === 1 ? 'var(--danger)' : o.prioridade === 2 ? 'var(--warning)' : 'var(--primary)';
-    const badge = o.prioridade === 1 ? 'badge-danger' : o.prioridade === 2 ? 'badge-warning' : 'badge-primary';
-    return `
-      <div class="card" style="border-left: 3px solid ${color};">
-        <div class="flex-between mb-4">
-          <div class="flex-center gap-2">
-            <span class="badge ${badge}">P${o.prioridade}</span>
-            <span class="badge badge-primary">${o.categoria}</span>
-          </div>
-        </div>
-        <h3 style="font-size: 15px; font-weight: 800; margin-bottom: 8px;">${o.titulo}</h3>
-        <p style="color: var(--text-dim); margin-bottom: 14px; font-size: 13px;">${o.descricao}</p>
-        <div style="background: rgba(0,0,0,0.2); padding: 12px 16px; border-radius: 8px; border: 1px dashed var(--border);">
-          <strong style="color: ${color}; font-size: 11px; text-transform: uppercase;">Ação Recomendada:</strong>
-          <p style="margin-top: 4px; font-size: 13px;">${o.acao}</p>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// ── CAMPAIGNS TAB ──
-function renderCampTable(camps) {
-  const tbody = document.getElementById('campTableBody');
-  const c = getCurrency();
-
-  if (!camps || camps.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; padding: 40px; color: var(--text-muted);">Nenhuma campanha encontrada.</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = camps.map(camp => {
-    const perfColor = camp.status_performance === 'Excelente' || camp.status_performance === 'Muito Bom' ? 'var(--success)' :
-      camp.status_performance === 'Bom' ? 'var(--primary)' :
-      camp.status_performance === 'Crítico' ? 'var(--danger)' : 'var(--warning)';
-    const perfBadge = camp.status_performance === 'Excelente' || camp.status_performance === 'Muito Bom' ? 'badge-success' :
-      camp.status_performance === 'Bom' ? 'badge-primary' :
-      camp.status_performance === 'Crítico' ? 'badge-danger' : 'badge-warning';
-    const statusDot = camp.status === 'ACTIVE' ? 'var(--success)' : 'var(--text-muted)';
-
-    return `
-      <tr>
-        <td style="max-width: 200px;">
-          <div style="font-weight: 700; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${camp.name}</div>
-          <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
-            <span style="width: 6px; height: 6px; background: ${statusDot}; border-radius: 50;"></span>
-            <span style="font-size: 10px; color: var(--text-muted);">${camp.status}</span>
-          </div>
-        </td>
-        <td style="font-weight: 700;">${c} ${(camp.spend || 0).toFixed(2)}</td>
-        <td>${(camp.reach || 0).toLocaleString('pt-BR')}</td>
-        <td style="color: ${(camp.frequency || 0) > 4 ? 'var(--warning)' : 'var(--text)'}">${(camp.frequency || 0).toFixed(2)}</td>
-        <td>${(camp.impressions || 0).toLocaleString('pt-BR')}</td>
-        <td style="color: ${(camp.ctr || 0) > 1.5 ? 'var(--success)' : 'var(--text)'}">${(camp.ctr || 0).toFixed(2)}%</td>
-        <td style="font-weight: 800; color: ${(camp.roas || 0) > 2 ? 'var(--success)' : (camp.roas || 0) > 1 ? 'var(--warning)' : 'var(--danger)'}">${(camp.roas || 0).toFixed(2)}x</td>
-        <td>${(camp.messages || 0).toLocaleString('pt-BR')}</td>
-        <td>${(camp.purchases || 0).toLocaleString('pt-BR')}</td>
-        <td>${(camp.leads || 0).toLocaleString('pt-BR')}</td>
-        <td>${c} ${(camp.costPerPur || 0).toFixed(2)}</td>
-        <td><span class="badge ${perfBadge}">${camp.status_performance || 'N/A'}</span></td>
-        <td>
-          <button onclick="analyzeCampaignFull('${camp.id}')" class="btn btn-primary btn-sm">🤖 IA</button>
-        </td>
-      </tr>
-    `;
-  }).join('');
-}
-
-function filterCamps(type, btn) {
-  if (!state.analysis) return;
-  document.querySelectorAll('#tab-campaigns .btn-ghost').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  let filtered = state.analysis.campanhas_analise;
-  if (type === 'active') filtered = filtered.filter(c => c.status === 'ACTIVE');
-  if (type === 'running') filtered = filtered.filter(c => c.status === 'ACTIVE' && c.spend > 0);
-  renderCampTable(filtered);
-}
-
-async function analyzeCampaignFull(id) {
-  const camp = state.analysis.campanhas_analise.find(x => x.id === id);
-  if (!camp) return;
-
-  openModal(`🤖 Análise IA: ${camp.name}`, camp.diagnostico || 'Analisando...', '<div style="text-align: center; padding: 20px;"><div class="spinner" style="margin: 0 auto;"></div><p style="margin-top: 12px; color: var(--text-muted);">Analisando funil completo...</p></div>');
-
-  try {
-    const params = getDateParams();
-    const funnelRes = await fetch(`/api/campaigns/${id}/funnel?${params}`).then(r => r.json());
-    const adsets = funnelRes.adsets || [];
-
-    const analysisRes = await fetch('/api/gpt-campaign', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ campaign: camp, adsets, metrics: state.metrics })
-    }).then(r => r.json());
-
-    const html = markdownToHtml(analysisRes.analysis || 'Análise não disponível.');
-    document.getElementById('modalBody').innerHTML = html;
-
-    // Adicionar recomendações Andromeda
-    document.getElementById('modalBody').innerHTML += generateAndromedaRecommendations(camp);
-
-    // Adicionar funil visual
-    if (adsets.length > 0) {
-      document.getElementById('modalBody').innerHTML += renderFunnelHtml(adsets);
-    }
-  } catch (e) {
-    document.getElementById('modalBody').innerHTML = `<p style="color: var(--danger);">Erro ao analisar: ${e.message}</p>`;
-  }
-}
-
-function renderFunnelHtml(adsets) {
-  const c = getCurrency();
-  let html = `<h3 style="margin-top: 20px; margin-bottom: 12px; color: var(--text);">📊 Funil: Conjuntos de Anúncios</h3>`;
-  html += `<div class="funnel-container">`;
-  adsets.slice(0, 5).forEach(adset => {
-    const ins = adset.insights?.data?.[0] || {};
-    const statusColor = adset.status === 'ACTIVE' ? 'var(--success)' : 'var(--text-muted)';
-    html += `
-      <div class="funnel-level">
-        <div class="funnel-level-header">
-          <span style="color: ${statusColor}; font-size: 10px;">●</span>
-          <span class="funnel-level-title">${adset.name}</span>
-          <span class="badge ${adset.status === 'ACTIVE' ? 'badge-success' : 'badge-warning'}">${adset.status}</span>
-        </div>
-        <div style="display: flex; gap: 16px; font-size: 12px; color: var(--text-dim); flex-wrap: wrap;">
-          <span>💰 ${c} ${parseFloat(ins.spend || 0).toFixed(2)}</span>
-          <span>👆 CTR ${parseFloat(ins.ctr || 0).toFixed(2)}%</span>
-          <span>👁️ ${parseInt(ins.impressions || 0).toLocaleString()} impr.</span>
-          <span>📍 Freq. ${parseFloat(ins.frequency || 0).toFixed(2)}</span>
-        </div>
-        ${adset.ads && adset.ads.length > 0 ? `
-          <div class="funnel-items" style="margin-top: 10px;">
-            ${adset.ads.slice(0, 3).map(ad => {
-              const adIns = ad.insights?.data?.[0] || {};
-              return `
-                <div class="funnel-item">
-                  <div>
-                    <div class="funnel-item-name">${ad.name}</div>
-                    <div style="font-size: 10px; color: var(--text-muted);">${ad.status}</div>
-                  </div>
-                  <div class="funnel-item-metrics">
-                    <span>💰 ${c} ${parseFloat(adIns.spend || 0).toFixed(2)}</span>
-                    <span>CTR ${parseFloat(adIns.ctr || 0).toFixed(2)}%</span>
-                    <span>CPC ${c} ${parseFloat(adIns.cpc || 0).toFixed(2)}</span>
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        ` : ''}
-      </div>
-    `;
-  });
-  html += `</div>`;
-  return html;
-}
-
-// ── CREATIVES TAB ──
-function renderCreatives() {
-  const grid = document.getElementById('creativesGrid');
-  if (!state.creatives || state.creatives.length === 0) {
-    grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-dim);">Nenhum criativo com dados no período.</p>';
-    return;
-  }
-
-  const sortType = document.getElementById('creativeSort')?.value || 'roas';
-  const sorted = [...state.creatives].sort((a, b) => {
-    const getVal = (item, type) => {
-      const ins = item.insights?.data?.[0] || { spend: 0, clicks: 0, actions: [], action_values: [] };
-      if (type === 'spend') return parseFloat(ins.spend || 0);
-      if (type === 'clicks') return parseInt(ins.clicks || 0);
-      if (type === 'purchases') return (ins.actions || []).find(a => a.action_type.includes('purchase'))?.value || 0;
-      if (type === 'messages') return (ins.actions || []).find(a => a.action_type.includes('message'))?.value || 0;
-      if (type === 'roas') {
-        const rev = (ins.action_values || []).find(a => a.action_type.includes('purchase'))?.value || 0;
-        const sp = parseFloat(ins.spend || 0);
-        return sp > 0 ? rev / sp : 0;
-      }
-      return 0;
-    };
-    return getVal(b, sortType) - getVal(a, sortType);
-  });
-
-  const c = getCurrency();
-  grid.innerHTML = sorted.map((cr, i) => {
-    const ins = cr.insights?.data?.[0] || { spend: 0, ctr: 0, actions: [], action_values: [], clicks: 0, impressions: 0 };
-    const img = cr.creative?.image_url || cr.creative?.thumbnail_url || '';
-    const pur = (ins.actions || []).find(a => a.action_type.includes('purchase'))?.value || 0;
-    const msg = (ins.actions || []).find(a => a.action_type.includes('message'))?.value || 0;
-    const rev = (ins.action_values || []).find(a => a.action_type.includes('purchase'))?.value || 0;
-    const roas = parseFloat(ins.spend) > 0 ? parseFloat(rev) / parseFloat(ins.spend) : 0;
-    const isChampion = i === 0 && sortType === 'roas' && roas > 0;
-
-    return `
-      <div class="creative-card" style="position: relative;">
-        ${isChampion ? '<div class="champion-badge"><span class="badge badge-warning">🏆 Campeão</span></div>' : ''}
-        ${img ? `<img src="${img}" class="creative-img" onerror="this.style.display='none'">` : `<div class="creative-img" style="display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 32px;">🖼️</div>`}
-        <div class="creative-info">
-          <div class="creative-name" title="${cr.name}">${cr.name}</div>
-          <div class="creative-metrics">
-            <div class="creative-metric"><span>Gasto:</span> ${c} ${parseFloat(ins.spend || 0).toFixed(2)}</div>
-            <div class="creative-metric"><span>ROAS:</span> <strong style="color: ${roas > 2 ? 'var(--success)' : 'var(--text)'}">${roas.toFixed(2)}x</strong></div>
-            <div class="creative-metric"><span>CTR:</span> ${parseFloat(ins.ctr || 0).toFixed(2)}%</div>
-            <div class="creative-metric"><span>Cliques:</span> ${parseInt(ins.clicks || 0).toLocaleString()}</div>
-            <div class="creative-metric"><span>Compras:</span> ${pur}</div>
-            <div class="creative-metric"><span>Mensagens:</span> ${msg}</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// ── BREAKDOWN TAB ──
-async function loadBreakdown(type, btn) {
-  if (!state.selectedAccountId) return;
-
-  // Update active button
-  document.querySelectorAll('#tab-breakdown .btn-ghost').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-
-  setLoading(true, 'Buscando breakdown...');
-  const params = getDateParams();
-
-  try {
-    const res = await fetch(`/api/adaccounts/${state.selectedAccountId}/breakdown/${type}?${params}`).then(r => r.json());
-    const data = (res.data || []).sort((a, b) => parseFloat(b.spend) - parseFloat(a.spend));
-
-    if (data.length === 0) {
-      document.getElementById('breakdownChart').parentElement.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--text-muted);">Sem dados para este breakdown.</p>';
-      document.getElementById('breakdownTable').innerHTML = '';
-      return;
-    }
-
-    const getLabel = (d) => d.device_platform || d.publisher_platform || d.platform_position || d.gender || d.age || d.region || 'Outros';
-    const labels = data.map(getLabel);
-    const spends = data.map(d => parseFloat(d.spend || 0));
-    const maxSpend = Math.max(...spends);
-
-    const ctx = document.getElementById('breakdownChart').getContext('2d');
-    if (state.charts.breakdown) state.charts.breakdown.destroy();
-
-    const colors = [
-      'rgba(59,130,246,0.8)', 'rgba(16,185,129,0.8)', 'rgba(245,158,11,0.8)',
-      'rgba(139,92,246,0.8)', 'rgba(239,68,68,0.8)', 'rgba(20,184,166,0.8)',
-      'rgba(249,115,22,0.8)', 'rgba(236,72,153,0.8)'
-    ];
-
-    state.charts.breakdown = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Investimento (R$)',
-          data: spends,
-          backgroundColor: data.map((_, i) => colors[i % colors.length]),
-          borderRadius: 6,
-          borderSkipped: false
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => ` R$ ${ctx.raw.toFixed(2)}`
-            }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: { color: 'rgba(255,255,255,0.04)' },
-            ticks: { color: 'var(--text-muted)', callback: v => `R$ ${v.toFixed(0)}` }
-          },
-          x: {
-            grid: { display: false },
-            ticks: { color: 'var(--text-dim)' }
-          }
-        }
-      }
-    });
-
-    const c = getCurrency();
-    const table = document.getElementById('breakdownTable');
-    table.innerHTML = `
-      <thead><tr>
-        <th>Segmento</th>
-        <th>Gasto</th>
-        <th>% do Total</th>
-        <th>Impressões</th>
-        <th>Cliques</th>
-        <th>CTR</th>
-        <th>CPC</th>
-        <th>Alcance</th>
-      </tr></thead>
-      <tbody>
-        ${data.map(d => {
-          const spend = parseFloat(d.spend || 0);
-          const totalSpend = spends.reduce((a, b) => a + b, 0);
-          const pct = totalSpend > 0 ? (spend / totalSpend * 100) : 0;
-          return `
-            <tr>
-              <td style="font-weight: 700;">${getLabel(d)}</td>
-              <td style="font-weight: 700;">${c} ${spend.toFixed(2)}</td>
-              <td>
-                <div>${pct.toFixed(1)}%</div>
-                <div class="breakdown-row-bar" style="width: ${pct}%;"></div>
-              </td>
-              <td>${parseInt(d.impressions || 0).toLocaleString()}</td>
-              <td>${parseInt(d.clicks || 0).toLocaleString()}</td>
-              <td>${parseFloat(d.ctr || 0).toFixed(2)}%</td>
-              <td>${c} ${parseFloat(d.cpc || 0).toFixed(2)}</td>
-              <td>${parseInt(d.reach || 0).toLocaleString()}</td>
-            </tr>
-          `;
-        }).join('')}
-      </tbody>
-    `;
-  } catch (e) {
-    console.error('Breakdown error:', e);
-  } finally { setLoading(false); }
-}
-
-// ── TREND TAB ──
-async function loadTrend() {
-  if (!state.selectedAccountId) return;
-  setLoading(true, 'Buscando tendências...');
-  try {
-    const res = await fetch(`/api/trend/${state.selectedAccountId}`).then(r => r.json());
-    const data = res.trend || [];
-
-    if (data.length === 0) {
-      document.getElementById('trendEmpty').style.display = 'block';
-      document.getElementById('trendChart').parentElement.style.display = 'none';
-      return;
-    }
-
-    document.getElementById('trendEmpty').style.display = 'none';
-    document.getElementById('trendChart').parentElement.style.display = 'block';
-
-    const ctx = document.getElementById('trendChart').getContext('2d');
-    if (state.charts.trend) state.charts.trend.destroy();
-
-    state.charts.trend = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: data.map(d => new Date(d.date).toLocaleDateString('pt-BR')),
-        datasets: [
-          {
-            label: 'Score de Saúde',
-            data: data.map(d => d.avg_health),
-            borderColor: 'var(--success)',
-            backgroundColor: 'rgba(16,185,129,0.1)',
-            tension: 0.4,
-            fill: true,
-            yAxisID: 'y'
-          },
-          {
-            label: 'Gasto Diário (R$)',
-            data: data.map(d => parseFloat(d.total_spend || 0)),
-            borderColor: 'var(--primary)',
-            backgroundColor: 'rgba(59,130,246,0.1)',
-            tension: 0.4,
-            fill: true,
-            yAxisID: 'y1'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: {
-            labels: { color: 'var(--text-dim)', font: { family: 'Inter' } }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 100,
-            grid: { color: 'rgba(255,255,255,0.04)' },
-            ticks: { color: 'var(--text-muted)' },
-            title: { display: true, text: 'Score de Saúde', color: 'var(--text-muted)' }
-          },
-          y1: {
-            position: 'right',
-            beginAtZero: true,
-            grid: { display: false },
-            ticks: { color: 'var(--text-muted)', callback: v => `R$ ${v}` },
-            title: { display: true, text: 'Gasto (R$)', color: 'var(--text-muted)' }
-          },
-          x: {
-            grid: { display: false },
-            ticks: { color: 'var(--text-dim)' }
-          }
-        }
-      }
-    });
-
-    // Histórico de análises
-    const histRes = await fetch(`/api/history/${state.selectedAccountId}`).then(r => r.json());
-    if (histRes.length > 0) {
-      const c = getCurrency();
-      document.getElementById('historyTable').innerHTML = `
-        <h3 style="margin-bottom: 14px; font-size: 15px; font-weight: 800;">Histórico de Análises</h3>
-        <div class="table-container">
-          <table>
-            <thead><tr><th>Data</th><th>Período</th><th>Gasto</th><th>CTR</th><th>Frequência</th><th>Score</th></tr></thead>
-            <tbody>
-              ${histRes.slice(0, 20).map(r => `
-                <tr>
-                  <td>${new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
-                  <td>${r.date_range || 'N/A'}</td>
-                  <td>${c} ${parseFloat(r.total_spend || 0).toFixed(2)}</td>
-                  <td>${parseFloat(r.avg_ctr || 0).toFixed(2)}%</td>
-                  <td>${parseFloat(r.avg_frequency || 0).toFixed(2)}</td>
-                  <td><span class="badge ${r.health_score > 80 ? 'badge-success' : r.health_score > 50 ? 'badge-warning' : 'badge-danger'}">${r.health_score || 0} pts</span></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
-  } catch (e) { console.error('Trend error:', e); }
-  finally { setLoading(false); }
-}
-
-// ── NOTES TAB ──
-async function loadNotes() {
-  if (!state.selectedAccountId) return;
-  try {
-    const notes = await fetch(`/api/notes/${state.selectedAccountId}`).then(r => r.json());
-    const list = document.getElementById('notesList');
-    if (!notes || notes.length === 0) {
-      list.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Nenhuma nota ainda.</p>';
-      return;
-    }
-    list.innerHTML = notes.map(n => `
-      <div class="note-card">
-        <div class="note-header">
-          <div class="flex-center gap-2">
-            <span class="badge badge-primary">${n.type}</span>
-            <span class="note-date">${new Date(n.created_at).toLocaleDateString('pt-BR')}</span>
-          </div>
-          <button onclick="deleteNote(${n.id})" class="btn btn-danger btn-sm">✕</button>
-        </div>
-        <p class="note-text">${n.note}</p>
-      </div>
-    `).join('');
-  } catch (e) { console.error('Notes error:', e); }
-}
-
-async function saveNote() {
-  const note = document.getElementById('noteInput').value.trim();
-  if (!note) return alert('Digite uma nota!');
-  if (!state.selectedAccountId) return alert('Selecione uma conta!');
-  try {
-    await fetch('/api/notes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fbAccountId: state.selectedAccountId,
-        note,
-        type: document.getElementById('noteType').value
-      })
-    });
-    document.getElementById('noteInput').value = '';
-    await loadNotes();
-  } catch (e) { alert('Erro ao salvar nota.'); }
-}
-
-async function deleteNote(id) {
-  if (!confirm('Excluir esta nota?')) return;
-  try {
-    await fetch(`/api/notes/${id}`, { method: 'DELETE' });
-    await loadNotes();
-  } catch (e) { alert('Erro ao excluir nota.'); }
-}
-
-// ── ALERTS TAB ──
-async function loadAlerts() {
-  if (!state.selectedAccountId) return;
-  try {
-    const alert = await fetch(`/api/alerts/${state.selectedAccountId}`).then(r => r.json());
-    const status = document.getElementById('alertStatus');
-    if (alert) {
-      document.getElementById('alertEmail').value = alert.alert_email || '';
-      document.getElementById('alertThreshold').value = alert.threshold_amount || 100;
-      status.innerHTML = `<div class="card" style="border-color: var(--success);"><p style="color: var(--success); font-weight: 700;">✅ Alerta configurado</p><p style="color: var(--text-dim); font-size: 12px; margin-top: 4px;">E-mail: ${alert.alert_email} | Limite: R$ ${alert.threshold_amount}</p></div>`;
-    } else {
-      status.innerHTML = '';
-    }
-  } catch (e) { console.error('Alerts error:', e); }
-}
-
-async function saveAlert() {
-  const email = document.getElementById('alertEmail').value.trim();
-  const threshold = parseFloat(document.getElementById('alertThreshold').value);
-  if (!email) return alert('Digite um e-mail!');
-  if (!state.selectedAccountId) return alert('Selecione uma conta!');
-  try {
-    const account = state.accounts.find(a => a.account_id === state.selectedAccountId);
-    await fetch('/api/alerts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fbAccountId: state.selectedAccountId,
-        accountName: account?.name,
-        email,
-        threshold,
-        currency: account?.currency || 'BRL'
-      })
-    });
-    await loadAlerts();
-    alert('✅ Alerta salvo com sucesso!');
-  } catch (e) { alert('Erro ao salvar alerta.'); }
-}
-
-// ── GPT COPILOT ──
-async function openGptCopilot() {
-  if (!state.metrics || !state.analysis) return alert('Execute uma análise primeiro!');
-  openModal('🤖 Plano de Guerra — IA Sênior', 'Análise estratégica completa da sua conta', '<div style="text-align: center; padding: 30px;"><div class="spinner" style="margin: 0 auto;"></div><p style="margin-top: 12px; color: var(--text-muted);">Gerando plano estratégico...</p></div>');
-
-  try {
-    const res = await fetch('/api/gpt-copilot', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        data: {
-          metrics: state.metrics,
-          analysis: state.analysis,
-          campaigns: state.analysis.campanhas_analise?.slice(0, 10),
-          dateRange: document.getElementById('dateSel').value,
-          niche: document.getElementById('nicheSel').value
-        }
-      })
-    }).then(r => r.json());
-
-    document.getElementById('modalBody').innerHTML = markdownToHtml(res.strategy || 'Análise não disponível.');
-  } catch (e) {
-    document.getElementById('modalBody').innerHTML = `<p style="color: var(--danger);">Erro ao gerar análise: ${e.message}</p>`;
-  }
-}
-
-// ── MODAL ──
-function openModal(title, subtitle, body) {
-  document.getElementById('modalTitle').textContent = title;
-  document.getElementById('modalSubtitle').textContent = subtitle;
-  document.getElementById('modalBody').innerHTML = body;
-  document.getElementById('modalOverlay').classList.add('active');
-}
-
-function closeModal(e) {
-  if (e.target === document.getElementById('modalOverlay')) {
-    document.getElementById('modalOverlay').classList.remove('active');
-  }
-}
-
-// ── MARKDOWN TO HTML ──
-function markdownToHtml(md) {
-  if (!md) return '';
-  return md
-    .replace(/^### (.+)$/gm, '<h3 style="color: var(--text); margin: 16px 0 8px; font-size: 15px;">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 style="color: var(--text); margin: 20px 0 10px; font-size: 17px;">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 style="color: var(--text); margin: 24px 0 12px; font-size: 20px;">$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong style="color: var(--primary);">$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^- (.+)$/gm, '<li style="margin-bottom: 4px;">$1</li>')
-    .replace(/(<li.*<\/li>\n?)+/g, '<ul style="padding-left: 20px; margin: 8px 0;">$&</ul>')
-    .replace(/\n\n/g, '</p><p style="margin-bottom: 10px;">')
-    .replace(/\n/g, '<br>')
-    .replace(/^(?!<)(.+)$/gm, '<p style="margin-bottom: 8px;">$1</p>');
-}
-
-// ── TAB SWITCHING ──
-function switchTab(tab, btn) {
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  switchTabById(tab);
-}
-
-function switchTabById(tab) {
-  state.currentTab = tab;
-  ['overview', 'analysis', 'campaigns', 'creatives', 'breakdown', 'trend', 'notes', 'alerts'].forEach(t => {
-    const el = document.getElementById('tab-' + t);
-    if (el) el.style.display = t === tab ? 'block' : 'none';
-  });
-
-  if (tab === 'breakdown' && state.selectedAccountId) loadBreakdown('device', document.getElementById('bd-device'));
-  if (tab === 'trend') loadTrend();
-  if (tab === 'notes') loadNotes();
-  if (tab === 'alerts') loadAlerts();
-}
-
-// ── EXPORTAÇÃO DE DADOS ──
-function exportCampaignsCSV() {
-  if (!state.analysis || !state.analysis.campanhas_analise) {
-    alert('Nenhum dado de campanha para exportar.');
-    return;
-  }
-  
-  const campaigns = state.analysis.campanhas_analise;
-  const headers = ['Campanha', 'Status', 'Gasto', 'ROAS', 'CTR', 'Impressoes', 'Cliques', 'Alcance', 'Frequencia', 'Compras', 'Mensagens', 'Leads', 'Custo/Compra', 'Performance', 'Diagnostico'];
-  
-  const rows = campaigns.map(c => [
-    c.name,
-    c.status,
-    (c.spend || 0).toFixed(2),
-    (c.roas || 0).toFixed(2),
-    (c.ctr || 0).toFixed(2),
-    c.impressions || 0,
-    c.clicks || 0,
-    c.reach || 0,
-    (c.frequency || 0).toFixed(2),
-    c.purchases || 0,
-    c.messages || 0,
-    c.leads || 0,
-    (c.costPerPur || 0).toFixed(2),
-    c.status_performance || 'N/A',
-    c.diagnostico || 'N/A'
-  ]);
-  
-  const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `campanhas_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  window.URL.revokeObjectURL(url);
-}
-
-function exportCampaignsJSON() {
-  if (!state.analysis || !state.analysis.campanhas_analise) {
-    alert('Nenhum dado de campanha para exportar.');
-    return;
-  }
-  
-  const data = {
-    exportDate: new Date().toISOString(),
-    metrics: state.metrics,
-    analysis: state.analysis.resumo_geral,
-    campaigns: state.analysis.campanhas_analise
+  sel.innerHTML = '<option value="">Escolha a conta</option>' + state.accounts.map(a=>`<option value="${a.account_id}">${a.name}</option>`).join('');
+  sel.onchange = async () => {
+    state.selectedAccountId = sel.value;
+    if(!state.selectedAccountId) return;
+    state.campaigns = (await fetch(`/api/adaccounts/${state.selectedAccountId}/campaigns`).then(r=>r.json())).data || [];
   };
-  
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `analise_${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  window.URL.revokeObjectURL(url);
 }
 
-// ── RECOMENDAÇÕES ANDROMEDA POR CAMPANHA ──
-function generateAndromedaRecommendations(camp) {
-  let html = `<div style="margin-top: 24px; padding: 16px; background: rgba(139,92,246,0.1); border: 1px solid var(--purple); border-radius: 12px;">`;
-  html += `<h3 style="color: var(--purple); margin-bottom: 12px; font-size: 16px;">🤖 Recomendações Andromeda</h3>`;
-  
-  const roas = camp.roas || 0;
-  const ctr = camp.ctr || 0;
-  const freq = camp.frequency || 0;
-  const cpa = camp.costPerPur || 0;
-  const spend = camp.spend || 0;
-  
-  if (roas < 1.5) {
-    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(239,68,68,0.1); border-left: 3px solid var(--danger); border-radius: 4px;"><strong style="color: var(--danger);">⚠️ ROAS Crítico (${roas.toFixed(2)}x)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Expanda públicos • Use Lookalike 1-5% • Aumente orçamento 20-30% • Pause públicos com CPA alto</span></div>`;
-  } else if (roas < 2.5) {
-    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(245,158,11,0.1); border-left: 3px solid var(--warning); border-radius: 4px;"><strong style="color: var(--warning);">📊 ROAS Moderado (${roas.toFixed(2)}x)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Teste Advantage+ Shopping • Dynamic Ads • Aumente testes de públicos • Teste novos formatos</span></div>`;
-  } else {
-    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(16,185,129,0.1); border-left: 3px solid var(--success); border-radius: 4px;"><strong style="color: var(--success);">🔥 ROAS Excelente (${roas.toFixed(2)}x)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Escale 15-25% • Teste públicos similares • Documente estrutura • Replique em outras campanhas</span></div>`;
-  }
-  
-  if (ctr < 0.8) {
-    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(239,68,68,0.1); border-left: 3px solid var(--danger); border-radius: 4px;"><strong style="color: var(--danger);">🪝 CTR Muito Baixo (${ctr.toFixed(2)}%)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Criativo fraco • Teste copy com urgência • Revise segmentação • Teste formatos diferentes</span></div>`;
-  } else if (ctr < 1.2) {
-    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(245,158,11,0.1); border-left: 3px solid var(--warning); border-radius: 4px;"><strong style="color: var(--warning);">📈 CTR Abaixo da Média (${ctr.toFixed(2)}%)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Teste variações de copy • Teste imagens/vídeos • A/B testing com públicos similares</span></div>`;
-  }
-  
-  if (freq > 4) {
-    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(239,68,68,0.1); border-left: 3px solid var(--danger); border-radius: 4px;"><strong style="color: var(--danger);">😴 Fadiga (${freq.toFixed(2)}x)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Renove criativos 2-3 semanas • Teste formatos • Expanda público • Cap de frequência 3x/semana</span></div>`;
-  } else if (freq > 3) {
-    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(245,158,11,0.1); border-left: 3px solid var(--warning); border-radius: 4px;"><strong style="color: var(--warning);">⚠️ Frequência Elevada (${freq.toFixed(2)}x)</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Prepare novos criativos • Teste expansão • Monitore CTR</span></div>`;
-  }
-  
-  if (cpa > 150) {
-    html += `<div style="margin-bottom: 12px; padding: 10px; background: rgba(239,68,68,0.1); border-left: 3px solid var(--danger); border-radius: 4px;"><strong style="color: var(--danger);">💰 CPA Alto (R$ ${cpa.toFixed(2)})</strong><br><span style="font-size: 12px; color: var(--text-dim);">• Otimize landing page • Teste públicos • Retargeting • Revise checkout</span></div>`;
-  }
-  
-  html += `<div style="margin-top: 12px; padding: 10px; background: rgba(59,130,246,0.1); border-left: 3px solid var(--primary); border-radius: 4px;"><strong style="color: var(--primary); font-size: 12px;">💡 Princípios Andromeda:</strong> Escala > Segmentação | Dados > Criatividade | Freq < 3x | 10-15% testes | Paciência 7-14 dias</div>`;
-  html += `</div>`;
-  return html;
+function currency(){ return state.accounts.find(a=>a.account_id===state.selectedAccountId)?.currency === 'USD' ? '$' : 'R$'; }
+function params(){ return 'date_preset=' + document.getElementById('dateSel').value; }
+function badge(action){
+  if(action==='ESCALAR') return '<span class="badge s">ESCALAR</span>';
+  if(action==='PAUSAR') return '<span class="badge d">PAUSAR</span>';
+  if(action==='RENOVAR_CRIATIVO') return '<span class="badge w">RENOVAR CRIATIVO</span>';
+  if(action==='TESTAR_NOVA_VARIACAO') return '<span class="badge p">TESTAR</span>';
+  return '<span class="badge p">MANTER/OTIMIZAR</span>';
 }
 
-// ── LOADING ──
-function setLoading(active, text = 'Carregando...') {
-  const el = document.getElementById('loadingOverlay');
-  document.getElementById('loadingText').textContent = text;
-  if (active) el.classList.add('active');
-  else el.classList.remove('active');
+async function runAnalysis(){
+  if(!state.selectedAccountId){ alert('Selecione uma conta.'); return; }
+  const p = params();
+  const [insights, creatives, comparison] = await Promise.all([
+    fetch(`/api/adaccounts/${state.selectedAccountId}/insights?${p}`).then(r=>r.json()),
+    fetch(`/api/adaccounts/${state.selectedAccountId}/creatives?${p}`).then(r=>r.json()),
+    fetch(`/api/adaccounts/${state.selectedAccountId}/comparison?${p}`).then(r=>r.json())
+  ]);
+  state.insights = insights;
+  state.creatives = creatives.data || [];
+  state.comparison = comparison;
+
+  const accountData = state.accounts.find(a=>a.account_id===state.selectedAccountId);
+  const result = await fetch('/api/analyze', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ accountData, campaigns: state.campaigns, insights, dateRange: document.getElementById('dateSel').value, niche: document.getElementById('nicheSel').value, previousMetrics: comparison.previous })
+  }).then(r=>r.json());
+
+  state.metrics = result.metrics;
+  state.analysis = result.analysis;
+  document.getElementById('empty').style.display = 'none';
+  renderOverview();
+  renderDecision();
+  renderAnalysis();
+  renderCampaigns();
+  renderCreatives();
+  renderBreakdown();
+  renderTrend();
+  loadNotes();
 }
 
-// ── START ──
+function renderOverview(){
+  const m = state.metrics, a = state.analysis, c = currency();
+  const score = a.resumo_geral.score_saude;
+  document.getElementById('hero').innerHTML = `
+    <div class="card hero">
+      <div><h2>Score ${score} — ${a.resumo_geral.nivel_saude}</h2><div class="muted">${a.resumo_geral.resumo_historico}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill">ROAS ${m.roas.toFixed(2)}x</span><span class="pill">CTR ${m.avgCtr.toFixed(2)}%</span><span class="pill">Freq. ${m.avgFrequency.toFixed(2)}</span></div>
+    </div>`;
+  document.getElementById('overviewCards').innerHTML = [
+    ['Investimento', `${c} ${m.totalSpend.toFixed(2)}`, 'Gasto do período'],
+    ['Receita', `${c} ${m.totalRev.toFixed(2)}`, 'Receita rastreada'],
+    ['ROAS', `${m.roas.toFixed(2)}x`, 'Retorno sobre investimento'],
+    ['CTR', `${m.avgCtr.toFixed(2)}%`, 'Taxa média de clique'],
+    ['CPM', `${c} ${m.avgCpm.toFixed(2)}`, 'Custo por mil'],
+    ['CPC', `${c} ${m.avgCpc.toFixed(2)}`, 'Custo por clique'],
+    ['Mensagens', `${m.totalMessages}`, 'Conversas geradas'],
+    ['Compras', `${m.totalPurchases}`, 'Conversões de venda']
+  ].map(x => `<div class="card"><div class="label">${x[0]}</div><div class="value">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
+}
+
+function renderDecision(){
+  const dc = state.analysis.decision_center; const c = currency();
+  document.getElementById('decisionSummary').innerHTML = [
+    ['Escalar', dc.summary.scaleCount], ['Pausar', dc.summary.pauseCount], ['Renovar', dc.summary.refreshCount], ['Testar', dc.summary.testCount], ['Desperdício estimado', `${c} ${dc.summary.totalEstimatedWaste.toFixed(2)}`], ['Verba para redistribuir', `${c} ${dc.summary.reallocationPool.toFixed(2)}`]
+  ].map(x=>`<div class="card"><div class="label">${x[0]}</div><div class="value">${x[1]}</div></div>`).join('');
+  document.getElementById('immediateActions').innerHTML = (dc.immediateActions||[]).map(x=>`<li>${x}</li>`).join('') || '<li>Nenhuma ação imediata identificada.</li>';
+  document.getElementById('allocationBox').innerHTML = dc.allocationSuggestions.length ? dc.allocationSuggestions.map(x=>`<div style="margin-bottom:10px"><strong>${x.campaignName}</strong><br>+ ${c} ${x.suggestedExtraBudget.toFixed(2)}<br><span class="muted">${x.reason}</span></div>`).join('') : 'Sem sugestão clara de redistribuição neste momento.';
+  document.getElementById('decisionCards').innerHTML = dc.campaigns.map(camp=>`
+    <div class="decision-card">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:start"> <h4>${camp.name}</h4> ${badge(camp.decision.action)} </div>
+      <div class="small muted">${camp.decision.reason}</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px" class="small">
+        <div><strong>Gasto</strong><br>${currency()} ${Number(camp.spend||0).toFixed(2)}</div>
+        <div><strong>ROAS</strong><br>${Number(camp.roas||0).toFixed(2)}x</div>
+        <div><strong>CTR</strong><br>${Number(camp.ctr||0).toFixed(2)}%</div>
+        <div><strong>Frequência</strong><br>${Number(camp.frequency||0).toFixed(2)}</div>
+      </div>
+      <div style="margin-top:12px;padding:10px;border:1px dashed var(--line);border-radius:12px" class="small">
+        <strong>Próxima ação</strong><br>${camp.decision.budgetSuggestion}
+      </div>
+    </div>`).join('');
+}
+
+function renderAnalysis(){
+  const list = state.analysis.otimizacoes_prioritarias || [];
+  document.getElementById('analysisList').innerHTML = list.length ? list.map(item=>`
+    <div class="card"><div style="display:flex;gap:8px;margin-bottom:8px"><span class="badge ${item.prioridade===1?'d':'w'}">P${item.prioridade}</span><span class="badge p">${item.categoria}</span></div><h3 style="margin:0 0 8px">${item.titulo}</h3><div class="muted">${item.descricao}</div><div style="margin-top:12px" class="small"><strong>Ação:</strong> ${item.acao}</div></div>`).join('') : '<div class="card">Nenhuma recomendação prioritária.</div>';
+}
+
+function renderCampaigns(){
+  const rows = state.analysis.campanhas_analise || [];
+  document.getElementById('campaignRows').innerHTML = rows.map(c=>`<tr><td>${c.name}</td><td>${currency()} ${Number(c.spend||0).toFixed(2)}</td><td>${Number(c.ctr||0).toFixed(2)}%</td><td>${Number(c.roas||0).toFixed(2)}x</td><td>${Number(c.frequency||0).toFixed(2)}</td><td>${c.messages||0}</td><td>${c.purchases||0}</td><td>${c.status_performance||'-'}</td><td>${badge(c.decision?.action || 'MANTER_E_OTIMIZAR')}</td></tr>`).join('');
+}
+
+function renderCreatives(){
+  const list = [...(state.creatives||[])].sort((a,b)=>Number(b?.insights?.data?.[0]?.spend||0)-Number(a?.insights?.data?.[0]?.spend||0)).slice(0,12);
+  document.getElementById('creativeGrid').innerHTML = list.map(cr=>{
+    const ins = cr.insights?.data?.[0] || {}; const img = cr.creative?.image_url || cr.creative?.thumbnail_url || ''; const spend = Number(ins.spend||0); const ctr = Number(ins.ctr||0); const clicks = Number(ins.clicks||0);
+    return `<div class="decision-card">${img?`<img src="${img}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;margin-bottom:10px">`:''}<h4>${cr.name}</h4><div class="small muted">Gasto ${currency()} ${spend.toFixed(2)} · CTR ${ctr.toFixed(2)}% · Cliques ${clicks}</div></div>`;
+  }).join('') || '<div class="card">Sem criativos no período.</div>';
+}
+
+async function renderBreakdown(){
+  const res = await fetch(`/api/adaccounts/${state.selectedAccountId}/breakdown/device?${params()}`).then(r=>r.json()).catch(()=>({data:[]}));
+  const rows = res.data || [];
+  const labels = rows.map(x=>x.device_platform || 'outros');
+  const values = rows.map(x=>Number(x.spend||0));
+  if(state.charts.breakdown) state.charts.breakdown.destroy();
+  state.charts.breakdown = new Chart(document.getElementById('breakdownChart'), {type:'bar',data:{labels,datasets:[{label:'Gasto',data:values}]},options:{responsive:true,maintainAspectRatio:false}});
+}
+
+async function renderTrend(){
+  const res = await fetch(`/api/trend/${state.selectedAccountId}`).then(r=>r.json()).catch(()=>({trend:[]}));
+  const rows = res.trend || [];
+  const labels = rows.map(x=>new Date(x.date).toLocaleDateString('pt-BR'));
+  const score = rows.map(x=>Number(x.avg_health||0));
+  const spend = rows.map(x=>Number(x.total_spend||0));
+  if(state.charts.trend) state.charts.trend.destroy();
+  state.charts.trend = new Chart(document.getElementById('trendChart'), {type:'line',data:{labels,datasets:[{label:'Score',data:score,yAxisID:'y'},{label:'Gasto',data:spend,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,max:100},y1:{position:'right',beginAtZero:true}}}});
+}
+
+async function openCopilot(){
+  const res = await fetch('/api/gpt-copilot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{metrics:state.metrics,analysis:state.analysis,decisionCenter:state.analysis.decision_center,niche:document.getElementById('nicheSel').value}})}).then(r=>r.json());
+  document.getElementById('modalTitle').textContent = 'Plano de Guerra';
+  document.getElementById('modalBody').innerHTML = (res.strategy || '').replace(/\n/g,'<br>');
+  document.getElementById('modalBg').classList.add('open');
+}
+
+function showSection(id, btn){ document.querySelectorAll('.section').forEach(x=>x.classList.remove('active')); document.getElementById(id).classList.add('active'); document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active')); if(btn) btn.classList.add('active'); }
+
+async function loadNotes(){
+  const notes = await fetch(`/api/notes/${state.selectedAccountId}`).then(r=>r.json()).catch(()=>[]);
+  document.getElementById('notesList').innerHTML = notes.map(n=>`<div class="card"><div class="small muted">${new Date(n.created_at).toLocaleString('pt-BR')}</div><div style="margin-top:8px">${n.note}</div></div>`).join('') || '<div class="card">Nenhuma nota.</div>';
+}
+
+async function saveNote(){
+  const note = document.getElementById('noteInput').value.trim(); if(!note) return;
+  await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fbAccountId:state.selectedAccountId,note,type:'geral'})});
+  document.getElementById('noteInput').value=''; loadNotes();
+}
+
 init();
 </script>
 </body>
