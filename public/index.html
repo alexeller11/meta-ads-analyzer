@@ -4,704 +4,252 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meta Ads Analyzer</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+
   <style>
-    :root{
-      --bg:#08111f;
-      --bg2:#0d1728;
-      --card:#101c31;
-      --card2:#162540;
-      --border:#253555;
-      --primary:#3b82f6;
-      --primary-2:#60a5fa;
-      --success:#10b981;
-      --warning:#f59e0b;
-      --danger:#ef4444;
-      --text:#eef4ff;
-      --muted:#9db0cf;
-      --muted-2:#7f90ab;
-      --glow:rgba(59,130,246,.18);
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
     }
 
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;font-family:Inter,sans-serif;background:linear-gradient(180deg,var(--bg) 0%, #0a1424 100%);color:var(--text)}
-    a{text-decoration:none;color:inherit}
-
-    .page{
-      min-height:100vh;
-      display:flex;
-      flex-direction:column;
-      overflow:hidden;
-      position:relative;
+    body {
+      background: #0b1220;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
 
-    .bg-orb{
-      position:absolute;
-      border-radius:999px;
-      filter:blur(70px);
-      opacity:.22;
-      pointer-events:none;
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
     }
 
-    .orb-1{
-      width:420px;height:420px;
-      background:#2563eb;
-      top:-80px;left:-120px;
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 60px;
     }
 
-    .orb-2{
-      width:380px;height:380px;
-      background:#8b5cf6;
-      right:-120px;top:120px;
+    .logo {
+      font-size: 22px;
+      font-weight: 900;
     }
 
-    .orb-3{
-      width:280px;height:280px;
-      background:#10b981;
-      left:35%;bottom:-80px;
+    .logo span {
+      color: #3b82f6;
     }
 
-    .topbar{
-      position:relative;
-      z-index:2;
-      height:74px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:0 28px;
-      border-bottom:1px solid rgba(255,255,255,.06);
-      background:rgba(8,17,31,.55);
-      backdrop-filter:blur(14px);
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 40px;
+      align-items: center;
     }
 
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      font-weight:900;
-      font-size:20px;
-      letter-spacing:-.4px;
+    .hero h1 {
+      font-size: 48px;
+      line-height: 1.1;
+      margin-bottom: 20px;
     }
 
-    .brand-logo{
-      width:40px;height:40px;border-radius:12px;
-      display:grid;place-items:center;
-      background:linear-gradient(135deg,var(--primary),#1d4ed8);
-      box-shadow:0 10px 30px rgba(59,130,246,.28);
-      font-size:18px;
+    .hero h1 span {
+      color: #3b82f6;
     }
 
-    .brand span{
-      color:var(--primary-2);
+    .hero p {
+      color: #94a3b8;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 30px;
     }
 
-    .top-actions{
-      display:flex;
-      align-items:center;
-      gap:10px;
+    .btn {
+      padding: 14px 24px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.2s;
     }
 
-    .chip{
-      padding:10px 14px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.08);
-      color:var(--muted);
-      font-size:12px;
-      font-weight:700;
-      background:rgba(255,255,255,.03);
+    .btn-primary {
+      background: #3b82f6;
+      color: #fff;
     }
 
-    .btn{
-      height:46px;
-      padding:0 18px;
-      border-radius:12px;
-      border:none;
-      cursor:pointer;
-      font-family:Inter,sans-serif;
-      font-weight:800;
-      font-size:14px;
-      transition:.2s ease;
+    .btn-primary:hover {
+      background: #2563eb;
     }
 
-    .btn-primary{
-      background:linear-gradient(135deg,var(--primary),#2563eb);
-      color:#fff;
-      box-shadow:0 12px 30px rgba(59,130,246,.24);
+    .card {
+      background: #111827;
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid #1f2937;
     }
 
-    .btn-primary:hover{
-      transform:translateY(-1px);
-      box-shadow:0 16px 36px rgba(59,130,246,.32);
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
     }
 
-    .btn-ghost{
-      background:rgba(255,255,255,.04);
-      color:var(--text);
-      border:1px solid rgba(255,255,255,.08);
+    .metric {
+      background: #0f172a;
+      padding: 16px;
+      border-radius: 12px;
     }
 
-    .btn-ghost:hover{
-      background:rgba(255,255,255,.07);
+    .metric small {
+      color: #64748b;
+      font-size: 12px;
     }
 
-    .hero{
-      position:relative;
-      z-index:2;
-      display:grid;
-      grid-template-columns:1.15fr .85fr;
-      gap:28px;
-      width:min(1220px,calc(100% - 40px));
-      margin:34px auto 24px;
-      align-items:stretch;
+    .metric strong {
+      display: block;
+      font-size: 22px;
+      margin-top: 6px;
     }
 
-    .hero-left{
-      padding:42px 34px;
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:28px;
-      background:linear-gradient(180deg,rgba(16,28,49,.88),rgba(13,23,40,.88));
-      box-shadow:0 30px 80px rgba(0,0,0,.28);
-      backdrop-filter:blur(8px);
+    .features {
+      margin-top: 80px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
     }
 
-    .mini-badge{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 12px;
-      border-radius:999px;
-      background:rgba(59,130,246,.12);
-      color:var(--primary-2);
-      border:1px solid rgba(59,130,246,.25);
-      font-size:12px;
-      font-weight:800;
-      margin-bottom:18px;
+    .feature {
+      background: #111827;
+      padding: 20px;
+      border-radius: 14px;
+      border: 1px solid #1f2937;
     }
 
-    .hero-title{
-      font-size:54px;
-      line-height:1.03;
-      margin:0;
-      letter-spacing:-1.6px;
-      font-weight:900;
-      max-width:760px;
+    .feature h3 {
+      font-size: 16px;
+      margin-bottom: 10px;
     }
 
-    .hero-title .accent{
-      color:var(--primary-2);
+    .feature p {
+      font-size: 14px;
+      color: #94a3b8;
+      line-height: 1.6;
     }
 
-    .hero-sub{
-      margin:18px 0 0;
-      color:var(--muted);
-      font-size:17px;
-      line-height:1.7;
-      max-width:700px;
+    .footer {
+      margin-top: auto;
+      padding: 20px;
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
     }
 
-    .hero-actions{
-      display:flex;
-      gap:12px;
-      flex-wrap:wrap;
-      margin-top:26px;
-    }
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
 
-    .hero-stats{
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:14px;
-      margin-top:30px;
-    }
-
-    .stat-card{
-      padding:18px 16px;
-      border-radius:18px;
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.08);
-    }
-
-    .stat-label{
-      font-size:11px;
-      text-transform:uppercase;
-      letter-spacing:.6px;
-      color:var(--muted-2);
-      font-weight:800;
-      margin-bottom:8px;
-    }
-
-    .stat-value{
-      font-size:26px;
-      font-weight:900;
-    }
-
-    .stat-sub{
-      font-size:12px;
-      color:var(--muted);
-      margin-top:6px;
-    }
-
-    .hero-right{
-      display:flex;
-      flex-direction:column;
-      gap:18px;
-    }
-
-    .login-card{
-      padding:26px;
-      border-radius:26px;
-      border:1px solid rgba(255,255,255,.08);
-      background:linear-gradient(180deg,rgba(16,28,49,.92),rgba(13,23,40,.92));
-      box-shadow:0 30px 80px rgba(0,0,0,.28);
-    }
-
-    .login-title{
-      font-size:24px;
-      margin:0 0 8px;
-      font-weight:900;
-      letter-spacing:-.6px;
-    }
-
-    .login-sub{
-      margin:0 0 20px;
-      color:var(--muted);
-      line-height:1.6;
-      font-size:14px;
-    }
-
-    .login-box{
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      margin-top:16px;
-    }
-
-    .login-feature{
-      display:flex;
-      align-items:flex-start;
-      gap:10px;
-      padding:12px 12px;
-      border-radius:14px;
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.05);
-    }
-
-    .login-feature-icon{
-      width:34px;height:34px;border-radius:10px;
-      display:grid;place-items:center;
-      background:rgba(59,130,246,.14);
-      color:var(--primary-2);
-      flex-shrink:0;
-      font-size:15px;
-    }
-
-    .login-feature strong{
-      display:block;
-      font-size:13px;
-      margin-bottom:4px;
-    }
-
-    .login-feature span{
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.5;
-    }
-
-    .showcase{
-      padding:22px;
-      border-radius:24px;
-      border:1px solid rgba(255,255,255,.08);
-      background:linear-gradient(180deg,rgba(16,28,49,.92),rgba(13,23,40,.92));
-      box-shadow:0 30px 80px rgba(0,0,0,.28);
-    }
-
-    .showcase-top{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom:16px;
-    }
-
-    .showcase-title{
-      font-size:16px;
-      font-weight:900;
-      letter-spacing:-.3px;
-    }
-
-    .showcase-pill{
-      font-size:11px;
-      font-weight:800;
-      color:var(--success);
-      background:rgba(16,185,129,.12);
-      border:1px solid rgba(16,185,129,.18);
-      padding:7px 10px;
-      border-radius:999px;
-    }
-
-    .showcase-grid{
-      display:grid;
-      grid-template-columns:repeat(2,1fr);
-      gap:12px;
-    }
-
-    .showcase-card{
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.06);
-      border-radius:16px;
-      padding:16px;
-    }
-
-    .showcase-card .k{
-      font-size:11px;
-      color:var(--muted-2);
-      text-transform:uppercase;
-      font-weight:800;
-      margin-bottom:8px;
-    }
-
-    .showcase-card .v{
-      font-size:24px;
-      font-weight:900;
-      margin-bottom:6px;
-    }
-
-    .showcase-card .t{
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.5;
-    }
-
-    .features{
-      position:relative;
-      z-index:2;
-      width:min(1220px,calc(100% - 40px));
-      margin:12px auto 40px;
-    }
-
-    .section-head{
-      display:flex;
-      align-items:end;
-      justify-content:space-between;
-      gap:18px;
-      margin-bottom:18px;
-    }
-
-    .section-head h2{
-      margin:0;
-      font-size:30px;
-      font-weight:900;
-      letter-spacing:-1px;
-    }
-
-    .section-head p{
-      margin:8px 0 0;
-      color:var(--muted);
-      max-width:740px;
-      line-height:1.7;
-      font-size:15px;
-    }
-
-    .feature-grid{
-      display:grid;
-      grid-template-columns:repeat(4,1fr);
-      gap:14px;
-    }
-
-    .feature-card{
-      padding:20px;
-      border-radius:20px;
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.07);
-      min-height:190px;
-    }
-
-    .feature-icon{
-      width:42px;height:42px;border-radius:12px;
-      display:grid;place-items:center;
-      background:rgba(59,130,246,.14);
-      color:var(--primary-2);
-      font-size:18px;
-      margin-bottom:16px;
-    }
-
-    .feature-card h3{
-      margin:0 0 10px;
-      font-size:17px;
-      font-weight:800;
-    }
-
-    .feature-card p{
-      margin:0;
-      color:var(--muted);
-      font-size:14px;
-      line-height:1.7;
-    }
-
-    .footer{
-      position:relative;
-      z-index:2;
-      width:min(1220px,calc(100% - 40px));
-      margin:0 auto 26px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-      padding-top:8px;
-      color:var(--muted-2);
-      font-size:12px;
-    }
-
-    .status-line{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-
-    .status-pill{
-      padding:8px 10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.07);
-      font-weight:700;
-    }
-
-    @media (max-width: 1100px){
-      .hero{grid-template-columns:1fr}
-      .feature-grid{grid-template-columns:repeat(2,1fr)}
-      .hero-title{font-size:44px}
-    }
-
-    @media (max-width: 700px){
-      .topbar{padding:0 16px;height:auto;min-height:74px;flex-wrap:wrap;padding-top:14px;padding-bottom:14px}
-      .hero{width:calc(100% - 24px);margin:20px auto}
-      .features,.footer{width:calc(100% - 24px)}
-      .hero-left,.login-card,.showcase{padding:22px}
-      .hero-title{font-size:36px}
-      .hero-stats,.showcase-grid,.feature-grid{grid-template-columns:1fr}
-      .footer{flex-direction:column;align-items:flex-start}
+      .features {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
+
 <body>
-  <div class="page">
-    <div class="bg-orb orb-1"></div>
-    <div class="bg-orb orb-2"></div>
-    <div class="bg-orb orb-3"></div>
 
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-logo">⚡</div>
-        <div>Meta<span>Analyzer</span></div>
-      </div>
+  <div class="container">
 
-      <div class="top-actions">
-        <div class="chip">Diagnóstico real de campanha</div>
-        <div class="chip">IA + dados do Meta</div>
-      </div>
-    </header>
+    <div class="header">
+      <div class="logo">Meta<span>Analyzer</span></div>
+    </div>
 
-    <section class="hero">
-      <div class="hero-left">
-        <div class="mini-badge">🧠 Inteligência sênior para tráfego pago</div>
+    <div class="hero">
 
-        <h1 class="hero-title">
-          Pare de olhar só números.
-          <span class="accent">Entenda o que otimizar, o que pausar e o que escalar.</span>
+      <div>
+        <h1>
+          Pare de olhar só números.<br>
+          <span>Comece a tomar decisões.</span>
         </h1>
 
-        <p class="hero-sub">
-          O Meta Ads Analyzer foi pensado para operação interna de agência. Ele cruza métricas da conta, histórico, funil, criativos e leitura estratégica para transformar dados soltos em tomada de decisão.
+        <p>
+          Analise campanhas do Meta com profundidade, entenda o que está funcionando,
+          identifique gargalos e saiba exatamente o que otimizar, pausar ou escalar.
         </p>
 
-        <div class="hero-actions">
-          <a href="/auth/facebook">
-            <button class="btn btn-primary">Entrar com Facebook</button>
-          </a>
-          <a href="#features">
-            <button class="btn btn-ghost">Ver recursos</button>
-          </a>
-        </div>
-
-        <div class="hero-stats">
-          <div class="stat-card">
-            <div class="stat-label">Central de decisão</div>
-            <div class="stat-value">Escalar ou pausar</div>
-            <div class="stat-sub">Leitura clara por campanha, com foco em ação e não só em relatório.</div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-label">Análise de funil</div>
-            <div class="stat-value">Clique até conversão</div>
-            <div class="stat-sub">Connect rate, custo por venda, gargalos de página e sinais de fadiga.</div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-label">Histórico diário</div>
-            <div class="stat-value">Evolução real</div>
-            <div class="stat-sub">Acompanhe melhora, piora e tendência por período para decidir com mais segurança.</div>
-          </div>
-        </div>
+        <a href="/auth/facebook">
+          <button class="btn btn-primary">
+            Entrar com Facebook
+          </button>
+        </a>
       </div>
 
-      <div class="hero-right">
-        <div class="login-card">
-          <h2 class="login-title">Conecte sua conta e analise com profundidade</h2>
-          <p class="login-sub">
-            A ferramenta acessa suas contas de anúncio com autenticação do Facebook, organiza os dados e entrega uma leitura prática para otimização de performance.
-          </p>
+      <div class="card">
 
-          <a href="/auth/facebook" style="display:block">
-            <button class="btn btn-primary" style="width:100%">Entrar com Facebook</button>
-          </a>
+        <div class="metrics">
 
-          <div class="login-box">
-            <div class="login-feature">
-              <div class="login-feature-icon">📊</div>
-              <div>
-                <strong>Visão geral completa</strong>
-                <span>Investimento, ROAS, CTR, CPM, connect rate, impressões, alcance e custo por venda.</span>
-              </div>
-            </div>
-
-            <div class="login-feature">
-              <div class="login-feature-icon">🎯</div>
-              <div>
-                <strong>Central de decisão</strong>
-                <span>Veja quais campanhas estão em melhor ponto para escalar, quais exigem ajuste e quais devem ser pausadas.</span>
-              </div>
-            </div>
-
-            <div class="login-feature">
-              <div class="login-feature-icon">🖼️</div>
-              <div>
-                <strong>Criativos e breakdown</strong>
-                <span>Leia os melhores anúncios, compare plataforma, idade, sexo, cidade, região e dispositivo.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="showcase">
-          <div class="showcase-top">
-            <div class="showcase-title">Visão do que você acompanha</div>
-            <div class="showcase-pill">Painel interno de agência</div>
+          <div class="metric">
+            <small>ROAS</small>
+            <strong>2.84x</strong>
           </div>
 
-          <div class="showcase-grid">
-            <div class="showcase-card">
-              <div class="k">ROAS</div>
-              <div class="v">2.84x</div>
-              <div class="t">Leitura rápida de retorno para entender onde vale insistir e onde está o desperdício.</div>
-            </div>
-
-            <div class="showcase-card">
-              <div class="k">Connect rate</div>
-              <div class="v">71.3%</div>
-              <div class="t">Mostra quantos cliques realmente viram acesso à página. Ajuda a encontrar gargalo técnico.</div>
-            </div>
-
-            <div class="showcase-card">
-              <div class="k">Frequência</div>
-              <div class="v">3.6</div>
-              <div class="t">Quando sobe demais, é sinal de fadiga. Ideal para decidir renovação de criativo.</div>
-            </div>
-
-            <div class="showcase-card">
-              <div class="k">Custo por venda</div>
-              <div class="v">R$ 38,20</div>
-              <div class="t">Métrica central para leitura de eficiência em campanhas orientadas a resultado.</div>
-            </div>
+          <div class="metric">
+            <small>CTR</small>
+            <strong>3.2%</strong>
           </div>
+
+          <div class="metric">
+            <small>Connect Rate</small>
+            <strong>72%</strong>
+          </div>
+
+          <div class="metric">
+            <small>Custo por venda</small>
+            <strong>R$ 38</strong>
+          </div>
+
         </div>
+
       </div>
-    </section>
 
-    <section class="features" id="features">
-      <div class="section-head">
-        <div>
-          <h2>Recursos pensados para operação real</h2>
-          <p>
-            Não é só um painel bonito. A estrutura foi desenhada para facilitar leitura de performance, comparação de períodos e otimização prática no dia a dia da agência.
-          </p>
-        </div>
+    </div>
+
+    <div class="features">
+
+      <div class="feature">
+        <h3>Visão Geral</h3>
+        <p>Entenda rapidamente o desempenho da conta e os principais indicadores.</p>
       </div>
 
-      <div class="feature-grid">
-        <div class="feature-card">
-          <div class="feature-icon">📈</div>
-          <h3>Visão geral estratégica</h3>
-          <p>
-            Reúne as principais métricas da conta em um só lugar, com leitura clara de investimento, retorno, alcance, entrega e eficiência.
-          </p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">🧠</div>
-          <h3>Insights e plano de guerra</h3>
-          <p>
-            A IA ajuda a organizar diagnóstico, apontar gargalos e priorizar ações de otimização com base no desempenho da conta.
-          </p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">🎛️</div>
-          <h3>Filtros por período e status</h3>
-          <p>
-            Trabalhe com períodos personalizados, comparação com o mesmo intervalo anterior e filtros por campanha ativa, pausada, concluída ou rodando.
-          </p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">🗂️</div>
-          <h3>Histórico para leitura de evolução</h3>
-          <p>
-            Acompanhe métricas diariamente e identifique com clareza o que está melhorando, piorando ou apenas oscilando.
-          </p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">🖼️</div>
-          <h3>Ranking de criativos</h3>
-          <p>
-            Veja criativo campeão, anúncios com mais mensagens e anúncios com mais compras para acelerar decisões criativas.
-          </p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">🌎</div>
-          <h3>Breakdown detalhado</h3>
-          <p>
-            Entenda comportamento por plataforma, posicionamento, sexo, idade, região, cidade e dispositivo para ajustar segmentação e verba.
-          </p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">📝</div>
-          <h3>Notas e contexto operacional</h3>
-          <p>
-            Registre observações importantes da conta e mantenha o histórico do que foi testado, ajustado ou identificado em cada cliente.
-          </p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">🔔</div>
-          <h3>Alertas de saldo</h3>
-          <p>
-            Configure notificações para evitar pausas inesperadas por falta de saldo e manter previsibilidade na operação.
-          </p>
-        </div>
+      <div class="feature">
+        <h3>Campanhas</h3>
+        <p>Analise cada campanha e identifique onde está o problema ou a oportunidade.</p>
       </div>
-    </section>
 
-    <footer class="footer">
-      <div class="status-line">
-        <div class="status-pill">Login seguro com Facebook</div>
-        <div class="status-pill">Dados organizados para tomada de decisão</div>
-        <div class="status-pill">Uso interno de agência</div>
+      <div class="feature">
+        <h3>Criativos</h3>
+        <p>Descubra quais anúncios estão performando melhor e onde ajustar.</p>
       </div>
-      <div>Meta Ads Analyzer</div>
-    </footer>
+
+      <div class="feature">
+        <h3>Breakdown</h3>
+        <p>Veja dados por plataforma, idade, sexo, dispositivo e localização.</p>
+      </div>
+
+    </div>
+
   </div>
+
+  <div class="footer">
+    Meta Ads Analyzer — Uso interno de agência
+  </div>
+
 </body>
 </html>
