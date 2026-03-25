@@ -1,3 +1,13 @@
+// 🔍 Validação de variáveis críticas
+const requiredEnv = ['FB_APP_ID', 'FB_APP_SECRET', 'BASE_URL'];
+
+requiredEnv.forEach((envVar) => {
+  if (!process.env[envVar]) {
+    console.error(`❌ Variável não definida: ${envVar}`);
+  } else {
+    console.log(`✅ ${envVar} carregada`);
+  }
+});
 require("dotenv").config();
 const express = require("express");
 const session = require("express-session");
