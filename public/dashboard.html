@@ -3,201 +3,671 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meta Ads Analyzer — Dashboard</title>
+  <title>Ideale.id — Meta Ads Analyzer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     :root{
-      --bg:#08111f;
-      --bg2:#0d1728;
-      --bg3:#111d33;
-      --card:#101c31;
-      --card2:#162540;
-      --border:#253555;
-      --primary:#3b82f6;
-      --primary2:#60a5fa;
-      --success:#10b981;
-      --warning:#f59e0b;
-      --danger:#ef4444;
-      --purple:#8b5cf6;
-      --text:#eef4ff;
-      --muted:#9db0cf;
-      --muted2:#7f90ab;
-      --shadow:0 20px 60px rgba(0,0,0,.26);
+      --bg:#071018;
+      --bg2:#0d1824;
+      --bg3:#122132;
+      --card:#101d2c;
+      --card2:#162739;
+      --border:rgba(255,255,255,.08);
+      --border-strong:rgba(255,255,255,.14);
+      --text:#edf7ff;
+      --muted:#9bb2c7;
+      --muted-2:#7f95ab;
+      --primary:#39c7c3;
+      --primary-dark:#1b9895;
+      --accent:#4f8cff;
+      --success:#17c484;
+      --warning:#f5b24a;
+      --danger:#ff6b6b;
+      --purple:#8b6bff;
+      --shadow:0 20px 60px rgba(0,0,0,.25);
+      --glow:0 0 0 1px rgba(57,199,195,.12), 0 14px 40px rgba(57,199,195,.08);
+      --radius:22px;
     }
+
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;font-family:Inter,sans-serif;background:linear-gradient(180deg,var(--bg) 0%, #0a1424 100%);color:var(--text)}
+    html,body{
+      margin:0;
+      padding:0;
+      font-family:Inter,sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(57,199,195,.12), transparent 30%),
+        radial-gradient(circle at top right, rgba(79,140,255,.12), transparent 28%),
+        linear-gradient(180deg, #061018 0%, #09131d 100%);
+      color:var(--text);
+    }
+
     body{min-height:100vh}
+
     .topbar{
-      position:sticky;top:0;z-index:30;
-      min-height:76px;
-      display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+      position:sticky;
+      top:0;
+      z-index:50;
+      min-height:78px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
       padding:12px 18px;
-      background:rgba(8,17,31,.72);
-      border-bottom:1px solid rgba(255,255,255,.06);
-      backdrop-filter:blur(12px);
+      background:rgba(7,16,24,.72);
+      border-bottom:1px solid var(--border);
+      backdrop-filter:blur(14px);
     }
-    .logo{font-weight:900;font-size:21px;letter-spacing:-.4px;margin-right:4px}
-    .logo span{color:var(--primary2)}
+
+    .brand-wrap{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-right:6px;
+      padding-right:8px;
+    }
+
+    .brand-icon{
+      width:46px;
+      height:46px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(135deg, rgba(57,199,195,.18), rgba(79,140,255,.08));
+      border:1px solid rgba(57,199,195,.18);
+      box-shadow:var(--glow);
+      overflow:hidden;
+      flex-shrink:0;
+    }
+
+    .brand-icon img{
+      width:80%;
+      height:80%;
+      object-fit:contain;
+      display:block;
+    }
+
+    .brand-text{
+      display:flex;
+      flex-direction:column;
+      line-height:1.05;
+    }
+
+    .brand-main{
+      font-size:15px;
+      font-weight:900;
+      letter-spacing:.6px;
+      color:var(--text);
+      text-transform:uppercase;
+    }
+
+    .brand-sub{
+      font-size:11px;
+      font-weight:700;
+      color:var(--primary);
+      letter-spacing:.8px;
+      text-transform:uppercase;
+      margin-top:4px;
+    }
+
     .control,.btn{
-      height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.04);color:var(--text);
-      padding:0 12px;font-family:Inter,sans-serif;font-size:14px
-    }
-    .control{min-width:160px}
-    .btn{
-      cursor:pointer;font-weight:800;background:linear-gradient(135deg,var(--primary),#2563eb);
-      border:none;box-shadow:0 10px 30px rgba(59,130,246,.18)
-    }
-    .btn.secondary{
+      height:44px;
+      border-radius:14px;
+      border:1px solid var(--border);
       background:rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.08);
-      box-shadow:none
+      color:var(--text);
+      padding:0 13px;
+      font-family:Inter,sans-serif;
+      font-size:14px;
     }
-    .checkline{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:700}
-    .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;font-weight:700}
-    .app{display:flex;min-height:calc(100vh - 76px)}
+
+    .control{
+      min-width:160px;
+      outline:none;
+    }
+
+    .control:focus{
+      border-color:rgba(57,199,195,.4);
+      box-shadow:0 0 0 4px rgba(57,199,195,.08);
+    }
+
+    .btn{
+      cursor:pointer;
+      font-weight:800;
+      background:linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border:none;
+      box-shadow:0 12px 28px rgba(57,199,195,.18);
+      transition:.18s ease;
+    }
+
+    .btn:hover{
+      transform:translateY(-1px);
+      filter:brightness(1.04);
+    }
+
+    .btn.secondary{
+      background:rgba(255,255,255,.05);
+      border:1px solid var(--border);
+      box-shadow:none;
+    }
+
+    .checkline{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:var(--muted);
+      font-size:13px;
+      font-weight:700;
+      padding:0 2px;
+    }
+
+    .topbar-right{
+      margin-left:auto;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      color:var(--muted);
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .user-chip{
+      padding:10px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      color:var(--text);
+    }
+
+    .app{
+      display:flex;
+      min-height:calc(100vh - 78px);
+    }
+
     .sidebar{
-      width:250px;flex-shrink:0;
-      background:rgba(13,23,40,.78);
-      border-right:1px solid rgba(255,255,255,.06);
-      padding:16px 12px;backdrop-filter:blur(10px)
+      width:270px;
+      flex-shrink:0;
+      padding:18px 14px;
+      background:linear-gradient(180deg, rgba(10,19,30,.88), rgba(8,16,24,.88));
+      border-right:1px solid var(--border);
+      backdrop-filter:blur(10px);
     }
+
+    .sidebar-logo{
+      margin-bottom:18px;
+      padding:10px 10px 16px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+
+    .sidebar-logo img{
+      width:100%;
+      max-width:190px;
+      object-fit:contain;
+      display:block;
+    }
+
     .nav-title{
-      font-size:11px;color:var(--muted2);text-transform:uppercase;font-weight:900;
-      letter-spacing:.8px;padding:12px 10px 6px
+      font-size:11px;
+      color:var(--muted-2);
+      text-transform:uppercase;
+      font-weight:900;
+      letter-spacing:.9px;
+      padding:14px 10px 6px;
     }
+
     .nav-btn{
-      width:100%;text-align:left;border:none;background:transparent;color:var(--text);
-      padding:11px 12px;border-radius:14px;cursor:pointer;font-size:14px;font-weight:800;
-      transition:.18s
+      width:100%;
+      text-align:left;
+      border:none;
+      background:transparent;
+      color:var(--text);
+      padding:12px 14px;
+      border-radius:16px;
+      cursor:pointer;
+      font-size:14px;
+      font-weight:800;
+      transition:.18s ease;
+      display:flex;
+      align-items:center;
+      gap:10px;
     }
-    .nav-btn:hover,.nav-btn.active{
-      background:linear-gradient(135deg,rgba(59,130,246,.18),rgba(96,165,250,.10));
-      color:#fff
+
+    .nav-btn:hover,
+    .nav-btn.active{
+      background:linear-gradient(135deg, rgba(57,199,195,.16), rgba(79,140,255,.10));
+      border:1px solid rgba(57,199,195,.16);
+      box-shadow:var(--glow);
     }
-    .main{flex:1;padding:22px;overflow:auto}
+
+    .main{
+      flex:1;
+      padding:22px;
+      overflow:auto;
+    }
+
     .hero{
-      display:grid;grid-template-columns:1.15fr .85fr;gap:16px;align-items:stretch
+      display:grid;
+      grid-template-columns:1.15fr .85fr;
+      gap:16px;
+      align-items:stretch;
     }
+
     .card{
-      background:linear-gradient(180deg,rgba(16,28,49,.94),rgba(13,23,40,.94));
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:22px;padding:18px;box-shadow:var(--shadow)
+      background:linear-gradient(180deg, rgba(16,29,44,.96), rgba(11,21,31,.96));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:18px;
+      box-shadow:var(--shadow);
     }
+
     .hero-card{
-      display:flex;gap:18px;align-items:center;min-height:140px
+      display:flex;
+      gap:18px;
+      align-items:center;
+      min-height:160px;
+      overflow:hidden;
+      position:relative;
     }
+
+    .hero-card::after{
+      content:"";
+      position:absolute;
+      right:-40px;
+      top:-40px;
+      width:180px;
+      height:180px;
+      background:radial-gradient(circle, rgba(57,199,195,.18), transparent 65%);
+      pointer-events:none;
+    }
+
     .score{
-      width:104px;height:104px;border-radius:28px;
-      display:flex;align-items:center;justify-content:center;
-      background:linear-gradient(135deg,rgba(59,130,246,.18),rgba(96,165,250,.08));
-      border:1px solid rgba(96,165,250,.2);
-      font-size:32px;font-weight:900;color:var(--primary2);flex-shrink:0
+      width:108px;
+      height:108px;
+      border-radius:30px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:
+        linear-gradient(135deg, rgba(57,199,195,.22), rgba(79,140,255,.10));
+      border:1px solid rgba(57,199,195,.2);
+      font-size:34px;
+      font-weight:900;
+      color:var(--primary);
+      flex-shrink:0;
+      box-shadow:var(--glow);
     }
-    .summary-title{margin:0 0 8px;font-size:26px;font-weight:900;letter-spacing:-.7px}
-    .summary-text{font-size:14px;color:var(--muted);line-height:1.7}
-    .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+    .summary-title{
+      margin:0 0 8px;
+      font-size:28px;
+      font-weight:900;
+      letter-spacing:-.8px;
+    }
+
+    .summary-text{
+      font-size:14px;
+      color:var(--muted);
+      line-height:1.75;
+      max-width:760px;
+    }
+
+    .pill-row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+
     .pill{
-      padding:8px 10px;border-radius:999px;
+      padding:8px 11px;
+      border-radius:999px;
       background:rgba(255,255,255,.04);
       border:1px solid rgba(255,255,255,.07);
-      font-size:12px;font-weight:800;color:var(--text)
+      font-size:12px;
+      font-weight:800;
+      color:var(--text);
     }
-    .side-kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+    .side-kpis{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
     .mini{
-      padding:16px;border-radius:18px;
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.06)
+      padding:16px;
+      border-radius:18px;
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.025));
+      border:1px solid rgba(255,255,255,.07);
+      min-height:110px;
     }
-    .k-label{font-size:11px;color:var(--muted2);text-transform:uppercase;font-weight:900;letter-spacing:.7px;margin-bottom:8px}
-    .k-value{font-size:24px;font-weight:900;letter-spacing:-.6px}
-    .k-sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
-    .section{margin-top:22px}
-    .section-title{font-size:18px;font-weight:900;margin:0 0 14px;letter-spacing:-.3px}
-    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-    .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+
+    .k-label{
+      font-size:11px;
+      color:var(--muted-2);
+      text-transform:uppercase;
+      font-weight:900;
+      letter-spacing:.8px;
+      margin-bottom:8px;
+    }
+
+    .k-value{
+      font-size:24px;
+      font-weight:900;
+      letter-spacing:-.6px;
+    }
+
+    .k-sub{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:7px;
+      line-height:1.55;
+    }
+
+    .section{
+      margin-top:22px;
+    }
+
+    .section-title{
+      font-size:18px;
+      font-weight:900;
+      margin:0 0 14px;
+      letter-spacing:-.3px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:14px;
+    }
+
+    .grid5{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:14px;
+    }
+
     .metric-card{
-      padding:18px;border-radius:20px;
-      background:linear-gradient(180deg,rgba(16,28,49,.94),rgba(13,23,40,.94));
-      border:1px solid rgba(255,255,255,.08);box-shadow:var(--shadow)
+      padding:18px;
+      border-radius:22px;
+      background:linear-gradient(180deg, rgba(16,29,44,.96), rgba(11,21,31,.96));
+      border:1px solid var(--border);
+      box-shadow:var(--shadow);
+      position:relative;
+      overflow:hidden;
     }
-    .metric-label{font-size:11px;color:var(--muted2);text-transform:uppercase;font-weight:900;letter-spacing:.7px;margin-bottom:8px}
-    .metric-value{font-size:28px;font-weight:900;letter-spacing:-.6px}
-    .metric-sub{margin-top:6px;font-size:12px;color:var(--muted);line-height:1.5}
-    .filters{display:flex;gap:8px;flex-wrap:wrap}
+
+    .metric-card::after{
+      content:"";
+      position:absolute;
+      inset:auto -30px -40px auto;
+      width:120px;
+      height:120px;
+      background:radial-gradient(circle, rgba(57,199,195,.10), transparent 60%);
+      pointer-events:none;
+    }
+
+    .metric-label{
+      font-size:11px;
+      color:var(--muted-2);
+      text-transform:uppercase;
+      font-weight:900;
+      letter-spacing:.8px;
+      margin-bottom:8px;
+    }
+
+    .metric-value{
+      font-size:29px;
+      font-weight:900;
+      letter-spacing:-.8px;
+    }
+
+    .metric-sub{
+      margin-top:7px;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.55;
+    }
+
+    .filters{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
     .filter-btn{
-      border:none;padding:9px 12px;border-radius:999px;
-      background:rgba(255,255,255,.04);color:var(--text);
-      border:1px solid rgba(255,255,255,.08);cursor:pointer;font-weight:800;font-size:12px
+      border:none;
+      padding:9px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.04);
+      color:var(--text);
+      border:1px solid rgba(255,255,255,.08);
+      cursor:pointer;
+      font-weight:800;
+      font-size:12px;
+      transition:.18s ease;
     }
+
     .filter-btn.active{
-      background:linear-gradient(135deg,rgba(59,130,246,.18),rgba(96,165,250,.10));
-      border-color:rgba(96,165,250,.25)
+      background:linear-gradient(135deg, rgba(57,199,195,.16), rgba(79,140,255,.10));
+      border-color:rgba(57,199,195,.22);
+      box-shadow:var(--glow);
     }
+
     .badge{
-      display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:900
+      display:inline-flex;
+      align-items:center;
+      padding:5px 10px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.2px;
     }
-    .badge.primary{background:rgba(59,130,246,.14);color:var(--primary2)}
-    .badge.success{background:rgba(16,185,129,.14);color:var(--success)}
-    .badge.warning{background:rgba(245,158,11,.14);color:var(--warning)}
-    .badge.danger{background:rgba(239,68,68,.14);color:var(--danger)}
-    .badge.purple{background:rgba(139,92,246,.14);color:var(--purple)}
+
+    .badge.primary{background:rgba(79,140,255,.16);color:#8ab2ff}
+    .badge.success{background:rgba(23,196,132,.16);color:#7ce2b8}
+    .badge.warning{background:rgba(245,178,74,.16);color:#ffd181}
+    .badge.danger{background:rgba(255,107,107,.16);color:#ffb2b2}
+    .badge.purple{background:rgba(139,107,255,.16);color:#c4b2ff}
+
     .table-wrap{
-      overflow:auto;border-radius:22px;border:1px solid rgba(255,255,255,.08);
-      background:linear-gradient(180deg,rgba(16,28,49,.94),rgba(13,23,40,.94));box-shadow:var(--shadow)
+      overflow:auto;
+      border-radius:24px;
+      border:1px solid var(--border);
+      background:linear-gradient(180deg, rgba(16,29,44,.96), rgba(11,21,31,.96));
+      box-shadow:var(--shadow);
     }
-    table{width:100%;border-collapse:collapse;min-width:980px}
-    th,td{padding:13px 14px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;font-size:13px;white-space:nowrap;vertical-align:top}
-    th{font-size:11px;color:var(--muted2);text-transform:uppercase;font-weight:900;letter-spacing:.7px;background:rgba(255,255,255,.02)}
-    .empty{padding:34px;text-align:center;color:var(--muted);font-size:14px}
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:980px;
+    }
+
+    th,td{
+      padding:13px 14px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      text-align:left;
+      font-size:13px;
+      white-space:nowrap;
+      vertical-align:top;
+    }
+
+    th{
+      font-size:11px;
+      color:var(--muted-2);
+      text-transform:uppercase;
+      font-weight:900;
+      letter-spacing:.8px;
+      background:rgba(255,255,255,.025);
+    }
+
+    .empty{
+      padding:36px;
+      text-align:center;
+      color:var(--muted);
+      font-size:14px;
+    }
+
     .hidden{display:none!important}
-    .analysis-list{display:flex;flex-direction:column;gap:12px}
+
+    .analysis-list{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
     .analysis-item{
-      border-radius:20px;padding:18px;
-      background:linear-gradient(180deg,rgba(16,28,49,.94),rgba(13,23,40,.94));
-      border:1px solid rgba(255,255,255,.08);box-shadow:var(--shadow)
+      border-radius:22px;
+      padding:18px;
+      background:linear-gradient(180deg, rgba(16,29,44,.96), rgba(11,21,31,.96));
+      border:1px solid var(--border);
+      box-shadow:var(--shadow);
     }
-    .analysis-item h3{margin:0;font-size:16px;font-weight:900}
-    .analysis-item p{margin:10px 0 0;color:var(--muted);line-height:1.7;font-size:14px}
-    .analysis-action{margin-top:12px;font-size:13px;font-weight:800}
-    .creative-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+
+    .analysis-item h3{
+      margin:0;
+      font-size:16px;
+      font-weight:900;
+    }
+
+    .analysis-item p{
+      margin:10px 0 0;
+      color:var(--muted);
+      line-height:1.7;
+      font-size:14px;
+    }
+
+    .analysis-action{
+      margin-top:12px;
+      font-size:13px;
+      font-weight:800;
+    }
+
+    .creative-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+      gap:14px;
+    }
+
     .creative-card{
-      border-radius:20px;overflow:hidden;
-      background:linear-gradient(180deg,rgba(16,28,49,.94),rgba(13,23,40,.94));
-      border:1px solid rgba(255,255,255,.08);box-shadow:var(--shadow)
+      border-radius:22px;
+      overflow:hidden;
+      background:linear-gradient(180deg, rgba(16,29,44,.96), rgba(11,21,31,.96));
+      border:1px solid var(--border);
+      box-shadow:var(--shadow);
     }
-    .creative-card img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#0f172a}
-    .creative-info{padding:14px}
-    .creative-name{font-size:14px;font-weight:800;margin-bottom:10px;line-height:1.4}
-    .creative-line{font-size:12px;color:var(--muted);margin-bottom:6px}
+
+    .creative-card img{
+      width:100%;
+      aspect-ratio:1/1;
+      object-fit:cover;
+      display:block;
+      background:#0f172a;
+    }
+
+    .creative-info{
+      padding:14px;
+    }
+
+    .creative-name{
+      font-size:14px;
+      font-weight:800;
+      margin-bottom:10px;
+      line-height:1.4;
+    }
+
+    .creative-line{
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+
     .chart-box{
-      height:360px;border-radius:22px;padding:18px;
-      background:linear-gradient(180deg,rgba(16,28,49,.94),rgba(13,23,40,.94));
-      border:1px solid rgba(255,255,255,.08);box-shadow:var(--shadow)
+      height:370px;
+      border-radius:24px;
+      padding:18px;
+      background:linear-gradient(180deg, rgba(16,29,44,.96), rgba(11,21,31,.96));
+      border:1px solid var(--border);
+      box-shadow:var(--shadow);
     }
+
     .textarea{
-      width:100%;min-height:110px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);
-      color:var(--text);border-radius:16px;padding:14px;font-family:Inter,sans-serif;resize:vertical;font-size:14px
+      width:100%;
+      min-height:110px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+      color:var(--text);
+      border-radius:18px;
+      padding:14px;
+      font-family:Inter,sans-serif;
+      resize:vertical;
+      font-size:14px;
     }
+
     .note-card{
-      background:linear-gradient(180deg,rgba(16,28,49,.94),rgba(13,23,40,.94));
-      border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow)
+      background:linear-gradient(180deg, rgba(16,29,44,.96), rgba(11,21,31,.96));
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:14px;
+      margin-bottom:10px;
+      box-shadow:var(--shadow);
     }
-    .small-muted{font-size:12px;color:var(--muted)}
+
+    .small-muted{
+      font-size:12px;
+      color:var(--muted);
+    }
+
     .modal-bg{
-      position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:20px;z-index:100
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.72);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      z-index:100;
     }
+
     .modal{
-      width:min(980px,96vw);max-height:88vh;overflow:auto;
-      background:linear-gradient(180deg,rgba(16,28,49,.98),rgba(13,23,40,.98));
-      border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:24px;box-shadow:var(--shadow)
+      width:min(980px,96vw);
+      max-height:88vh;
+      overflow:auto;
+      background:linear-gradient(180deg, rgba(16,29,44,.98), rgba(11,21,31,.98));
+      border:1px solid var(--border);
+      border-radius:24px;
+      padding:24px;
+      box-shadow:var(--shadow);
     }
-    .modal-title{font-size:20px;font-weight:900;margin:0}
-    .modal-sub{color:var(--muted);margin:8px 0 0;font-size:13px}
-    .modal-content{margin-top:18px;font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap}
-    @media (max-width:1200px){.grid,.grid5{grid-template-columns:repeat(2,1fr)}.hero{grid-template-columns:1fr}}
+
+    .modal-title{
+      font-size:20px;
+      font-weight:900;
+      margin:0;
+    }
+
+    .modal-sub{
+      color:var(--muted);
+      margin:8px 0 0;
+      font-size:13px;
+    }
+
+    .modal-content{
+      margin-top:18px;
+      font-size:14px;
+      line-height:1.75;
+      color:var(--text);
+      white-space:pre-wrap;
+    }
+
+    @media (max-width:1200px){
+      .grid,.grid5{grid-template-columns:repeat(2,1fr)}
+      .hero{grid-template-columns:1fr}
+    }
+
     @media (max-width:920px){
       .app{display:block}
       .sidebar{width:auto;border-right:none;border-bottom:1px solid rgba(255,255,255,.06)}
@@ -209,7 +679,15 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="logo">Meta<span>Analyzer</span></div>
+    <div class="brand-wrap">
+      <div class="brand-icon">
+        <img src="/assets/logo-ideale-icon.png" alt="Ideale.id" onerror="this.style.display='none';this.parentNode.innerHTML='◆';this.parentNode.style.color='var(--primary)';this.parentNode.style.fontWeight='900';this.parentNode.style.fontSize='20px';">
+      </div>
+      <div class="brand-text">
+        <div class="brand-main">Ideale.id</div>
+        <div class="brand-sub">Meta Ads Analyzer</div>
+      </div>
+    </div>
 
     <select id="accountSel" class="control">
       <option value="">Carregando contas...</option>
@@ -245,13 +723,17 @@
     <button id="runBtn" class="btn">Analisar</button>
 
     <div class="topbar-right">
-      <span id="userName">Carregando...</span>
+      <div class="user-chip" id="userName">Carregando...</div>
       <a href="/auth/logout" style="color:inherit;text-decoration:none">Sair</a>
     </div>
   </header>
 
   <div class="app">
     <aside class="sidebar">
+      <div class="sidebar-logo">
+        <img src="/assets/logo-ideale-horizontal.png" alt="Ideale.id" onerror="this.style.display='none'">
+      </div>
+
       <div class="nav-title">Resumo</div>
       <button class="nav-btn active" data-tab="overview">Visão Geral</button>
       <button class="nav-btn" data-tab="analysis">Insights IA</button>
@@ -375,964 +857,4 @@
         <div class="grid">
           <div class="metric-card"><div class="metric-label">Escalar</div><div class="metric-value" id="dScale">0</div><div class="metric-sub">Campanhas prontas para escala</div></div>
           <div class="metric-card"><div class="metric-label">Pausar</div><div class="metric-value" id="dPause">0</div><div class="metric-sub">Campanhas queimando verba</div></div>
-          <div class="metric-card"><div class="metric-label">Renovar Criativo</div><div class="metric-value" id="dCreative">0</div><div class="metric-sub">Sinal de fadiga ou CTR baixo</div></div>
-          <div class="metric-card"><div class="metric-label">Desperdício Estimado</div><div class="metric-value" id="dWaste">R$ 0,00</div><div class="metric-sub">Estimativa conservadora por regra</div></div>
-        </div>
-
-        <div class="section">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Campanha</th><th>Status</th><th>Ação</th><th>Gasto</th><th>Impressões</th><th>Alcance</th><th>CTR</th><th>Connect Rate</th><th>ROAS</th><th>Motivo</th>
-                </tr>
-              </thead>
-              <tbody id="decisionBody"><tr><td colspan="10" class="empty">Sem dados.</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-campaigns" class="hidden">
-        <div class="toolbar">
-          <div class="filters" id="campaignFilters">
-            <button class="filter-btn active" data-filter="TODAS">Todas</button>
-            <button class="filter-btn" data-filter="ATIVA">Ativas</button>
-            <button class="filter-btn" data-filter="PAUSADA">Pausadas</button>
-            <button class="filter-btn" data-filter="CONCLUIDA">Concluídas</button>
-            <button class="filter-btn" data-filter="RODANDO">Rodando</button>
-          </div>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Campanha</th><th>Status</th><th>Gasto</th><th>Impressões</th><th>Alcance</th><th>CTR</th><th>Connect Rate</th><th>ROAS</th><th>Mensagens</th><th>Compras</th><th>Custo/Venda</th><th>IA</th>
-              </tr>
-            </thead>
-            <tbody id="campaignBody"><tr><td colspan="12" class="empty">Sem dados.</td></tr></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="tab-creatives" class="hidden">
-        <div class="toolbar">
-          <div class="filters" id="creativeFilters">
-            <button class="filter-btn active" data-filter="CAMPEAO">Criativo campeão</button>
-            <button class="filter-btn" data-filter="MENSAGENS">Mais mensagens</button>
-            <button class="filter-btn" data-filter="COMPRAS">Mais compras</button>
-          </div>
-        </div>
-        <div id="creativesGrid" class="creative-grid"><div class="empty" style="grid-column:1/-1">Sem criativos carregados.</div></div>
-      </section>
-
-      <section id="tab-breakdown" class="hidden">
-        <div class="toolbar">
-          <select id="breakdownType" class="control">
-            <option value="platform">Plataforma</option>
-            <option value="position">Posicionamento</option>
-            <option value="gender">Sexo</option>
-            <option value="age">Idade</option>
-            <option value="region">Região</option>
-            <option value="city">Cidade</option>
-            <option value="device">Dispositivo</option>
-          </select>
-          <button id="loadBreakdownBtn" class="btn">Carregar Breakdown</button>
-        </div>
-        <div class="chart-box"><canvas id="breakdownChart"></canvas></div>
-        <div class="section">
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Segmento</th><th>Gasto</th><th>Impressões</th><th>Alcance</th><th>CTR</th><th>CPC</th></tr></thead>
-              <tbody id="breakdownBody"><tr><td colspan="6" class="empty">Sem breakdown carregado.</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-trend" class="hidden">
-        <div class="chart-box"><canvas id="trendChart"></canvas></div>
-        <div id="trendEmpty" class="empty hidden">Sem histórico disponível ainda.</div>
-      </section>
-
-      <section id="tab-history" class="hidden">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr><th>Data</th><th>Período</th><th>Gasto</th><th>Impressões</th><th>Cliques</th><th>Alcance</th><th>CTR</th><th>CPC</th><th>CPM</th><th>Frequência</th><th>ROAS</th><th>Score</th></tr>
-            </thead>
-            <tbody id="historyBody"><tr><td colspan="12" class="empty">Sem histórico salvo ainda.</td></tr></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="tab-notes" class="hidden">
-        <div class="card">
-          <div class="metric-label">Nova nota</div>
-          <textarea id="noteInput" class="textarea" placeholder="Escreva uma observação sobre a conta ou campanha..."></textarea>
-          <div class="toolbar" style="margin-top:12px">
-            <select id="noteType" class="control">
-              <option value="geral">Geral</option><option value="criativo">Criativo</option><option value="publico">Público</option><option value="orcamento">Orçamento</option><option value="resultado">Resultado</option>
-            </select>
-            <button id="saveNoteBtn" class="btn">Salvar Nota</button>
-          </div>
-        </div>
-        <div id="notesList" class="section"></div>
-      </section>
-
-      <section id="tab-alerts" class="hidden">
-        <div class="card">
-          <div class="metric-label">Configurar alerta de saldo</div>
-          <div class="toolbar">
-            <input id="alertEmail" class="control" type="email" placeholder="email@dominio.com" />
-            <input id="alertThreshold" class="control" type="number" placeholder="100" value="100" />
-            <button id="saveAlertBtn" class="btn">Salvar Alerta</button>
-          </div>
-          <div id="alertStatus" style="margin-top:14px"></div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <div id="modalBg" class="modal-bg">
-    <div class="modal">
-      <div class="toolbar" style="justify-content:space-between">
-        <div>
-          <h3 id="modalTitle" class="modal-title">Análise</h3>
-          <p id="modalSub" class="modal-sub">Conteúdo gerado pela IA</p>
-        </div>
-        <button id="closeModalBtn" class="btn secondary">Fechar</button>
-      </div>
-      <div id="modalContent" class="modal-content"></div>
-    </div>
-  </div>
-
-  <script>
-    const state = {
-      me: null,
-      accounts: [],
-      selectedAccountId: null,
-      selectedAccount: null,
-      campaigns: [],
-      analysis: null,
-      metrics: null,
-      creatives: [],
-      trendRows: [],
-      comparison: null,
-      breakdownRows: [],
-      decision: null,
-      charts: { trend: null, breakdown: null }
-    };
-
-    const brMoney = v => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    const brNum = v => Number(v || 0).toLocaleString('pt-BR');
-    const brPct = v => `${Number(v || 0).toFixed(2)}%`;
-
-    function getDateConfig(){
-      const preset = document.getElementById('dateSel').value;
-      if (preset === 'custom') {
-        return { type: 'custom', since: document.getElementById('sinceDate').value, until: document.getElementById('untilDate').value };
-      }
-      return { type: 'preset', date_preset: preset };
-    }
-
-    function toQuery(obj){
-      const params = new URLSearchParams();
-      Object.entries(obj).forEach(([k,v]) => {
-        if (v !== undefined && v !== null && v !== '') params.append(k, v);
-      });
-      return params.toString();
-    }
-
-    function computePreviousRange(since, until){
-      if (!since || !until) return null;
-      const start = new Date(`${since}T00:00:00`);
-      const end = new Date(`${until}T00:00:00`);
-      const diffDays = Math.round((end - start) / 86400000) + 1;
-      const previousEnd = new Date(start);
-      previousEnd.setDate(previousEnd.getDate() - 1);
-      const previousStart = new Date(previousEnd);
-      previousStart.setDate(previousStart.getDate() - (diffDays - 1));
-
-      const format = d => {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
-      };
-
-      return { since: format(previousStart), until: format(previousEnd) };
-    }
-
-    function getLifecycleStatus(c){
-      const status = String(c.status || '').toUpperCase();
-      const spend = Number(c.spend || 0);
-      const stopTime = c.stop_time ? new Date(c.stop_time) : null;
-      const now = new Date();
-      if (status === 'PAUSED') return 'PAUSADA';
-      if (stopTime && stopTime < now) return 'CONCLUIDA';
-      if (status === 'ACTIVE' && spend > 0) return 'RODANDO';
-      if (status === 'ACTIVE') return 'ATIVA';
-      return 'ATIVA';
-    }
-
-    function bindTabButtons(){
-      document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
-          btn.classList.add('active');
-          document.querySelectorAll('main > section').forEach(section => section.classList.add('hidden'));
-          document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('hidden');
-          if (btn.dataset.tab === 'trend') renderTrend();
-          if (btn.dataset.tab === 'history') loadHistoryTable();
-          if (btn.dataset.tab === 'notes') loadNotes();
-          if (btn.dataset.tab === 'alerts') loadAlert();
-        });
-      });
-    }
-
-    function bindFilterGroup(groupId, callback){
-      const container = document.getElementById(groupId);
-      if (!container) return;
-      container.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          container.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
-          btn.classList.add('active');
-          callback();
-        });
-      });
-    }
-
-    function getActiveFilter(groupId){
-      return document.querySelector(`#${groupId} .filter-btn.active`)?.dataset.filter || 'TODAS';
-    }
-
-    async function api(url, options = {}){
-      const response = await fetch(url, options);
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || 'Erro na requisição');
-      }
-      return response.json();
-    }
-
-    async function init(){
-      bindTabButtons();
-      bindFilterGroup('decisionFilters', renderDecisionCenter);
-      bindFilterGroup('campaignFilters', renderCampaigns);
-      bindFilterGroup('creativeFilters', renderCreatives);
-
-      document.getElementById('dateSel').addEventListener('change', () => {
-        const isCustom = document.getElementById('dateSel').value === 'custom';
-        document.getElementById('sinceDate').classList.toggle('hidden', !isCustom);
-        document.getElementById('untilDate').classList.toggle('hidden', !isCustom);
-      });
-
-      document.getElementById('runBtn').addEventListener('click', runAnalysis);
-      document.getElementById('copilotBtn').addEventListener('click', openCopilot);
-      document.getElementById('loadBreakdownBtn').addEventListener('click', loadBreakdown);
-      document.getElementById('closeModalBtn').addEventListener('click', closeModal);
-      document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
-      document.getElementById('saveAlertBtn').addEventListener('click', saveAlert);
-
-      const me = await api('/api/me');
-      if (!me.authenticated) {
-        window.location.href = '/';
-        return;
-      }
-
-      state.me = me.user;
-      document.getElementById('userName').textContent = me.user.name || 'Usuário';
-
-      const accounts = await api('/api/adaccounts');
-      state.accounts = accounts.data || [];
-
-      const accountSel = document.getElementById('accountSel');
-      accountSel.innerHTML = `<option value="">Selecione a conta</option>` + state.accounts.map(acc => `<option value="${acc.account_id}">${acc.name}</option>`).join('');
-
-      accountSel.addEventListener('change', () => {
-        state.selectedAccountId = accountSel.value;
-        state.selectedAccount = state.accounts.find(acc => acc.account_id === state.selectedAccountId) || null;
-      });
-    }
-
-    async function runAnalysis(){
-      if (!state.selectedAccountId) {
-        alert('Selecione uma conta antes de analisar.');
-        return;
-      }
-
-      const dateConfig = getDateConfig();
-
-      if (dateConfig.type === 'custom' && (!dateConfig.since || !dateConfig.until)) {
-        alert('Preencha as duas datas do período personalizado.');
-        return;
-      }
-
-      try {
-        const campaignsRes = await api(`/api/adaccounts/${state.selectedAccountId}/campaigns`);
-        state.campaigns = campaignsRes.data || [];
-
-        const insightsQuery = dateConfig.type === 'custom'
-          ? toQuery({ since: dateConfig.since, until: dateConfig.until })
-          : toQuery({ date_preset: dateConfig.date_preset });
-
-        const [insightsRes, creativesRes] = await Promise.all([
-          api(`/api/adaccounts/${state.selectedAccountId}/insights?${insightsQuery}`),
-          api(`/api/adaccounts/${state.selectedAccountId}/creatives?${insightsQuery}`)
-        ]);
-
-        state.creatives = creativesRes.data || [];
-
-        let previousInsights = null;
-        let comparison = null;
-
-        if (document.getElementById('comparePeriod').checked) {
-          if (dateConfig.type === 'custom') {
-            const prev = computePreviousRange(dateConfig.since, dateConfig.until);
-            if (prev) {
-              previousInsights = await api(`/api/adaccounts/${state.selectedAccountId}/insights?${toQuery(prev)}`);
-              comparison = buildComparisonFromInsights(insightsRes, previousInsights);
-            }
-          } else {
-            const preset = dateConfig.date_preset;
-            if (['last_7d', 'last_30d', 'last_90d'].includes(preset)) {
-              comparison = await api(`/api/adaccounts/${state.selectedAccountId}/comparison?${toQuery({ date_preset: preset })}`);
-            }
-          }
-        }
-
-        state.comparison = comparison;
-
-        const analyzePayload = {
-          accountData: state.selectedAccount,
-          campaigns: state.campaigns,
-          insights: insightsRes,
-          creatives: state.creatives,
-          dateRange: JSON.stringify(dateConfig),
-          niche: document.getElementById('nicheSel').value
-        };
-
-        if (previousInsights) analyzePayload.previousInsights = previousInsights;
-
-        const analyzeRes = await api('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(analyzePayload)
-        });
-
-        state.analysis = analyzeRes.analysis;
-        state.metrics = analyzeRes.metrics;
-        state.decision = analyzeRes.decision;
-
-        renderOverview();
-        renderInsights();
-        renderDecisionCenter();
-        renderCampaigns();
-        renderCreatives();
-
-        document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
-        document.querySelector('.nav-btn[data-tab="overview"]').classList.add('active');
-        document.querySelectorAll('main > section').forEach(section => section.classList.add('hidden'));
-        document.getElementById('tab-overview').classList.remove('hidden');
-      } catch (error) {
-        console.error(error);
-        alert('Erro ao analisar. Verifique o console e se a conta tem dados disponíveis.');
-      }
-    }
-
-    function getMetricsFromInsights(insightsRes){
-      const rows = insightsRes?.data || [];
-      const metrics = {
-        totalSpend: 0, totalImpressions: 0, totalClicks: 0, totalReach: 0,
-        totalPurchases: 0, totalMessages: 0, totalSessions: 0, totalRev: 0,
-        avgFrequency: 0, avgCtr: 0, avgCpc: 0, avgCpm: 0, connectRate: 0, costPerPurchase: 0
-      };
-
-      const getAction = (arr, types) => {
-        if (!Array.isArray(arr)) return 0;
-        for (const type of types) {
-          const found = arr.find(x => x.action_type === type);
-          if (found) return Number(found.value || 0);
-        }
-        return 0;
-      };
-
-      rows.forEach(r => {
-        metrics.totalSpend += Number(r.spend || 0);
-        metrics.totalImpressions += Number(r.impressions || 0);
-        metrics.totalClicks += Number(r.clicks || 0);
-        metrics.totalReach += Number(r.reach || 0);
-        metrics.totalPurchases += getAction(r.actions, ['offsite_conversion.fb_pixel_purchase', 'purchase', 'omni_purchase']);
-        metrics.totalMessages += getAction(r.actions, [
-          'onsite_conversion.messaging_conversation_started_7d',
-          'onsite_conversion.messaging_first_reply',
-          'onsite_conversion.total_messaging_connection'
-        ]);
-        metrics.totalSessions += getAction(r.actions, ['landing_page_view']);
-        metrics.totalRev += getAction(r.action_values, ['offsite_conversion.fb_pixel_purchase', 'purchase', 'omni_purchase']);
-      });
-
-      metrics.avgFrequency = metrics.totalReach > 0 ? metrics.totalImpressions / metrics.totalReach : 0;
-      metrics.avgCtr = metrics.totalImpressions > 0 ? (metrics.totalClicks / metrics.totalImpressions) * 100 : 0;
-      metrics.avgCpc = metrics.totalClicks > 0 ? metrics.totalSpend / metrics.totalClicks : 0;
-      metrics.avgCpm = metrics.totalImpressions > 0 ? (metrics.totalSpend / metrics.totalImpressions) * 1000 : 0;
-      metrics.connectRate = metrics.totalClicks > 0 ? (metrics.totalSessions / metrics.totalClicks) * 100 : 0;
-      metrics.roas = metrics.totalSpend > 0 ? metrics.totalRev / metrics.totalSpend : 0;
-      metrics.costPerPurchase = metrics.totalPurchases > 0 ? metrics.totalSpend / metrics.totalPurchases : 0;
-
-      return metrics;
-    }
-
-    function buildComparisonFromInsights(currentInsights, previousInsights){
-      const current = getMetricsFromInsights(currentInsights);
-      const previous = getMetricsFromInsights(previousInsights);
-      const variation = (cur, prev) => ((cur - prev) / (prev || 1)) * 100;
-      return {
-        current,
-        previous,
-        comparison: {
-          spendChange: variation(current.totalSpend, previous.totalSpend),
-          roasChange: variation(current.roas, previous.roas),
-          ctrChange: variation(current.avgCtr, previous.avgCtr),
-          purchasesChange: variation(current.totalPurchases, previous.totalPurchases),
-          connectRateChange: variation(current.connectRate, previous.connectRate)
-        }
-      };
-    }
-
-    function renderOverview(){
-      if (!state.analysis || !state.metrics) return;
-      const summary = state.analysis.resumo_geral || {};
-      const metrics = state.metrics;
-
-      document.getElementById('healthScore').textContent = summary.score_saude || 0;
-      document.getElementById('healthTitle').textContent = summary.nivel_saude || 'Sem dados';
-      document.getElementById('healthSummary').textContent = summary.resumo_historico || 'Sem resumo disponível.';
-
-      document.getElementById('summarySpend').textContent = `Investimento: ${brMoney(metrics.totalSpend)}`;
-      document.getElementById('summaryRoas').textContent = `ROAS: ${Number(metrics.roas || 0).toFixed(2)}x`;
-      document.getElementById('summaryCtr').textContent = `CTR: ${brPct(metrics.avgCtr)}`;
-      document.getElementById('summaryConnect').textContent = `Connect Rate: ${brPct(metrics.connectRate)}`;
-
-      document.getElementById('mSpend').textContent = brMoney(metrics.totalSpend);
-      document.getElementById('mRevenue').textContent = brMoney(metrics.totalRev);
-      document.getElementById('mRoas').textContent = `${Number(metrics.roas || 0).toFixed(2)}x`;
-      document.getElementById('mCostPerPurchase').textContent = brMoney(metrics.costPerPurchase);
-      document.getElementById('mImpressions').textContent = brNum(metrics.totalImpressions);
-      document.getElementById('mReach').textContent = brNum(metrics.totalReach);
-      document.getElementById('mFrequency').textContent = Number(metrics.avgFrequency || 0).toFixed(2);
-      document.getElementById('mCpm').textContent = brMoney(metrics.avgCpm);
-      document.getElementById('mCtr').textContent = brPct(metrics.avgCtr);
-      document.getElementById('mCpc').textContent = brMoney(metrics.avgCpc);
-      document.getElementById('mConnectRate').textContent = brPct(metrics.connectRate);
-      document.getElementById('mMessages').textContent = brNum(metrics.totalMessages);
-      document.getElementById('mPurchases').textContent = brNum(metrics.totalPurchases);
-
-      if (state.decision) {
-        document.getElementById('heroScale').textContent = state.decision.summary.scaleCount || 0;
-        document.getElementById('heroPause').textContent = state.decision.summary.pauseCount || 0;
-        document.getElementById('heroWaste').textContent = brMoney(state.decision.totalWaste || 0);
-        document.getElementById('heroCreative').textContent = state.decision.summary.creativeCount || 0;
-      }
-
-      renderComparison();
-    }
-
-    function renderComparison(){
-      const body = document.getElementById('comparisonBody');
-      if (!state.comparison || !state.comparison.current || !state.comparison.previous) {
-        body.innerHTML = `<tr><td colspan="4" class="empty">Comparação não disponível para este período.</td></tr>`;
-        return;
-      }
-
-      const current = state.comparison.current;
-      const previous = state.comparison.previous;
-      const comp = state.comparison.comparison || {};
-
-      const rows = [
-        ['Investimento', brMoney(current.totalSpend), brMoney(previous.totalSpend), `${Number(comp.spendChange || 0).toFixed(2)}%`],
-        ['ROAS', `${Number(current.roas || 0).toFixed(2)}x`, `${Number(previous.roas || 0).toFixed(2)}x`, `${Number(comp.roasChange || 0).toFixed(2)}%`],
-        ['CTR', brPct(current.avgCtr), brPct(previous.avgCtr), `${Number(comp.ctrChange || 0).toFixed(2)}%`],
-        ['Compras', brNum(current.totalPurchases), brNum(previous.totalPurchases), `${Number(comp.purchasesChange || 0).toFixed(2)}%`],
-        ['Connect Rate', brPct(current.connectRate), brPct(previous.connectRate), `${Number(comp.connectRateChange || 0).toFixed(2)}%`]
-      ];
-
-      body.innerHTML = rows.map(row => `<tr><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td><td>${row[3]}</td></tr>`).join('');
-    }
-
-    function renderInsights(){
-      const list = document.getElementById('analysisList');
-      const items = state.analysis?.otimizacoes_prioritarias || [];
-      if (!items.length) {
-        list.innerHTML = `<div class="empty">Nenhuma recomendação crítica foi gerada.</div>`;
-        return;
-      }
-
-      list.innerHTML = items.map(item => `
-        <div class="analysis-item">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-            <div><div class="metric-label">${item.categoria}</div><h3>${item.titulo}</h3></div>
-            <span class="badge ${item.prioridade === 1 ? 'danger' : item.prioridade === 2 ? 'warning' : 'primary'}">P${item.prioridade}</span>
-          </div>
-          <p>${item.descricao}</p>
-          <div class="analysis-action">${item.acao}</div>
-        </div>
-      `).join('');
-    }
-
-    function getEnrichedCampaigns(){
-      const list = state.analysis?.campanhas_analise || [];
-      return list.map(c => ({ ...c, lifecycleStatus: getLifecycleStatus(c) }));
-    }
-
-    function actionBadgeClass(action){
-      if (action === 'ESCALAR') return 'success';
-      if (action === 'PAUSAR') return 'danger';
-      if (action === 'RENOVAR_CRIATIVO') return 'warning';
-      if (action === 'AJUSTAR_FUNIL') return 'purple';
-      return 'primary';
-    }
-
-    function renderDecisionCenter(){
-      const filter = getActiveFilter('decisionFilters');
-      const data = state.decision;
-      const body = document.getElementById('decisionBody');
-      if (!data) {
-        body.innerHTML = `<tr><td colspan="10" class="empty">Sem dados.</td></tr>`;
-        return;
-      }
-
-      document.getElementById('dScale').textContent = data.summary.scaleCount || 0;
-      document.getElementById('dPause').textContent = data.summary.pauseCount || 0;
-      document.getElementById('dCreative').textContent = data.summary.creativeCount || 0;
-      document.getElementById('dWaste').textContent = brMoney(data.totalWaste || 0);
-
-      const campaigns = (data.campaigns || []).filter(c => filter === 'TODAS' ? true : c.lifecycleStatus === filter);
-      if (!campaigns.length) {
-        body.innerHTML = `<tr><td colspan="10" class="empty">Nenhuma campanha encontrada.</td></tr>`;
-        return;
-      }
-
-      body.innerHTML = campaigns.map(c => `
-        <tr>
-          <td>${c.name}</td>
-          <td><span class="badge primary">${c.lifecycleStatus}</span></td>
-          <td><span class="badge ${actionBadgeClass(c.decision.action)}">${c.decision.action.replaceAll('_', ' ')}</span></td>
-          <td>${brMoney(c.spend)}</td>
-          <td>${brNum(c.impressions)}</td>
-          <td>${brNum(c.reach)}</td>
-          <td>${brPct(c.ctr)}</td>
-          <td>${brPct(c.connectRate)}</td>
-          <td>${Number(c.roas || 0).toFixed(2)}x</td>
-          <td>${c.decision.reason}</td>
-        </tr>
-      `).join('');
-    }
-
-    function renderCampaigns(){
-      const filter = getActiveFilter('campaignFilters');
-      const campaigns = getEnrichedCampaigns().filter(c => filter === 'TODAS' ? true : c.lifecycleStatus === filter);
-      const body = document.getElementById('campaignBody');
-      if (!campaigns.length) {
-        body.innerHTML = `<tr><td colspan="12" class="empty">Nenhuma campanha encontrada.</td></tr>`;
-        return;
-      }
-
-      body.innerHTML = campaigns.map(c => `
-        <tr>
-          <td>${c.name}</td>
-          <td><span class="badge primary">${c.lifecycleStatus}</span></td>
-          <td>${brMoney(c.spend)}</td>
-          <td>${brNum(c.impressions)}</td>
-          <td>${brNum(c.reach)}</td>
-          <td>${brPct(c.ctr)}</td>
-          <td>${brPct(c.connectRate)}</td>
-          <td>${Number(c.roas || 0).toFixed(2)}x</td>
-          <td>${brNum(c.messages)}</td>
-          <td>${brNum(c.purchases)}</td>
-          <td>${brMoney(c.costPerPur)}</td>
-          <td><button class="btn" style="height:34px" onclick="analyzeCampaignById('${c.id}')">IA</button></td>
-        </tr>
-      `).join('');
-    }
-
-    function getCreativeMetrics(item){
-      const ins = item?.insights?.data?.[0] || {};
-      const actions = ins.actions || [];
-      const values = ins.action_values || [];
-      const getByContains = (arr, term) => {
-        const found = arr.find(x => String(x.action_type || '').includes(term));
-        return Number(found?.value || 0);
-      };
-      const spend = Number(ins.spend || 0);
-      const revenue = getByContains(values, 'purchase');
-      const purchases = getByContains(actions, 'purchase');
-      const messages = getByContains(actions, 'message');
-      const roas = spend > 0 ? revenue / spend : 0;
-      return { spend, revenue, purchases, messages, roas, ctr: Number(ins.ctr || 0), clicks: Number(ins.clicks || 0) };
-    }
-
-    function renderCreatives(){
-      const filter = getActiveFilter('creativeFilters');
-      const grid = document.getElementById('creativesGrid');
-      let list = [...(state.creatives || [])];
-
-      if (!list.length) {
-        grid.innerHTML = `<div class="empty" style="grid-column:1/-1">Nenhum criativo encontrado.</div>`;
-        return;
-      }
-
-      if (filter === 'CAMPEAO') list.sort((a, b) => getCreativeMetrics(b).roas - getCreativeMetrics(a).roas);
-      else if (filter === 'MENSAGENS') list.sort((a, b) => getCreativeMetrics(b).messages - getCreativeMetrics(a).messages);
-      else if (filter === 'COMPRAS') list.sort((a, b) => getCreativeMetrics(b).purchases - getCreativeMetrics(a).purchases);
-
-      grid.innerHTML = list.map((item, idx) => {
-        const metrics = getCreativeMetrics(item);
-        const img = item?.creative?.image_url || item?.creative?.thumbnail_url || '';
-        return `
-          <div class="creative-card">
-            ${img ? `<img src="${img}" alt="Criativo" />` : `<div style="aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:#0f172a;color:var(--muted)">Sem imagem</div>`}
-            <div class="creative-info">
-              <div class="creative-name">${item.name || 'Criativo sem nome'}</div>
-              <div class="creative-line">Gasto: ${brMoney(metrics.spend)}</div>
-              <div class="creative-line">ROAS: ${metrics.roas.toFixed(2)}x</div>
-              <div class="creative-line">CTR: ${brPct(metrics.ctr)}</div>
-              <div class="creative-line">Mensagens: ${brNum(metrics.messages)}</div>
-              <div class="creative-line">Compras: ${brNum(metrics.purchases)}</div>
-              ${filter === 'CAMPEAO' && idx === 0 ? `<div style="margin-top:10px"><span class="badge warning">Criativo campeão</span></div>` : ''}
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    async function loadBreakdown(){
-      if (!state.selectedAccountId) {
-        alert('Selecione uma conta primeiro.');
-        return;
-      }
-
-      try {
-        const type = document.getElementById('breakdownType').value;
-        const dateConfig = getDateConfig();
-        const query = dateConfig.type === 'custom'
-          ? toQuery({ since: dateConfig.since, until: dateConfig.until })
-          : toQuery({ date_preset: dateConfig.date_preset });
-
-        const res = await api(`/api/adaccounts/${state.selectedAccountId}/breakdown/${type}?${query}`);
-        state.breakdownRows = res.data || [];
-        renderBreakdownTableAndChart(type);
-      } catch (error) {
-        console.error(error);
-        alert('Erro ao carregar breakdown.');
-      }
-    }
-
-    function getBreakdownLabel(row, type){
-      if (type === 'platform') return row.publisher_platform || 'N/A';
-      if (type === 'position') return row.platform_position || 'N/A';
-      if (type === 'gender') return row.gender || 'N/A';
-      if (type === 'age') return row.age || 'N/A';
-      if (type === 'region') return row.region || 'N/A';
-      if (type === 'city') return row.city || 'N/A';
-      if (type === 'device') return row.device_platform || 'N/A';
-      return 'N/A';
-    }
-
-    function renderBreakdownTableAndChart(type){
-      const rows = [...state.breakdownRows];
-      const body = document.getElementById('breakdownBody');
-
-      if (!rows.length) {
-        body.innerHTML = `<tr><td colspan="6" class="empty">Sem dados para esse breakdown.</td></tr>`;
-        if (state.charts.breakdown) { state.charts.breakdown.destroy(); state.charts.breakdown = null; }
-        return;
-      }
-
-      rows.sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0));
-
-      body.innerHTML = rows.map(row => `
-        <tr>
-          <td>${getBreakdownLabel(row, type)}</td>
-          <td>${brMoney(row.spend)}</td>
-          <td>${brNum(row.impressions)}</td>
-          <td>${brNum(row.reach)}</td>
-          <td>${brPct(row.ctr)}</td>
-          <td>${brMoney(row.cpc)}</td>
-        </tr>
-      `).join('');
-
-      if (state.charts.breakdown) state.charts.breakdown.destroy();
-
-      const ctx = document.getElementById('breakdownChart');
-      state.charts.breakdown = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: rows.map(row => getBreakdownLabel(row, type)),
-          datasets: [{ label: 'Gasto', data: rows.map(row => Number(row.spend || 0)) }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
-    }
-
-    async function renderTrend(){
-      if (!state.selectedAccountId) {
-        document.getElementById('trendEmpty').classList.remove('hidden');
-        return;
-      }
-
-      try {
-        const history = await api(`/api/history/${state.selectedAccountId}`);
-        state.trendRows = history || [];
-        const empty = document.getElementById('trendEmpty');
-
-        if (!state.trendRows.length) {
-          empty.classList.remove('hidden');
-          if (state.charts.trend) { state.charts.trend.destroy(); state.charts.trend = null; }
-          return;
-        }
-
-        empty.classList.add('hidden');
-        const ordered = [...state.trendRows].reverse();
-
-        if (state.charts.trend) state.charts.trend.destroy();
-
-        const ctx = document.getElementById('trendChart');
-        state.charts.trend = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: ordered.map(row => new Date(row.created_at).toLocaleDateString('pt-BR')),
-            datasets: [
-              { label: 'Score', data: ordered.map(row => Number(row.health_score || 0)) },
-              { label: 'ROAS', data: ordered.map(row => Number(row.roas || 0)) },
-              { label: 'Gasto', data: ordered.map(row => Number(row.total_spend || 0)) }
-            ]
-          },
-          options: { responsive: true, maintainAspectRatio: false }
-        });
-      } catch (error) {
-        console.error(error);
-        document.getElementById('trendEmpty').classList.remove('hidden');
-      }
-    }
-
-    async function loadHistoryTable(){
-      if (!state.selectedAccountId) return;
-
-      try {
-        const history = await api(`/api/history/${state.selectedAccountId}`);
-        const body = document.getElementById('historyBody');
-
-        if (!history.length) {
-          body.innerHTML = `<tr><td colspan="12" class="empty">Sem histórico salvo ainda.</td></tr>`;
-          return;
-        }
-
-        body.innerHTML = history.map(row => `
-          <tr>
-            <td>${new Date(row.created_at).toLocaleDateString('pt-BR')}</td>
-            <td>${row.date_range || '-'}</td>
-            <td>${brMoney(row.total_spend)}</td>
-            <td>${brNum(row.total_impressions)}</td>
-            <td>${brNum(row.total_clicks)}</td>
-            <td>${brNum(row.total_reach)}</td>
-            <td>${brPct(row.avg_ctr)}</td>
-            <td>${brMoney(row.avg_cpc)}</td>
-            <td>${brMoney(row.avg_cpm)}</td>
-            <td>${Number(row.avg_frequency || 0).toFixed(2)}</td>
-            <td>${Number(row.roas || 0).toFixed(2)}x</td>
-            <td>${brNum(row.health_score)}</td>
-          </tr>
-        `).join('');
-      } catch (error) {
-        console.error(error);
-      }
-    }
-
-    async function analyzeCampaignById(campaignId){
-      const campaign = getEnrichedCampaigns().find(c => c.id === campaignId);
-      if (!campaign) return;
-
-      openModal(`Análise IA — ${campaign.name}`, 'Carregando análise detalhada...');
-
-      try {
-        const dateConfig = getDateConfig();
-        const query = dateConfig.type === 'custom'
-          ? toQuery({ since: dateConfig.since, until: dateConfig.until })
-          : toQuery({ date_preset: dateConfig.date_preset });
-
-        const funnel = await api(`/api/campaigns/${campaignId}/funnel?${query}`);
-
-        const result = await api('/api/gpt-campaign', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ campaign, adsets: funnel.adsets || [], metrics: state.metrics })
-        });
-
-        document.getElementById('modalContent').textContent = result.analysis || 'Sem análise disponível.';
-        document.getElementById('modalSub').textContent = 'Diagnóstico completo da campanha';
-      } catch (error) {
-        console.error(error);
-        document.getElementById('modalContent').textContent = 'Erro ao gerar análise dessa campanha.';
-      }
-    }
-
-    window.analyzeCampaignById = analyzeCampaignById;
-
-    async function openCopilot(){
-      if (!state.analysis || !state.metrics) {
-        alert('Rode uma análise antes.');
-        return;
-      }
-
-      openModal('Plano de Guerra IA', 'Gerando diagnóstico estratégico...');
-
-      try {
-        const result = await api('/api/gpt-copilot', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            data: {
-              metrics: state.metrics,
-              analysis: state.analysis,
-              campaigns: state.analysis?.campanhas_analise || [],
-              niche: document.getElementById('nicheSel').value
-            }
-          })
-        });
-
-        document.getElementById('modalContent').textContent = result.strategy || 'Sem conteúdo.';
-        document.getElementById('modalSub').textContent = 'Leitura estratégica da conta';
-      } catch (error) {
-        console.error(error);
-        document.getElementById('modalContent').textContent = 'Erro ao gerar o plano de guerra.';
-      }
-    }
-
-    function openModal(title, subtitle){
-      document.getElementById('modalTitle').textContent = title;
-      document.getElementById('modalSub').textContent = subtitle;
-      document.getElementById('modalContent').textContent = 'Carregando...';
-      document.getElementById('modalBg').style.display = 'flex';
-    }
-
-    function closeModal(){
-      document.getElementById('modalBg').style.display = 'none';
-    }
-
-    async function loadNotes(){
-      if (!state.selectedAccountId) return;
-      try {
-        const notes = await api(`/api/notes/${state.selectedAccountId}`);
-        const wrapper = document.getElementById('notesList');
-
-        if (!notes.length) {
-          wrapper.innerHTML = `<div class="empty">Nenhuma nota cadastrada.</div>`;
-          return;
-        }
-
-        wrapper.innerHTML = notes.map(note => `
-          <div class="note-card">
-            <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
-              <span class="badge primary">${note.type}</span>
-              <span class="small-muted">${new Date(note.created_at).toLocaleDateString('pt-BR')}</span>
-            </div>
-            <div style="margin-top:10px;line-height:1.6">${note.note}</div>
-          </div>
-        `).join('');
-      } catch (error) {
-        console.error(error);
-      }
-    }
-
-    async function saveNote(){
-      if (!state.selectedAccountId) {
-        alert('Selecione uma conta primeiro.');
-        return;
-      }
-
-      const note = document.getElementById('noteInput').value.trim();
-      if (!note) {
-        alert('Digite uma nota.');
-        return;
-      }
-
-      try {
-        await api('/api/notes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fbAccountId: state.selectedAccountId,
-            note,
-            type: document.getElementById('noteType').value
-          })
-        });
-
-        document.getElementById('noteInput').value = '';
-        loadNotes();
-      } catch (error) {
-        console.error(error);
-        alert('Erro ao salvar nota.');
-      }
-    }
-
-    async function loadAlert(){
-      if (!state.selectedAccountId) return;
-
-      try {
-        const alertData = await api(`/api/alerts/${state.selectedAccountId}`);
-        const box = document.getElementById('alertStatus');
-
-        if (!alertData) {
-          box.innerHTML = `<div class="empty">Nenhum alerta configurado para essa conta.</div>`;
-          return;
-        }
-
-        document.getElementById('alertEmail').value = alertData.alert_email || '';
-        document.getElementById('alertThreshold').value = alertData.threshold_amount || 100;
-
-        box.innerHTML = `
-          <div class="card">
-            <div class="metric-label">Alerta atual</div>
-            <div class="metric-sub">Email: ${alertData.alert_email}</div>
-            <div class="metric-sub">Limite: ${brMoney(alertData.threshold_amount)}</div>
-          </div>
-        `;
-      } catch (error) {
-        console.error(error);
-      }
-    }
-
-    async function saveAlert(){
-      if (!state.selectedAccountId || !state.selectedAccount) {
-        alert('Selecione uma conta primeiro.');
-        return;
-      }
-
-      try {
-        await api('/api/alerts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fbAccountId: state.selectedAccountId,
-            accountName: state.selectedAccount.name,
-            email: document.getElementById('alertEmail').value,
-            threshold: Number(document.getElementById('alertThreshold').value || 100),
-            currency: state.selectedAccount.currency || 'BRL'
-          })
-        });
-
-        loadAlert();
-        alert('Alerta salvo com sucesso.');
-      } catch (error) {
-        console.error(error);
-        alert('Erro ao salvar alerta.');
-      }
-    }
-
-    init();
-  </script>
-</body>
-</html>
+          <div class="metric-card"><div class="metric-label">Renovar Criativo</div><
