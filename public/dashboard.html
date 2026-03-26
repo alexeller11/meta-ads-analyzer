@@ -9,436 +9,78 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     :root{
-      --bg:#0b1220;
-      --bg2:#111827;
-      --card:#172033;
-      --card2:#1c2940;
-      --border:#2b3957;
-      --text:#eef4ff;
-      --muted:#97a6bf;
-      --primary:#3b82f6;
-      --success:#10b981;
-      --warning:#f59e0b;
-      --danger:#ef4444;
-      --purple:#8b5cf6;
+      --bg:#0b1220; --bg2:#111827; --card:#172033; --border:#2b3957;
+      --text:#eef4ff; --muted:#97a6bf; --primary:#3b82f6; --success:#10b981;
+      --warning:#f59e0b; --danger:#ef4444; --purple:#8b5cf6;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;font-family:Inter,sans-serif;background:var(--bg);color:var(--text)}
-    body{min-height:100vh}
-    .topbar{
-      height:72px;
-      background:rgba(17,24,39,.92);
-      border-bottom:1px solid var(--border);
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding:0 18px;
-      position:sticky;
-      top:0;
-      z-index:50;
-      backdrop-filter: blur(10px);
-    }
-    .logo{
-      font-size:21px;
-      font-weight:900;
-      letter-spacing:-.5px;
-      margin-right:6px;
-      white-space:nowrap;
-    }
-    .logo span{color:var(--primary)}
-    .topbar-right{
-      margin-left:auto;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      color:var(--muted);
-      font-size:13px;
-      font-weight:700;
-    }
-    .app{
-      display:flex;
-      min-height:calc(100vh - 72px);
-    }
-    .sidebar{
-      width:240px;
-      background:var(--bg2);
-      border-right:1px solid var(--border);
-      padding:14px 12px;
-      overflow:auto;
-      flex-shrink:0;
-    }
-    .main{
-      flex:1;
-      padding:20px;
-      overflow:auto;
-    }
-    .nav-title{
-      font-size:11px;
-      color:var(--muted);
-      text-transform:uppercase;
-      font-weight:900;
-      padding:10px 10px 6px;
-      letter-spacing:.7px;
-    }
-    .nav-btn{
-      width:100%;
-      text-align:left;
-      background:transparent;
-      border:none;
-      color:var(--text);
-      padding:11px 12px;
-      border-radius:12px;
-      cursor:pointer;
-      font-weight:700;
-      font-size:14px;
-      transition:.18s;
-    }
-    .nav-btn:hover,
-    .nav-btn.active{
-      background:rgba(59,130,246,.12);
-      color:#fff;
-    }
-    .toolbar{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      margin-bottom:18px;
-    }
-    .input,
-    .select,
-    .btn{
-      height:42px;
-      border-radius:12px;
-      border:1px solid var(--border);
-      background:var(--card);
-      color:var(--text);
-      padding:0 12px;
-      font-family:Inter,sans-serif;
-      font-size:14px;
-    }
-    .btn{
-      cursor:pointer;
-      font-weight:800;
-      background:var(--primary);
-      border:none;
-      transition:.18s;
-    }
-    .btn:hover{filter:brightness(1.06)}
-    .btn.secondary{
-      background:var(--card);
-      border:1px solid var(--border);
-    }
-    .btn.ghost{
-      background:transparent;
-      border:1px solid var(--border);
-    }
-    .checkbox-row{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      color:var(--muted);
-      font-size:13px;
-      font-weight:700;
-      padding:0 2px;
-    }
-    .card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:18px;
-      padding:18px;
-    }
-    .section{
-      margin-top:22px;
-    }
-    .section-title{
-      font-size:18px;
-      font-weight:900;
-      margin:0 0 14px;
-      letter-spacing:-.3px;
-    }
-    .grid{
-      display:grid;
-      grid-template-columns:repeat(4,1fr);
-      gap:14px;
-    }
-    .grid-5{
-      display:grid;
-      grid-template-columns:repeat(5,1fr);
-      gap:14px;
-    }
-    .metric-label{
-      font-size:11px;
-      color:var(--muted);
-      text-transform:uppercase;
-      font-weight:900;
-      letter-spacing:.7px;
-      margin-bottom:8px;
-    }
-    .metric-value{
-      font-size:28px;
-      font-weight:900;
-      letter-spacing:-.6px;
-    }
-    .metric-sub{
-      margin-top:6px;
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.5;
-    }
-    .summary-card{
-      display:flex;
-      gap:18px;
-      align-items:center;
-    }
-    .score{
-      width:96px;
-      height:96px;
-      border-radius:50%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border:8px solid rgba(59,130,246,.22);
-      color:var(--primary);
-      font-weight:900;
-      font-size:28px;
-      flex-shrink:0;
-    }
-    .summary-title{
-      font-size:24px;
-      font-weight:900;
-      margin:0 0 8px;
-    }
-    .summary-text{
-      color:var(--muted);
-      line-height:1.6;
-      font-size:14px;
-    }
-    .pill-row{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-top:12px;
-    }
-    .pill{
-      padding:7px 10px;
-      border-radius:999px;
-      font-size:12px;
-      font-weight:800;
-      background:rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.06);
-    }
-    .filters{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-    .filter-btn{
-      border:none;
-      padding:9px 12px;
-      border-radius:999px;
-      background:var(--card);
-      color:var(--text);
-      border:1px solid var(--border);
-      cursor:pointer;
-      font-weight:800;
-      font-size:12px;
-    }
-    .filter-btn.active{
-      background:rgba(59,130,246,.14);
-      border-color:var(--primary);
-    }
-    .badge{
-      display:inline-flex;
-      align-items:center;
-      padding:5px 9px;
-      border-radius:999px;
-      font-size:11px;
-      font-weight:900;
-      letter-spacing:.2px;
-    }
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,sans-serif}
+    .topbar{height:72px;background:rgba(17,24,39,.94);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 18px;position:sticky;top:0;z-index:30}
+    .logo{font-weight:900;font-size:21px}.logo span{color:var(--primary)}
+    .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;font-weight:700}
+    .app{display:flex;min-height:calc(100vh - 72px)}
+    .sidebar{width:240px;background:var(--bg2);border-right:1px solid var(--border);padding:14px 12px;overflow:auto}
+    .main{flex:1;padding:20px;overflow:auto}
+    .nav-title{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:900;padding:10px 10px 6px;letter-spacing:.7px}
+    .nav-btn{width:100%;text-align:left;background:transparent;border:none;color:var(--text);padding:11px 12px;border-radius:12px;cursor:pointer;font-weight:700;font-size:14px}
+    .nav-btn:hover,.nav-btn.active{background:rgba(59,130,246,.12)}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+    .input,.select,.btn{height:42px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text);padding:0 12px;font-family:Inter,sans-serif;font-size:14px}
+    .btn{cursor:pointer;font-weight:800;background:var(--primary);border:none}
+    .btn.secondary{background:var(--card);border:1px solid var(--border)}
+    .checkbox-row{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:700;padding:0 2px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px}
+    .section{margin-top:22px}
+    .section-title{font-size:18px;font-weight:900;margin:0 0 14px}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+    .metric-label{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:900;letter-spacing:.7px;margin-bottom:8px}
+    .metric-value{font-size:28px;font-weight:900}
+    .metric-sub{margin-top:6px;font-size:12px;color:var(--muted);line-height:1.5}
+    .summary-card{display:flex;gap:18px;align-items:center}
+    .score{width:96px;height:96px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:8px solid rgba(59,130,246,.22);color:var(--primary);font-weight:900;font-size:28px}
+    .summary-title{font-size:24px;font-weight:900;margin:0 0 8px}
+    .summary-text{color:var(--muted);line-height:1.6;font-size:14px}
+    .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .pill{padding:7px 10px;border-radius:999px;font-size:12px;font-weight:800;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+    .filters{display:flex;gap:8px;flex-wrap:wrap}
+    .filter-btn{border:none;padding:9px 12px;border-radius:999px;background:var(--card);color:var(--text);border:1px solid var(--border);cursor:pointer;font-weight:800;font-size:12px}
+    .filter-btn.active{background:rgba(59,130,246,.14);border-color:var(--primary)}
+    .badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:900}
     .badge.primary{background:rgba(59,130,246,.14);color:var(--primary)}
     .badge.success{background:rgba(16,185,129,.14);color:var(--success)}
     .badge.warning{background:rgba(245,158,11,.14);color:var(--warning)}
     .badge.danger{background:rgba(239,68,68,.14);color:var(--danger)}
     .badge.purple{background:rgba(139,92,246,.14);color:var(--purple)}
-    .table-wrap{
-      overflow:auto;
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:18px;
-    }
-    table{
-      width:100%;
-      border-collapse:collapse;
-      min-width:900px;
-    }
-    th,td{
-      padding:12px 14px;
-      border-bottom:1px solid rgba(255,255,255,.06);
-      text-align:left;
-      font-size:13px;
-      white-space:nowrap;
-      vertical-align:top;
-    }
-    th{
-      color:var(--muted);
-      font-size:11px;
-      text-transform:uppercase;
-      font-weight:900;
-      letter-spacing:.7px;
-      background:rgba(255,255,255,.02);
-    }
+    .table-wrap{overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:18px}
+    table{width:100%;border-collapse:collapse;min-width:900px}
+    th,td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;font-size:13px;white-space:nowrap;vertical-align:top}
+    th{color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:900;letter-spacing:.7px;background:rgba(255,255,255,.02)}
     .hidden{display:none !important}
-    .empty{
-      padding:34px;
-      text-align:center;
-      color:var(--muted);
-      font-size:14px;
-    }
-    .analysis-list{
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-    }
-    .analysis-item{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:16px;
-    }
-    .analysis-item h3{
-      margin:0;
-      font-size:16px;
-      font-weight:900;
-    }
-    .analysis-item p{
-      margin:10px 0 0;
-      color:var(--muted);
-      line-height:1.6;
-      font-size:14px;
-    }
-    .analysis-action{
-      margin-top:12px;
-      font-size:13px;
-      font-weight:800;
-    }
-    .creative-grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
-      gap:14px;
-    }
-    .creative-card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:18px;
-      overflow:hidden;
-    }
-    .creative-card img{
-      width:100%;
-      aspect-ratio:1/1;
-      object-fit:cover;
-      display:block;
-      background:#0f172a;
-    }
-    .creative-info{
-      padding:14px;
-    }
-    .creative-name{
-      font-size:14px;
-      font-weight:800;
-      margin-bottom:10px;
-      line-height:1.4;
-    }
-    .creative-line{
-      font-size:12px;
-      color:var(--muted);
-      margin-bottom:6px;
-    }
-    .chart-box{
-      height:340px;
-    }
-    .modal-bg{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.72);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      padding:20px;
-      z-index:100;
-    }
-    .modal{
-      width:min(980px,96vw);
-      max-height:88vh;
-      overflow:auto;
-      background:var(--bg2);
-      border:1px solid var(--border);
-      border-radius:20px;
-      padding:24px;
-    }
-    .modal-title{
-      font-size:20px;
-      font-weight:900;
-      margin:0;
-    }
-    .modal-sub{
-      color:var(--muted);
-      margin:8px 0 0;
-      font-size:13px;
-    }
-    .modal-content{
-      margin-top:18px;
-      font-size:14px;
-      line-height:1.7;
-      color:var(--text);
-      white-space:pre-wrap;
-    }
-    .textarea{
-      width:100%;
-      min-height:110px;
-      background:var(--card2);
-      border:1px solid var(--border);
-      color:var(--text);
-      border-radius:14px;
-      padding:14px;
-      font-family:Inter,sans-serif;
-      resize:vertical;
-      font-size:14px;
-    }
-    .alert-box{
-      margin-top:14px;
-    }
-    .note-card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:14px;
-      margin-bottom:10px;
-    }
-    .small-muted{
-      font-size:12px;
-      color:var(--muted);
-    }
-    @media (max-width:1200px){
-      .grid,.grid-5{grid-template-columns:repeat(2,1fr)}
-    }
-    @media (max-width:900px){
-      .app{display:block}
-      .sidebar{
-        width:auto;
-        border-right:none;
-        border-bottom:1px solid var(--border);
-      }
-      .grid,.grid-5{grid-template-columns:1fr}
-      .summary-card{flex-direction:column;align-items:flex-start}
-      .topbar{
-        height:auto;
-        min-height:72px;
-        flex-wrap:wrap;
-        padding:12px;
-      }
-    }
+    .empty{padding:34px;text-align:center;color:var(--muted);font-size:14px}
+    .analysis-list{display:flex;flex-direction:column;gap:12px}
+    .analysis-item{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}
+    .analysis-item h3{margin:0;font-size:16px;font-weight:900}
+    .analysis-item p{margin:10px 0 0;color:var(--muted);line-height:1.6;font-size:14px}
+    .analysis-action{margin-top:12px;font-size:13px;font-weight:800}
+    .creative-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+    .creative-card{background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden}
+    .creative-card img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#0f172a}
+    .creative-info{padding:14px}
+    .creative-name{font-size:14px;font-weight:800;margin-bottom:10px;line-height:1.4}
+    .creative-line{font-size:12px;color:var(--muted);margin-bottom:6px}
+    .chart-box{height:340px}
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:20px;z-index:100}
+    .modal{width:min(980px,96vw);max-height:88vh;overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:24px}
+    .modal-title{font-size:20px;font-weight:900;margin:0}
+    .modal-sub{color:var(--muted);margin:8px 0 0;font-size:13px}
+    .modal-content{margin-top:18px;font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap}
+    .textarea{width:100%;min-height:110px;background:#1c2940;border:1px solid var(--border);color:var(--text);border-radius:14px;padding:14px;font-family:Inter,sans-serif;resize:vertical;font-size:14px}
+    .alert-box{margin-top:14px}
+    .note-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px}
+    .small-muted{font-size:12px;color:var(--muted)}
+    @media (max-width:1200px){.grid,.grid-5{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:900px){.app{display:block}.sidebar{width:auto;border-right:none;border-bottom:1px solid var(--border)}.grid,.grid-5{grid-template-columns:1fr}.summary-card{flex-direction:column;align-items:flex-start}.topbar{height:auto;min-height:72px;flex-wrap:wrap;padding:12px}}
   </style>
 </head>
 <body>
@@ -504,15 +146,12 @@
     </aside>
 
     <main class="main">
-      <!-- OVERVIEW -->
       <section id="tab-overview">
         <div class="card summary-card">
           <div id="healthScore" class="score">0</div>
           <div>
             <h1 id="healthTitle" class="summary-title">Sem análise ainda</h1>
-            <div id="healthSummary" class="summary-text">
-              Selecione uma conta e rode a análise para carregar os dados.
-            </div>
+            <div id="healthSummary" class="summary-text">Selecione uma conta e rode a análise para carregar os dados.</div>
             <div class="pill-row">
               <span class="pill" id="summarySpend">Investimento: R$ 0,00</span>
               <span class="pill" id="summaryRoas">ROAS: 0.00x</span>
@@ -525,83 +164,31 @@
         <div class="section">
           <h2 class="section-title">Investimento e Retorno</h2>
           <div class="grid">
-            <div class="card">
-              <div class="metric-label">Investimento</div>
-              <div class="metric-value" id="mSpend">R$ 0,00</div>
-              <div class="metric-sub">Gasto total no período</div>
-            </div>
-            <div class="card">
-              <div class="metric-label">Receita</div>
-              <div class="metric-value" id="mRevenue">R$ 0,00</div>
-              <div class="metric-sub">Receita rastreada</div>
-            </div>
-            <div class="card">
-              <div class="metric-label">ROAS</div>
-              <div class="metric-value" id="mRoas">0.00x</div>
-              <div class="metric-sub">Retorno sobre investimento</div>
-            </div>
-            <div class="card">
-              <div class="metric-label">Custo por Venda</div>
-              <div class="metric-value" id="mCostPerPurchase">R$ 0,00</div>
-              <div class="metric-sub">CPA de compra</div>
-            </div>
+            <div class="card"><div class="metric-label">Investimento</div><div class="metric-value" id="mSpend">R$ 0,00</div><div class="metric-sub">Gasto total no período</div></div>
+            <div class="card"><div class="metric-label">Receita</div><div class="metric-value" id="mRevenue">R$ 0,00</div><div class="metric-sub">Receita rastreada</div></div>
+            <div class="card"><div class="metric-label">ROAS</div><div class="metric-value" id="mRoas">0.00x</div><div class="metric-sub">Retorno sobre investimento</div></div>
+            <div class="card"><div class="metric-label">Custo por Venda</div><div class="metric-value" id="mCostPerPurchase">R$ 0,00</div><div class="metric-sub">CPA de compra</div></div>
           </div>
         </div>
 
         <div class="section">
           <h2 class="section-title">Entrega e Alcance</h2>
           <div class="grid">
-            <div class="card">
-              <div class="metric-label">Impressões</div>
-              <div class="metric-value" id="mImpressions">0</div>
-              <div class="metric-sub">Volume total de exibição</div>
-            </div>
-            <div class="card">
-              <div class="metric-label">Alcance</div>
-              <div class="metric-value" id="mReach">0</div>
-              <div class="metric-sub">Pessoas alcançadas</div>
-            </div>
-            <div class="card">
-              <div class="metric-label">Frequência</div>
-              <div class="metric-value" id="mFrequency">0.00</div>
-              <div class="metric-sub">Média por pessoa</div>
-            </div>
-            <div class="card">
-              <div class="metric-label">CPM</div>
-              <div class="metric-value" id="mCpm">R$ 0,00</div>
-              <div class="metric-sub">Custo por mil impressões</div>
-            </div>
+            <div class="card"><div class="metric-label">Impressões</div><div class="metric-value" id="mImpressions">0</div><div class="metric-sub">Volume total de exibição</div></div>
+            <div class="card"><div class="metric-label">Alcance</div><div class="metric-value" id="mReach">0</div><div class="metric-sub">Pessoas alcançadas</div></div>
+            <div class="card"><div class="metric-label">Frequência</div><div class="metric-value" id="mFrequency">0.00</div><div class="metric-sub">Média por pessoa</div></div>
+            <div class="card"><div class="metric-label">CPM</div><div class="metric-value" id="mCpm">R$ 0,00</div><div class="metric-sub">Custo por mil impressões</div></div>
           </div>
         </div>
 
         <div class="section">
           <h2 class="section-title">Tráfego e Conversão</h2>
           <div class="grid-5">
-            <div class="card">
-              <div class="metric-label">CTR</div>
-              <div class="metric-value" id="mCtr">0.00%</div>
-              <div class="metric-sub">Taxa de clique</div>
-            </div>
-            <div class="card">
-              <div class="metric-label">CPC</div>
-              <div class="metric-value" id="mCpc">R$ 0,00</div>
-              <div class="metric-sub">Custo por clique</div>
-            </div>
-            <div class="card">
-              <div class="metric-label">Connect Rate</div>
-              <div class="metric-value" id="mConnectRate">0.00%</div>
-              <div class="metric-sub">Landing page views por clique</div>
-            </div>
-            <div class="card">
-              <div class="metric-label">Mensagens</div>
-              <div class="metric-value" id="mMessages">0</div>
-              <div class="metric-sub">Conversas iniciadas</div>
-            </div>
-            <div class="card">
-              <div class="metric-label">Compras</div>
-              <div class="metric-value" id="mPurchases">0</div>
-              <div class="metric-sub">Conversões de compra</div>
-            </div>
+            <div class="card"><div class="metric-label">CTR</div><div class="metric-value" id="mCtr">0.00%</div><div class="metric-sub">Taxa de clique</div></div>
+            <div class="card"><div class="metric-label">CPC</div><div class="metric-value" id="mCpc">R$ 0,00</div><div class="metric-sub">Custo por clique</div></div>
+            <div class="card"><div class="metric-label">Connect Rate</div><div class="metric-value" id="mConnectRate">0.00%</div><div class="metric-sub">Landing page views por clique</div></div>
+            <div class="card"><div class="metric-label">Mensagens</div><div class="metric-value" id="mMessages">0</div><div class="metric-sub">Conversas iniciadas</div></div>
+            <div class="card"><div class="metric-label">Compras</div><div class="metric-value" id="mPurchases">0</div><div class="metric-sub">Conversões de compra</div></div>
           </div>
         </div>
 
@@ -610,32 +197,19 @@
           <div class="table-wrap">
             <table>
               <thead>
-                <tr>
-                  <th>Métrica</th>
-                  <th>Atual</th>
-                  <th>Anterior</th>
-                  <th>Variação</th>
-                </tr>
+                <tr><th>Métrica</th><th>Atual</th><th>Anterior</th><th>Variação</th></tr>
               </thead>
-              <tbody id="comparisonBody">
-                <tr><td colspan="4" class="empty">Ative a comparação para visualizar.</td></tr>
-              </tbody>
+              <tbody id="comparisonBody"><tr><td colspan="4" class="empty">Ative a comparação para visualizar.</td></tr></tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <!-- ANALYSIS -->
       <section id="tab-analysis" class="hidden">
-        <div class="toolbar">
-          <button id="copilotBtn" class="btn">Plano de Guerra IA</button>
-        </div>
-        <div id="analysisList" class="analysis-list">
-          <div class="empty">Sem análise ainda.</div>
-        </div>
+        <div class="toolbar"><button id="copilotBtn" class="btn">Plano de Guerra IA</button></div>
+        <div id="analysisList" class="analysis-list"><div class="empty">Sem análise ainda.</div></div>
       </section>
 
-      <!-- DECISION -->
       <section id="tab-decision" class="hidden">
         <div class="toolbar">
           <div class="filters" id="decisionFilters">
@@ -648,26 +222,10 @@
         </div>
 
         <div class="grid">
-          <div class="card">
-            <div class="metric-label">Escalar</div>
-            <div class="metric-value" id="dScale">0</div>
-            <div class="metric-sub">Campanhas prontas para escala</div>
-          </div>
-          <div class="card">
-            <div class="metric-label">Pausar</div>
-            <div class="metric-value" id="dPause">0</div>
-            <div class="metric-sub">Campanhas queimando verba</div>
-          </div>
-          <div class="card">
-            <div class="metric-label">Renovar Criativo</div>
-            <div class="metric-value" id="dCreative">0</div>
-            <div class="metric-sub">Sinal de fadiga ou CTR baixo</div>
-          </div>
-          <div class="card">
-            <div class="metric-label">Desperdício Estimado</div>
-            <div class="metric-value" id="dWaste">R$ 0,00</div>
-            <div class="metric-sub">Estimativa conservadora por regra</div>
-          </div>
+          <div class="card"><div class="metric-label">Escalar</div><div class="metric-value" id="dScale">0</div><div class="metric-sub">Campanhas prontas para escala</div></div>
+          <div class="card"><div class="metric-label">Pausar</div><div class="metric-value" id="dPause">0</div><div class="metric-sub">Campanhas queimando verba</div></div>
+          <div class="card"><div class="metric-label">Renovar Criativo</div><div class="metric-value" id="dCreative">0</div><div class="metric-sub">Sinal de fadiga ou CTR baixo</div></div>
+          <div class="card"><div class="metric-label">Desperdício Estimado</div><div class="metric-value" id="dWaste">R$ 0,00</div><div class="metric-sub">Estimativa conservadora por regra</div></div>
         </div>
 
         <div class="section">
@@ -675,27 +233,15 @@
             <table>
               <thead>
                 <tr>
-                  <th>Campanha</th>
-                  <th>Status</th>
-                  <th>Ação</th>
-                  <th>Gasto</th>
-                  <th>Impressões</th>
-                  <th>Alcance</th>
-                  <th>CTR</th>
-                  <th>Connect Rate</th>
-                  <th>ROAS</th>
-                  <th>Motivo</th>
+                  <th>Campanha</th><th>Status</th><th>Ação</th><th>Gasto</th><th>Impressões</th><th>Alcance</th><th>CTR</th><th>Connect Rate</th><th>ROAS</th><th>Motivo</th>
                 </tr>
               </thead>
-              <tbody id="decisionBody">
-                <tr><td colspan="10" class="empty">Sem dados.</td></tr>
-              </tbody>
+              <tbody id="decisionBody"><tr><td colspan="10" class="empty">Sem dados.</td></tr></tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <!-- CAMPAIGNS -->
       <section id="tab-campaigns" class="hidden">
         <div class="toolbar">
           <div class="filters" id="campaignFilters">
@@ -711,28 +257,14 @@
           <table>
             <thead>
               <tr>
-                <th>Campanha</th>
-                <th>Status</th>
-                <th>Gasto</th>
-                <th>Impressões</th>
-                <th>Alcance</th>
-                <th>CTR</th>
-                <th>Connect Rate</th>
-                <th>ROAS</th>
-                <th>Mensagens</th>
-                <th>Compras</th>
-                <th>Custo/Venda</th>
-                <th>IA</th>
+                <th>Campanha</th><th>Status</th><th>Gasto</th><th>Impressões</th><th>Alcance</th><th>CTR</th><th>Connect Rate</th><th>ROAS</th><th>Mensagens</th><th>Compras</th><th>Custo/Venda</th><th>IA</th>
               </tr>
             </thead>
-            <tbody id="campaignBody">
-              <tr><td colspan="12" class="empty">Sem dados.</td></tr>
-            </tbody>
+            <tbody id="campaignBody"><tr><td colspan="12" class="empty">Sem dados.</td></tr></tbody>
           </table>
         </div>
       </section>
 
-      <!-- CREATIVES -->
       <section id="tab-creatives" class="hidden">
         <div class="toolbar">
           <div class="filters" id="creativeFilters">
@@ -741,13 +273,9 @@
             <button class="filter-btn" data-filter="COMPRAS">Mais compras</button>
           </div>
         </div>
-
-        <div id="creativesGrid" class="creative-grid">
-          <div class="empty" style="grid-column:1/-1">Sem criativos carregados.</div>
-        </div>
+        <div id="creativesGrid" class="creative-grid"><div class="empty" style="grid-column:1/-1">Sem criativos carregados.</div></div>
       </section>
 
-      <!-- BREAKDOWN -->
       <section id="tab-breakdown" class="hidden">
         <div class="toolbar">
           <select id="breakdownType" class="select">
@@ -762,78 +290,40 @@
           <button id="loadBreakdownBtn" class="btn">Carregar Breakdown</button>
         </div>
 
-        <div class="card chart-box">
-          <canvas id="breakdownChart"></canvas>
-        </div>
-
+        <div class="card chart-box"><canvas id="breakdownChart"></canvas></div>
         <div class="section">
           <div class="table-wrap">
             <table>
-              <thead>
-                <tr>
-                  <th>Segmento</th>
-                  <th>Gasto</th>
-                  <th>Impressões</th>
-                  <th>Alcance</th>
-                  <th>CTR</th>
-                  <th>CPC</th>
-                </tr>
-              </thead>
-              <tbody id="breakdownBody">
-                <tr><td colspan="6" class="empty">Sem breakdown carregado.</td></tr>
-              </tbody>
+              <thead><tr><th>Segmento</th><th>Gasto</th><th>Impressões</th><th>Alcance</th><th>CTR</th><th>CPC</th></tr></thead>
+              <tbody id="breakdownBody"><tr><td colspan="6" class="empty">Sem breakdown carregado.</td></tr></tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <!-- TREND -->
       <section id="tab-trend" class="hidden">
-        <div class="card chart-box">
-          <canvas id="trendChart"></canvas>
-        </div>
+        <div class="card chart-box"><canvas id="trendChart"></canvas></div>
         <div id="trendEmpty" class="empty hidden">Sem histórico disponível ainda.</div>
       </section>
 
-      <!-- HISTORY -->
       <section id="tab-history" class="hidden">
         <div class="table-wrap">
           <table>
             <thead>
-              <tr>
-                <th>Data</th>
-                <th>Período</th>
-                <th>Gasto</th>
-                <th>Impressões</th>
-                <th>Cliques</th>
-                <th>Alcance</th>
-                <th>CTR</th>
-                <th>CPC</th>
-                <th>CPM</th>
-                <th>Frequência</th>
-                <th>ROAS</th>
-                <th>Score</th>
-              </tr>
+              <tr><th>Data</th><th>Período</th><th>Gasto</th><th>Impressões</th><th>Cliques</th><th>Alcance</th><th>CTR</th><th>CPC</th><th>CPM</th><th>Frequência</th><th>ROAS</th><th>Score</th></tr>
             </thead>
-            <tbody id="historyBody">
-              <tr><td colspan="12" class="empty">Sem histórico salvo ainda.</td></tr>
-            </tbody>
+            <tbody id="historyBody"><tr><td colspan="12" class="empty">Sem histórico salvo ainda.</td></tr></tbody>
           </table>
         </div>
       </section>
 
-      <!-- NOTES -->
       <section id="tab-notes" class="hidden">
         <div class="card">
           <div class="metric-label">Nova nota</div>
           <textarea id="noteInput" class="textarea" placeholder="Escreva uma observação sobre a conta ou campanha..."></textarea>
           <div class="toolbar" style="margin-top:12px">
             <select id="noteType" class="select">
-              <option value="geral">Geral</option>
-              <option value="criativo">Criativo</option>
-              <option value="publico">Público</option>
-              <option value="orcamento">Orçamento</option>
-              <option value="resultado">Resultado</option>
+              <option value="geral">Geral</option><option value="criativo">Criativo</option><option value="publico">Público</option><option value="orcamento">Orçamento</option><option value="resultado">Resultado</option>
             </select>
             <button id="saveNoteBtn" class="btn">Salvar Nota</button>
           </div>
@@ -841,7 +331,6 @@
         <div id="notesList" class="section"></div>
       </section>
 
-      <!-- ALERTS -->
       <section id="tab-alerts" class="hidden">
         <div class="card">
           <div class="metric-label">Configurar alerta de saldo</div>
@@ -882,37 +371,20 @@
       trendRows: [],
       comparison: null,
       breakdownRows: [],
-      charts: {
-        trend: null,
-        breakdown: null
-      }
+      decision: null,
+      charts: { trend: null, breakdown: null }
     };
 
-    function brMoney(v){
-      return `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-
-    function brNum(v){
-      return Number(v || 0).toLocaleString('pt-BR');
-    }
-
-    function brPct(v){
-      return `${Number(v || 0).toFixed(2)}%`;
-    }
+    const brMoney = v => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const brNum = v => Number(v || 0).toLocaleString('pt-BR');
+    const brPct = v => `${Number(v || 0).toFixed(2)}%`;
 
     function getDateConfig(){
       const preset = document.getElementById('dateSel').value;
       if (preset === 'custom') {
-        return {
-          type: 'custom',
-          since: document.getElementById('sinceDate').value,
-          until: document.getElementById('untilDate').value
-        };
+        return { type: 'custom', since: document.getElementById('sinceDate').value, until: document.getElementById('untilDate').value };
       }
-      return {
-        type: 'preset',
-        date_preset: preset
-      };
+      return { type: 'preset', date_preset: preset };
     }
 
     function toQuery(obj){
@@ -935,17 +407,14 @@
       const previousStart = new Date(previousEnd);
       previousStart.setDate(previousStart.getDate() - (diffDays - 1));
 
-      const format = (date) => {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
+      const format = d => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
       };
 
-      return {
-        since: format(previousStart),
-        until: format(previousEnd)
-      };
+      return { since: format(previousStart), until: format(previousEnd) };
     }
 
     function getLifecycleStatus(c){
@@ -961,80 +430,13 @@
       return 'ATIVA';
     }
 
-    function buildDecisionForCampaign(c){
-      const roas = Number(c.roas || 0);
-      const ctr = Number(c.ctr || 0);
-      const freq = Number(c.frequency || 0);
-      const spend = Number(c.spend || 0);
-      const connectRate = Number(c.connectRate || 0);
-      const purchases = Number(c.purchases || 0);
-      const messages = Number(c.messages || 0);
-      const leads = Number(c.leads || 0);
-
-      if (spend <= 0) {
-        return {
-          action: 'SEM_DADOS',
-          waste: 0,
-          reason: 'Sem gasto no período.'
-        };
-      }
-
-      if (spend > 100 && purchases === 0 && messages === 0 && leads === 0) {
-        return {
-          action: 'PAUSAR',
-          waste: spend,
-          reason: 'Verba consumida sem gerar ação relevante.'
-        };
-      }
-
-      if (freq > 3.5 || ctr < 0.8) {
-        return {
-          action: 'RENOVAR_CRIATIVO',
-          waste: spend * 0.25,
-          reason: 'Sinal de fadiga ou baixo poder de clique.'
-        };
-      }
-
-      if (connectRate > 0 && connectRate < 60) {
-        return {
-          action: 'OTIMIZAR_FUNIL',
-          waste: spend * 0.20,
-          reason: 'Muitos cliques com pouca conexão até a página.'
-        };
-      }
-
-      if (roas >= 2.5 || purchases >= 3 || messages >= 10) {
-        return {
-          action: 'ESCALAR',
-          waste: 0,
-          reason: 'Campanha com sinal real de performance.'
-        };
-      }
-
-      return {
-        action: 'MANTER_E_OTIMIZAR',
-        waste: spend * 0.10,
-        reason: 'Campanha funcional, ainda com espaço para melhoria.'
-      };
-    }
-
-    function actionBadgeClass(action){
-      if (action === 'ESCALAR') return 'success';
-      if (action === 'PAUSAR') return 'danger';
-      if (action === 'RENOVAR_CRIATIVO') return 'warning';
-      if (action === 'OTIMIZAR_FUNIL') return 'purple';
-      return 'primary';
-    }
-
     function bindTabButtons(){
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
           btn.classList.add('active');
-
           document.querySelectorAll('main > section').forEach(section => section.classList.add('hidden'));
           document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('hidden');
-
           if (btn.dataset.tab === 'trend') renderTrend();
           if (btn.dataset.tab === 'history') loadHistoryTable();
           if (btn.dataset.tab === 'notes') loadNotes();
@@ -1100,10 +502,9 @@
       state.accounts = accounts.data || [];
 
       const accountSel = document.getElementById('accountSel');
-      accountSel.innerHTML = `<option value="">Selecione a conta</option>` +
-        state.accounts.map(acc => `<option value="${acc.account_id}">${acc.name}</option>`).join('');
+      accountSel.innerHTML = `<option value="">Selecione a conta</option>` + state.accounts.map(acc => `<option value="${acc.account_id}">${acc.name}</option>`).join('');
 
-      accountSel.addEventListener('change', async () => {
+      accountSel.addEventListener('change', () => {
         state.selectedAccountId = accountSel.value;
         state.selectedAccount = state.accounts.find(acc => acc.account_id === state.selectedAccountId) || null;
       });
@@ -1176,6 +577,7 @@
 
         state.analysis = analyzeRes.analysis;
         state.metrics = analyzeRes.metrics;
+        state.decision = analyzeRes.decision;
 
         renderOverview();
         renderInsights();
@@ -1196,20 +598,9 @@
     function getMetricsFromInsights(insightsRes){
       const rows = insightsRes?.data || [];
       const metrics = {
-        totalSpend: 0,
-        totalImpressions: 0,
-        totalClicks: 0,
-        totalReach: 0,
-        totalPurchases: 0,
-        totalMessages: 0,
-        totalSessions: 0,
-        totalRev: 0,
-        avgFrequency: 0,
-        avgCtr: 0,
-        avgCpc: 0,
-        avgCpm: 0,
-        connectRate: 0,
-        costPerPurchase: 0
+        totalSpend: 0, totalImpressions: 0, totalClicks: 0, totalReach: 0,
+        totalPurchases: 0, totalMessages: 0, totalSessions: 0, totalRev: 0,
+        avgFrequency: 0, avgCtr: 0, avgCpc: 0, avgCpm: 0, connectRate: 0, costPerPurchase: 0
       };
 
       const getAction = (arr, types) => {
@@ -1250,9 +641,7 @@
     function buildComparisonFromInsights(currentInsights, previousInsights){
       const current = getMetricsFromInsights(currentInsights);
       const previous = getMetricsFromInsights(previousInsights);
-
       const variation = (cur, prev) => ((cur - prev) / (prev || 1)) * 100;
-
       return {
         current,
         previous,
@@ -1268,14 +657,12 @@
 
     function renderOverview(){
       if (!state.analysis || !state.metrics) return;
-
       const summary = state.analysis.resumo_geral || {};
       const metrics = state.metrics;
 
       document.getElementById('healthScore').textContent = summary.score_saude || 0;
       document.getElementById('healthTitle').textContent = summary.nivel_saude || 'Sem dados';
       document.getElementById('healthSummary').textContent = summary.resumo_historico || 'Sem resumo disponível.';
-
       document.getElementById('summarySpend').textContent = `Investimento: ${brMoney(metrics.totalSpend)}`;
       document.getElementById('summaryRoas').textContent = `ROAS: ${Number(metrics.roas || 0).toFixed(2)}x`;
       document.getElementById('summaryCtr').textContent = `CTR: ${brPct(metrics.avgCtr)}`;
@@ -1318,14 +705,7 @@
         ['Connect Rate', brPct(current.connectRate), brPct(previous.connectRate), `${Number(comp.connectRateChange || 0).toFixed(2)}%`]
       ];
 
-      body.innerHTML = rows.map(row => `
-        <tr>
-          <td>${row[0]}</td>
-          <td>${row[1]}</td>
-          <td>${row[2]}</td>
-          <td>${row[3]}</td>
-        </tr>
-      `).join('');
+      body.innerHTML = rows.map(row => `<tr><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td><td>${row[3]}</td></tr>`).join('');
     }
 
     function renderInsights(){
@@ -1340,10 +720,7 @@
       list.innerHTML = items.map(item => `
         <div class="analysis-item">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-            <div>
-              <div class="metric-label">${item.categoria}</div>
-              <h3>${item.titulo}</h3>
-            </div>
+            <div><div class="metric-label">${item.categoria}</div><h3>${item.titulo}</h3></div>
             <span class="badge ${item.prioridade === 1 ? 'danger' : item.prioridade === 2 ? 'warning' : 'primary'}">P${item.prioridade}</span>
           </div>
           <p>${item.descricao}</p>
@@ -1356,39 +733,41 @@
       const list = state.analysis?.campanhas_analise || [];
       return list.map(c => ({
         ...c,
-        lifecycleStatus: getLifecycleStatus(c),
-        decision: buildDecisionForCampaign(c)
+        lifecycleStatus: getLifecycleStatus(c)
       }));
+    }
+
+    function actionBadgeClass(action){
+      if (action === 'ESCALAR') return 'success';
+      if (action === 'PAUSAR') return 'danger';
+      if (action === 'RENOVAR_CRIATIVO') return 'warning';
+      if (action === 'AJUSTAR_FUNIL') return 'purple';
+      return 'primary';
     }
 
     function renderDecisionCenter(){
       const filter = getActiveFilter('decisionFilters');
-      const campaigns = getEnrichedCampaigns();
-
-      const filtered = filter === 'TODAS'
-        ? campaigns
-        : campaigns.filter(c => c.lifecycleStatus === filter);
-
-      const summary = {
-        scale: campaigns.filter(c => c.decision.action === 'ESCALAR').length,
-        pause: campaigns.filter(c => c.decision.action === 'PAUSAR').length,
-        creative: campaigns.filter(c => c.decision.action === 'RENOVAR_CRIATIVO').length,
-        waste: campaigns.reduce((acc, c) => acc + Number(c.decision.waste || 0), 0)
-      };
-
-      document.getElementById('dScale').textContent = summary.scale;
-      document.getElementById('dPause').textContent = summary.pause;
-      document.getElementById('dCreative').textContent = summary.creative;
-      document.getElementById('dWaste').textContent = brMoney(summary.waste);
-
+      const data = state.decision;
       const body = document.getElementById('decisionBody');
 
-      if (!filtered.length) {
+      if (!data) {
+        body.innerHTML = `<tr><td colspan="10" class="empty">Sem dados.</td></tr>`;
+        return;
+      }
+
+      document.getElementById('dScale').textContent = data.summary.scaleCount || 0;
+      document.getElementById('dPause').textContent = data.summary.pauseCount || 0;
+      document.getElementById('dCreative').textContent = data.summary.creativeCount || 0;
+      document.getElementById('dWaste').textContent = brMoney(data.totalWaste || 0);
+
+      const campaigns = (data.campaigns || []).filter(c => filter === 'TODAS' ? true : c.lifecycleStatus === filter);
+
+      if (!campaigns.length) {
         body.innerHTML = `<tr><td colspan="10" class="empty">Nenhuma campanha encontrada.</td></tr>`;
         return;
       }
 
-      body.innerHTML = filtered.map(c => `
+      body.innerHTML = campaigns.map(c => `
         <tr>
           <td>${c.name}</td>
           <td><span class="badge primary">${c.lifecycleStatus}</span></td>
@@ -1406,20 +785,15 @@
 
     function renderCampaigns(){
       const filter = getActiveFilter('campaignFilters');
-      const campaigns = getEnrichedCampaigns();
-
-      const filtered = filter === 'TODAS'
-        ? campaigns
-        : campaigns.filter(c => c.lifecycleStatus === filter);
-
+      const campaigns = getEnrichedCampaigns().filter(c => filter === 'TODAS' ? true : c.lifecycleStatus === filter);
       const body = document.getElementById('campaignBody');
 
-      if (!filtered.length) {
+      if (!campaigns.length) {
         body.innerHTML = `<tr><td colspan="12" class="empty">Nenhuma campanha encontrada.</td></tr>`;
         return;
       }
 
-      body.innerHTML = filtered.map(c => `
+      body.innerHTML = campaigns.map(c => `
         <tr>
           <td>${c.name}</td>
           <td><span class="badge primary">${c.lifecycleStatus}</span></td>
@@ -1441,27 +815,16 @@
       const ins = item?.insights?.data?.[0] || {};
       const actions = ins.actions || [];
       const values = ins.action_values || [];
-
       const getByContains = (arr, term) => {
         const found = arr.find(x => String(x.action_type || '').includes(term));
         return Number(found?.value || 0);
       };
-
       const spend = Number(ins.spend || 0);
       const revenue = getByContains(values, 'purchase');
       const purchases = getByContains(actions, 'purchase');
       const messages = getByContains(actions, 'message');
       const roas = spend > 0 ? revenue / spend : 0;
-
-      return {
-        spend,
-        revenue,
-        purchases,
-        messages,
-        roas,
-        ctr: Number(ins.ctr || 0),
-        clicks: Number(ins.clicks || 0)
-      };
+      return { spend, revenue, purchases, messages, roas, ctr: Number(ins.ctr || 0), clicks: Number(ins.clicks || 0) };
     }
 
     function renderCreatives(){
@@ -1474,23 +837,16 @@
         return;
       }
 
-      if (filter === 'CAMPEAO') {
-        list.sort((a, b) => getCreativeMetrics(b).roas - getCreativeMetrics(a).roas);
-      } else if (filter === 'MENSAGENS') {
-        list.sort((a, b) => getCreativeMetrics(b).messages - getCreativeMetrics(a).messages);
-      } else if (filter === 'COMPRAS') {
-        list.sort((a, b) => getCreativeMetrics(b).purchases - getCreativeMetrics(a).purchases);
-      }
+      if (filter === 'CAMPEAO') list.sort((a, b) => getCreativeMetrics(b).roas - getCreativeMetrics(a).roas);
+      else if (filter === 'MENSAGENS') list.sort((a, b) => getCreativeMetrics(b).messages - getCreativeMetrics(a).messages);
+      else if (filter === 'COMPRAS') list.sort((a, b) => getCreativeMetrics(b).purchases - getCreativeMetrics(a).purchases);
 
       grid.innerHTML = list.map((item, idx) => {
         const metrics = getCreativeMetrics(item);
         const img = item?.creative?.image_url || item?.creative?.thumbnail_url || '';
         return `
           <div class="creative-card">
-            ${img
-              ? `<img src="${img}" alt="Criativo" />`
-              : `<div style="aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:#0f172a;color:var(--muted)">Sem imagem</div>`
-            }
+            ${img ? `<img src="${img}" alt="Criativo" />` : `<div style="aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:#0f172a;color:var(--muted)">Sem imagem</div>`}
             <div class="creative-info">
               <div class="creative-name">${item.name || 'Criativo sem nome'}</div>
               <div class="creative-line">Gasto: ${brMoney(metrics.spend)}</div>
@@ -1514,14 +870,12 @@
       try {
         const type = document.getElementById('breakdownType').value;
         const dateConfig = getDateConfig();
-
         const query = dateConfig.type === 'custom'
           ? toQuery({ since: dateConfig.since, until: dateConfig.until })
           : toQuery({ date_preset: dateConfig.date_preset });
 
         const res = await api(`/api/adaccounts/${state.selectedAccountId}/breakdown/${type}?${query}`);
         state.breakdownRows = res.data || [];
-
         renderBreakdownTableAndChart(type);
       } catch (error) {
         console.error(error);
@@ -1546,10 +900,7 @@
 
       if (!rows.length) {
         body.innerHTML = `<tr><td colspan="6" class="empty">Sem dados para esse breakdown.</td></tr>`;
-        if (state.charts.breakdown) {
-          state.charts.breakdown.destroy();
-          state.charts.breakdown = null;
-        }
+        if (state.charts.breakdown) { state.charts.breakdown.destroy(); state.charts.breakdown = null; }
         return;
       }
 
@@ -1573,15 +924,9 @@
         type: 'bar',
         data: {
           labels: rows.map(row => getBreakdownLabel(row, type)),
-          datasets: [{
-            label: 'Gasto',
-            data: rows.map(row => Number(row.spend || 0))
-          }]
+          datasets: [{ label: 'Gasto', data: rows.map(row => Number(row.spend || 0)) }]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false
-        }
+        options: { responsive: true, maintainAspectRatio: false }
       });
     }
 
@@ -1599,15 +944,11 @@
 
         if (!state.trendRows.length) {
           empty.classList.remove('hidden');
-          if (state.charts.trend) {
-            state.charts.trend.destroy();
-            state.charts.trend = null;
-          }
+          if (state.charts.trend) { state.charts.trend.destroy(); state.charts.trend = null; }
           return;
         }
 
         empty.classList.add('hidden');
-
         const ordered = [...state.trendRows].reverse();
 
         if (state.charts.trend) state.charts.trend.destroy();
@@ -1618,24 +959,12 @@
           data: {
             labels: ordered.map(row => new Date(row.created_at).toLocaleDateString('pt-BR')),
             datasets: [
-              {
-                label: 'Score',
-                data: ordered.map(row => Number(row.health_score || 0))
-              },
-              {
-                label: 'ROAS',
-                data: ordered.map(row => Number(row.roas || 0))
-              },
-              {
-                label: 'Gasto',
-                data: ordered.map(row => Number(row.total_spend || 0))
-              }
+              { label: 'Score', data: ordered.map(row => Number(row.health_score || 0)) },
+              { label: 'ROAS', data: ordered.map(row => Number(row.roas || 0)) },
+              { label: 'Gasto', data: ordered.map(row => Number(row.total_spend || 0)) }
             ]
           },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false
-          }
+          options: { responsive: true, maintainAspectRatio: false }
         });
       } catch (error) {
         console.error(error);
@@ -1693,11 +1022,7 @@
         const result = await api('/api/gpt-campaign', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            campaign,
-            adsets: funnel.adsets || [],
-            metrics: state.metrics
-          })
+          body: JSON.stringify({ campaign, adsets: funnel.adsets || [], metrics: state.metrics })
         });
 
         document.getElementById('modalContent').textContent = result.analysis || 'Sem análise disponível.';
