@@ -1,26 +1,22 @@
 const { Pool } = require('pg');
 
-// Neon.tech exige SSL sempre
 let pool;
 if (process.env.DATABASE_URL) {
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
   });
-  
+
   pool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
   });
 } else {
   console.log('⚠️ DATABASE_URL não configurada. Funcionalidades de histórico estarão desativadas.');
-  // Mock pool para evitar erros de undefined
   pool = {
     query: async () => ({ rows: [] }),
     on: () => {}
   };
 }
-
-// ─── SCHEMA ──────────────────────────────────────────────────────────────────
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS accounts (
@@ -39,7 +35,7 @@ const SCHEMA = `
     fb_account_id VARCHAR(64) NOT NULL,
     fb_user_id VARCHAR(64) NOT NULL,
     account_name TEXT,
-    date_range VARCHAR(32),
+    date_range VARCHAR(64),
     total_spend NUMERIC(14,2),
     total_impressions BIGINT,
     total_clicks BIGINT,
@@ -122,19 +118,93 @@ const SCHEMA = `
     type VARCHAR(32) DEFAULT 'geral',
     created_at TIMESTAMPTZ DEFAULT NOW()
   );
+
   CREATE INDEX IF NOT EXISTS idx_notes_account ON campaign_notes(fb_account_id, created_at DESC);
 `;
+
+async function ensureColumn(table, column, definition) {
+  try {
+    const check = await pool.query(
+      `
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_name = $1 AND column_name = $2
+      `,
+      [table, column]
+    );
+
+    if (check.rows.length === 0) {
+      await pool.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+      console.log(`✅ Coluna adicionada: ${table}.${column}`);
+    }
+  } catch (err) {
+    console.error(`❌ Erro ao garantir coluna ${table}.${column}:`, err.message);
+  }
+}
+
+async function runMigrations() {
+  const analysisRunColumns = [
+    ['date_range', 'VARCHAR(64)'],
+    ['total_spend', 'NUMERIC(14,2)'],
+    ['total_impressions', 'BIGINT'],
+    ['total_clicks', 'BIGINT'],
+    ['total_reach', 'BIGINT'],
+    ['total_purchases', 'NUMERIC(14,2)'],
+    ['total_messages', 'NUMERIC(14,2)'],
+    ['total_leads', 'NUMERIC(14,2)'],
+    ['total_revenue', 'NUMERIC(14,2)'],
+    ['avg_ctr', 'NUMERIC(8,4)'],
+    ['avg_cpc', 'NUMERIC(10,4)'],
+    ['avg_cpm', 'NUMERIC(10,4)'],
+    ['avg_frequency', 'NUMERIC(8,4)'],
+    ['roas', 'NUMERIC(10,4)'],
+    ['active_campaigns', 'INT'],
+    ['total_campaigns', 'INT'],
+    ['health_score', 'INT'],
+    ['health_level', 'VARCHAR(32)'],
+    ['ai_analysis', 'JSONB']
+  ];
+
+  const campaignSnapshotColumns = [
+    ['status', 'VARCHAR(32)'],
+    ['objective', 'VARCHAR(64)'],
+    ['spend', 'NUMERIC(14,2)'],
+    ['impressions', 'BIGINT'],
+    ['clicks', 'BIGINT'],
+    ['reach', 'BIGINT'],
+    ['ctr', 'NUMERIC(8,4)'],
+    ['cpc', 'NUMERIC(10,4)'],
+    ['cpm', 'NUMERIC(10,4)'],
+    ['frequency', 'NUMERIC(8,4)'],
+    ['purchases', 'NUMERIC(14,2)'],
+    ['messages', 'NUMERIC(14,2)'],
+    ['leads', 'NUMERIC(14,2)'],
+    ['revenue', 'NUMERIC(14,2)'],
+    ['roas', 'NUMERIC(10,4)'],
+    ['actions', 'JSONB'],
+    ['ai_performance_status', 'VARCHAR(64)'],
+    ['ai_diagnostico', 'TEXT'],
+    ['ai_escala', 'TEXT']
+  ];
+
+  for (const [column, definition] of analysisRunColumns) {
+    await ensureColumn('analysis_runs', column, definition);
+  }
+
+  for (const [column, definition] of campaignSnapshotColumns) {
+    await ensureColumn('campaign_snapshots', column, definition);
+  }
+}
 
 async function initDB() {
   try {
     await pool.query(SCHEMA);
+    await runMigrations();
     console.log('✅ Database schema ready (Neon)');
   } catch (err) {
     console.error('❌ DB init error:', err.message);
   }
 }
-
-// ─── QUERIES ─────────────────────────────────────────────────────────────────
 
 async function saveRun({ fbAccountId, fbUserId, accountName, dateRange, metrics, campaigns, aiAnalysis }) {
   const { rows } = await pool.query(`
@@ -166,7 +236,7 @@ async function saveRun({ fbAccountId, fbUserId, accountName, dateRange, metrics,
     metrics.totalCampaigns || 0,
     aiAnalysis?.resumo_geral?.score_saude || null,
     aiAnalysis?.resumo_geral?.nivel_saude || null,
-    JSON.stringify(aiAnalysis)
+    JSON.stringify(aiAnalysis || {})
   ]);
 
   const runId = rows[0].id;
@@ -182,11 +252,26 @@ async function saveRun({ fbAccountId, fbUserId, accountName, dateRange, metrics,
             actions, ai_performance_status, ai_diagnostico, ai_escala
           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
         `, [
-          runId, fbAccountId, c.id, c.name, c.status, c.objective || null,
-          c.spend || 0, c.impressions || 0, c.clicks || 0, c.reach || 0,
-          c.ctr || 0, 0, 0, c.frequency || 0,
-          c.purchases || 0, c.messages || 0, c.leads || 0, c.revenue || 0, c.roas || 0,
-          JSON.stringify([]),
+          runId,
+          fbAccountId,
+          c.id,
+          c.name,
+          c.status || null,
+          c.objective || null,
+          c.spend || 0,
+          c.impressions || 0,
+          c.clicks || 0,
+          c.reach || 0,
+          c.ctr || 0,
+          c.cpc || 0,
+          c.cpm || 0,
+          c.frequency || 0,
+          c.purchases || 0,
+          c.messages || 0,
+          c.leads || 0,
+          c.revenue || 0,
+          c.roas || 0,
+          JSON.stringify(c.actions || []),
           c.status_performance || null,
           c.diagnostico || null,
           c.escala_sugestao || null
@@ -280,8 +365,6 @@ async function getLastRun(fbAccountId) {
   return rows[0] || null;
 }
 
-// ─── ALERT QUERIES ───────────────────────────────────────────────────────────
-
 async function upsertBudgetAlert({ fbUserId, fbAccountId, accountName, email, threshold, currency }) {
   const { rows } = await pool.query(`
     INSERT INTO budget_alerts (fb_user_id, fb_account_id, account_name, alert_email, threshold_amount, currency, active)
@@ -329,8 +412,8 @@ async function markAlertSent(id) {
 }
 
 module.exports = {
-  pool, initDB,
-  // Notes
+  pool,
+  initDB,
   saveNote: async ({ fbUserId, fbAccountId, fbCampaignId, campaignName, note, type }) => {
     const { rows } = await pool.query(
       `INSERT INTO campaign_notes (fb_user_id, fb_account_id, fb_campaign_id, campaign_name, note, type)
@@ -349,9 +432,16 @@ module.exports = {
   deleteNote: async (id, fbUserId) => {
     await pool.query(`DELETE FROM campaign_notes WHERE id=$1 AND fb_user_id=$2`, [id, fbUserId]);
   },
-  saveRun, getRunHistory, getRunDetail,
-  getCampaignHistory, getAccountTrend,
-  compareRuns, getLastRun,
-  upsertBudgetAlert, getBudgetAlert, deleteBudgetAlert,
-  getAllActiveAlerts, markAlertSent
+  saveRun,
+  getRunHistory,
+  getRunDetail,
+  getCampaignHistory,
+  getAccountTrend,
+  compareRuns,
+  getLastRun,
+  upsertBudgetAlert,
+  getBudgetAlert,
+  deleteBudgetAlert,
+  getAllActiveAlerts,
+  markAlertSent
 };
