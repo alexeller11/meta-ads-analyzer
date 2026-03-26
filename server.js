@@ -1,14 +1,3 @@
-const decisionEngine = require('./decision-engine');
-// 🔍 Validação de variáveis críticas
-const requiredEnv = ['FB_APP_ID', 'FB_APP_SECRET', 'BASE_URL'];
-
-requiredEnv.forEach((envVar) => {
-  if (!process.env[envVar]) {
-    console.error(`❌ Variável não definida: ${envVar}`);
-  } else {
-    console.log(`✅ ${envVar} carregada`);
-  }
-});
 require("dotenv").config();
 const express = require("express");
 const session = require("express-session");
@@ -18,7 +7,7 @@ const db = require("./db");
 const benchmarks = require("./benchmarks");
 const nodemailer = require("nodemailer");
 const { OpenAI } = require("openai");
-const { buildDecisionEngine } = require("./decision-engine");
+const decisionEngine = require("./decision-engine");
 
 const app = express();
 
@@ -78,8 +67,8 @@ function auth(req, res, next) {
 
 function getAct(arr, type) {
   if (!Array.isArray(arr) || !type) return 0;
-  const f = arr.find(x => x && x.action_type === type);
-  const val = parseFloat(f?.value || 0);
+  const found = arr.find(x => x && x.action_type === type);
+  const val = parseFloat(found?.value || 0);
   return Number.isFinite(val) ? Math.max(0, val) : 0;
 }
 
@@ -205,69 +194,53 @@ function getMetrics(dataRows) {
   };
 }
 
-function getComparisonRanges(since, until) {
+function buildComparisonFromMetrics(currentMetrics, prevMetrics) {
+  const variation = (current, previous) => ((current - previous) / (previous || 1)) * 100;
+
+  return {
+    current: currentMetrics,
+    previous: prevMetrics,
+    comparison: {
+      spendChange: variation(currentMetrics.totalSpend, prevMetrics.totalSpend),
+      roasChange: variation(currentMetrics.roas, prevMetrics.roas),
+      ctrChange: variation(currentMetrics.avgCtr, prevMetrics.avgCtr),
+      purchasesChange: variation(currentMetrics.totalPurchases, prevMetrics.totalPurchases),
+      connectRateChange: variation(currentMetrics.connectRate, prevMetrics.connectRate)
+    }
+  };
+}
+
+function getComparisonPreset(preset) {
+  if (preset === "last_7d") return "last_7d_excluding_today";
+  if (preset === "last_30d") return "last_30d_excluding_today";
+  if (preset === "last_90d") return "last_90d_excluding_today";
+  return null;
+}
+
+function buildCustomPreviousRange(since, until) {
   if (!since || !until) return null;
+
   const start = new Date(`${since}T00:00:00`);
   const end = new Date(`${until}T00:00:00`);
-  const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+  const diffDays = Math.round((end - start) / 86400000) + 1;
 
   const prevEnd = new Date(start);
   prevEnd.setDate(prevEnd.getDate() - 1);
 
   const prevStart = new Date(prevEnd);
-  prevStart.setDate(prevStart.getDate() - (diff - 1));
+  prevStart.setDate(prevStart.getDate() - (diffDays - 1));
 
-  const fmt = d => d.toISOString().slice(0, 10);
+  const formatDate = d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
 
   return {
-    current: { since, until },
-    previous: { since: fmt(prevStart), until: fmt(prevEnd) }
+    since: formatDate(prevStart),
+    until: formatDate(prevEnd)
   };
-}
-
-async function fetchAccountInsights(accessToken, accountId, range, level = "ad") {
-  const params = {
-    fields: [
-      "campaign_id", "campaign_name", "adset_id", "adset_name", "ad_id", "ad_name",
-      "impressions", "clicks", "spend", "cpc", "cpm", "ctr",
-      "reach", "frequency",
-      "actions", "action_values",
-      "video_p25_watched_actions", "video_p50_watched_actions",
-      "video_p75_watched_actions", "video_p100_watched_actions",
-      "video_avg_time_watched_actions",
-      "unique_clicks", "unique_ctr",
-      "cost_per_action_type", "cost_per_unique_click"
-    ].join(","),
-    level,
-    access_token: accessToken,
-    limit: 500
-  };
-
-  if (range?.since && range?.until) {
-    params.time_range = JSON.stringify({ since: range.since, until: range.until });
-  }
-
-  const r = await axios.get(`https://graph.facebook.com/v19.0/act_${accountId}/insights`, { params });
-  return r.data;
-}
-
-async function fetchCampaignInsightsByPeriod(accessToken, campaignId, query) {
-  const params = {
-    fields: "impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values",
-    access_token: accessToken,
-    limit: 100
-  };
-
-  if (query.since && query.until) {
-    params.time_range = JSON.stringify({ since: query.since, until: query.until });
-  } else {
-    params.date_preset = query.date_preset || "last_30d";
-  }
-
-  const r = await axios.get(`https://graph.facebook.com/v19.0/${campaignId}/insights`, { params })
-    .catch(() => ({ data: { data: [] } }));
-
-  return r.data?.data?.[0] || null;
 }
 
 /* AUTH */
@@ -287,6 +260,7 @@ app.get("/auth/facebook/callback", async (req, res) => {
         code: req.query.code
       }
     });
+
     const t2 = await axios.get("https://graph.facebook.com/v19.0/oauth/access_token", {
       params: {
         grant_type: "fb_exchange_token",
@@ -295,13 +269,16 @@ app.get("/auth/facebook/callback", async (req, res) => {
         fb_exchange_token: t1.data.access_token
       }
     });
+
     req.session.accessToken = t2.data.access_token;
+
     const user = await axios.get("https://graph.facebook.com/v19.0/me", {
       params: {
         fields: "id,name,picture",
         access_token: req.session.accessToken
       }
     });
+
     req.session.user = user.data;
     res.redirect("/dashboard");
   } catch (err) {
@@ -318,6 +295,15 @@ app.get("/api/me", (req, res) => {
 
 app.get("/auth/logout", (req, res) => {
   req.session.destroy(() => res.redirect("/"));
+});
+
+app.get("/api/debug/env", (req, res) => {
+  res.json({
+    FB_APP_ID: process.env.FB_APP_ID || null,
+    hasFB_APP_SECRET: !!process.env.FB_APP_SECRET,
+    BASE_URL: process.env.BASE_URL || null,
+    NODE_ENV: process.env.NODE_ENV || null
+  });
 });
 
 /* CORE DATA */
@@ -344,13 +330,16 @@ app.get("/api/adaccounts/:id/balance", auth, async (req, res) => {
         access_token: req.session.accessToken
       }
     });
+
     const data = r.data;
     const funding = data.funding_source_details || {};
     data.is_prepaid = funding.type === "PREPAID" || (data.balance && parseInt(data.balance) < 0);
     data.readable_balance = data.balance ? Math.abs(parseFloat(data.balance) / 100) : 0;
+
     if (data.is_prepaid && data.readable_balance < 100) {
       await sendLowBalanceAlert(data.name, data.readable_balance);
     }
+
     res.json(data);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -375,6 +364,7 @@ app.get("/api/adaccounts/:id/campaigns", auth, async (req, res) => {
 app.get("/api/adaccounts/:id/insights", auth, async (req, res) => {
   try {
     const { since, until, date_preset } = req.query;
+
     const params = {
       fields: [
         "campaign_id", "campaign_name", "adset_id", "adset_name", "ad_id", "ad_name",
@@ -408,29 +398,38 @@ app.get("/api/adaccounts/:id/insights", auth, async (req, res) => {
 
 app.get("/api/adaccounts/:id/comparison", auth, async (req, res) => {
   try {
-    const { since, until } = req.query;
-    const ranges = getComparisonRanges(since, until);
-    if (!ranges) {
-      return res.json({ current: null, previous: null, comparison: null });
+    const { date_preset, since, until } = req.query;
+
+    const currentParams = {
+      fields: "impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values",
+      level: "account",
+      access_token: req.session.accessToken
+    };
+
+    const previousParams = {
+      fields: "impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values",
+      level: "account",
+      access_token: req.session.accessToken
+    };
+
+    if (since && until) {
+      currentParams.time_range = JSON.stringify({ since, until });
+      const prev = buildCustomPreviousRange(since, until);
+      if (prev) previousParams.time_range = JSON.stringify(prev);
+    } else {
+      currentParams.date_preset = date_preset || "last_30d";
+      previousParams.date_preset = getComparisonPreset(date_preset || "last_30d") || "last_30d_excluding_today";
     }
 
-    const currentRes = await fetchAccountInsights(req.session.accessToken, req.params.id, ranges.current);
-    const prevRes = await fetchAccountInsights(req.session.accessToken, req.params.id, ranges.previous);
+    const [currentRes, previousRes] = await Promise.all([
+      axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params: currentParams }),
+      axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params: previousParams })
+    ]);
 
-    const currentMetrics = getMetrics(currentRes?.data);
-    const prevMetrics = getMetrics(prevRes?.data);
+    const currentMetrics = getMetrics(currentRes.data?.data);
+    const previousMetrics = getMetrics(previousRes.data?.data);
 
-    res.json({
-      current: currentMetrics,
-      previous: prevMetrics,
-      comparison: {
-        spendChange: ((currentMetrics.totalSpend - prevMetrics.totalSpend) / (prevMetrics.totalSpend || 1)) * 100,
-        roasChange: ((currentMetrics.roas - prevMetrics.roas) / (prevMetrics.roas || 1)) * 100,
-        ctrChange: ((currentMetrics.avgCtr - prevMetrics.avgCtr) / (prevMetrics.avgCtr || 1)) * 100,
-        purchasesChange: ((currentMetrics.totalPurchases - prevMetrics.totalPurchases) / (prevMetrics.totalPurchases || 1)) * 100,
-        connectRateChange: ((currentMetrics.connectRate - prevMetrics.connectRate) / (prevMetrics.connectRate || 1)) * 100
-      }
-    });
+    res.json(buildComparisonFromMetrics(currentMetrics, previousMetrics));
   } catch (e) {
     console.error("Erro comparison:", e.response?.data || e.message);
     res.status(500).json({ error: e.message });
@@ -486,7 +485,6 @@ app.get("/api/adaccounts/:id/breakdown/:type", auth, async (req, res) => {
     else if (type === "age") params.breakdowns = "age";
     else if (type === "region") params.breakdowns = "region";
     else if (type === "city") params.breakdowns = "city";
-    else if (type === "country") params.breakdowns = "country";
     else params.breakdowns = "publisher_platform";
 
     const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
@@ -544,32 +542,6 @@ app.get("/api/trend/:id", auth, async (req, res) => {
     if (!process.env.DATABASE_URL) return res.json({ trend: [] });
     const trend = await db.getAccountTrend(req.params.id);
     res.json({ trend });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/daily-metrics/:accountId", auth, async (req, res) => {
-  try {
-    if (!process.env.DATABASE_URL) return res.json([]);
-    const history = await db.getRunHistory(req.params.accountId, 120);
-    const daily = history.map(row => ({
-      date: row.created_at,
-      spend: Number(row.total_spend || 0),
-      impressions: Number(row.total_impressions || 0),
-      clicks: Number(row.total_clicks || 0),
-      reach: Number(row.total_reach || 0),
-      purchases: Number(row.total_purchases || 0),
-      messages: Number(row.total_messages || 0),
-      revenue: Number(row.total_revenue || 0),
-      ctr: Number(row.avg_ctr || 0),
-      cpc: Number(row.avg_cpc || 0),
-      cpm: Number(row.avg_cpm || 0),
-      frequency: Number(row.avg_frequency || 0),
-      roas: Number(row.roas || 0),
-      healthScore: Number(row.health_score || 0)
-    }));
-    res.json(daily);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -678,12 +650,12 @@ app.post("/api/analyze", auth, async (req, res) => {
         sess: 0, rev: 0, addCart: 0, initCheck: 0, calls: 0, videoViews: 0
       };
 
-      const campCtr = m.impr > 0 ? (m.cl / m.impr) * 100 : 0;
-      const campRoas = m.sp > 0 ? m.rev / m.sp : 0;
+      const ctr = m.impr > 0 ? (m.cl / m.impr) * 100 : 0;
+      const roas = m.sp > 0 ? m.rev / m.sp : 0;
       const costPerMsg = m.msg > 0 ? m.sp / m.msg : 0;
       const costPerPur = m.pur > 0 ? m.sp / m.pur : 0;
       const costPerLead = m.lds > 0 ? m.sp / m.lds : 0;
-      const freq = m.reach > 0 ? m.impr / m.reach : 0;
+      const frequency = m.reach > 0 ? m.impr / m.reach : 0;
       const connectRate = m.cl > 0 ? (m.sess / m.cl) * 100 : 0;
 
       let diagnostico = "Aguardando dados.";
@@ -691,15 +663,15 @@ app.post("/api/analyze", auth, async (req, res) => {
       let escala = "Monitorar.";
 
       if (m.sp > 0) {
-        if (campRoas > 4 || (m.msg > 20 && costPerMsg < 3)) {
+        if (roas > 4 || (m.msg > 20 && costPerMsg < 3)) {
           diagnostico = "🔥 Performance excepcional.";
           statusPerformance = "Excelente";
           escala = "Escalar 20% a 30%.";
-        } else if (campRoas > 2.5 || (m.msg > 10 && costPerMsg < 7)) {
+        } else if (roas > 2.5 || (m.msg > 10 && costPerMsg < 7)) {
           diagnostico = "✅ Performance forte.";
           statusPerformance = "Muito Bom";
           escala = "Escalar 10% a 15%.";
-        } else if (campRoas > 1.5 || (m.msg > 5 && costPerMsg < 12)) {
+        } else if (roas > 1.5 || (m.msg > 5 && costPerMsg < 12)) {
           diagnostico = "📊 Performance estável.";
           statusPerformance = "Bom";
           escala = "Manter e otimizar.";
@@ -707,11 +679,11 @@ app.post("/api/analyze", auth, async (req, res) => {
           diagnostico = "🚨 Queima verba sem retorno.";
           statusPerformance = "Crítico";
           escala = "Pausar imediatamente.";
-        } else if (campCtr < 0.8 && m.sp > 30) {
+        } else if (ctr < 0.8 && m.sp > 30) {
           diagnostico = "🪝 CTR baixo, criativo fraco.";
           statusPerformance = "Criativo Ruim";
           escala = "Trocar criativo.";
-        } else if (freq > 3.5) {
+        } else if (frequency > 3.5) {
           diagnostico = "😴 Fadiga detectada.";
           statusPerformance = "Fadiga";
           escala = "Renovar criativo ou expandir público.";
@@ -725,10 +697,10 @@ app.post("/api/analyze", auth, async (req, res) => {
       return {
         ...c,
         spend: m.sp,
-        ctr: campCtr,
+        ctr,
         impressions: m.impr,
         reach: m.reach,
-        frequency: freq,
+        frequency,
         clicks: m.cl,
         purchases: m.pur,
         messages: m.msg,
@@ -738,7 +710,7 @@ app.post("/api/analyze", auth, async (req, res) => {
         initCheck: m.initCheck,
         calls: m.calls,
         videoViews: m.videoViews,
-        roas: campRoas,
+        roas,
         connectRate,
         diagnostico,
         status_performance: statusPerformance,
@@ -749,9 +721,8 @@ app.post("/api/analyze", auth, async (req, res) => {
       };
     });
 
-    const b = benchmarks[niche] || benchmarks.Geral;
-    const decisionCenter = buildDecisionEngine(enriched, b);
-    const aiAnalysis = runAnalysisEngine(accountData, decisionCenter.campaigns, metrics, prevMetrics, niche);
+    const decision = decisionEngine.analyzeAccount(enriched);
+    const aiAnalysis = runAnalysisEngine(accountData, decision.campaigns, metrics, prevMetrics, niche);
 
     if (process.env.DATABASE_URL) {
       try {
@@ -762,14 +733,11 @@ app.post("/api/analyze", auth, async (req, res) => {
           dateRange,
           metrics: {
             ...metrics,
-            activeCampaigns: decisionCenter.campaigns.filter(c => c.status === "ACTIVE").length,
-            totalCampaigns: decisionCenter.campaigns.length
+            activeCampaigns: decision.campaigns.filter(c => c.status === "ACTIVE").length,
+            totalCampaigns: decision.campaigns.length
           },
-          campaigns: decisionCenter.campaigns,
-          aiAnalysis: {
-            ...aiAnalysis,
-            decisionCenter
-          }
+          campaigns: decision.campaigns,
+          aiAnalysis
         });
       } catch (dbErr) {
         console.error("Erro salvar DB:", dbErr.message);
@@ -777,14 +745,12 @@ app.post("/api/analyze", auth, async (req, res) => {
     }
 
     res.json({
-      success: true,
       analysis: {
         ...aiAnalysis,
-        campanhas_analise: decisionCenter.campaigns,
-        central_decisao: decisionCenter
+        campanhas_analise: decision.campaigns
       },
       metrics,
-      prevMetrics
+      decision
     });
   } catch (err) {
     console.error("Erro /api/analyze:", err.message);
@@ -909,21 +875,20 @@ function runAnalysisEngine(accountData, campaigns, metrics, prevMetrics, niche =
   };
 }
 
-/* GPT */
-function markdownToHtmlFallback(md) {
-  return md || "";
-}
-
 function generateCampaignAnalysis(campaign, adsets) {
   let s = `### 🔍 Análise da campanha: ${campaign.name}\n\n`;
   s += `**Status:** ${campaign.status}\n\n`;
   s += `**Diagnóstico:** ${campaign.diagnostico || "Sem diagnóstico"}\n\n`;
   s += `**Métricas:**\n`;
   s += `- Gasto: R$ ${(campaign.spend || 0).toFixed(2)}\n`;
-  s += `- ROAS: ${(campaign.roas || 0).toFixed(2)}x\n`;
+  s += `- Impressões: ${Number(campaign.impressions || 0).toLocaleString("pt-BR")}\n`;
+  s += `- Alcance: ${Number(campaign.reach || 0).toLocaleString("pt-BR")}\n`;
   s += `- CTR: ${(campaign.ctr || 0).toFixed(2)}%\n`;
   s += `- Connect Rate: ${(campaign.connectRate || 0).toFixed(2)}%\n`;
-  s += `- Frequência: ${(campaign.frequency || 0).toFixed(2)}\n\n`;
+  s += `- ROAS: ${(campaign.roas || 0).toFixed(2)}x\n`;
+  s += `- Frequência: ${(campaign.frequency || 0).toFixed(2)}\n`;
+  s += `- Compras: ${campaign.purchases || 0}\n`;
+  s += `- Mensagens: ${campaign.messages || 0}\n\n`;
   s += `**Ação recomendada:** ${campaign.escala_sugestao || "Monitorar"}\n\n`;
 
   if (Array.isArray(adsets) && adsets.length > 0) {
@@ -987,6 +952,32 @@ app.post("/api/gpt-campaign", auth, async (req, res) => {
   }
 
   try {
+    const prompt = `
+Analise esta campanha de tráfego pago.
+
+Dados:
+- Nome: ${campaign.name}
+- Gasto: ${campaign.spend}
+- Impressões: ${campaign.impressions}
+- Alcance: ${campaign.reach}
+- CTR: ${campaign.ctr}
+- ROAS: ${campaign.roas}
+- Frequência: ${campaign.frequency}
+- Connect Rate: ${campaign.connectRate}
+- Compras: ${campaign.purchases}
+- Mensagens: ${campaign.messages}
+- Leads: ${campaign.leads}
+
+Responda como um gestor de tráfego experiente.
+
+Formato obrigatório:
+1. Diagnóstico direto
+2. Problema principal
+3. Ação recomendada objetiva
+4. Se deve pausar, manter ou escalar
+5. O que testar primeiro
+`.trim();
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -996,7 +987,7 @@ app.post("/api/gpt-campaign", auth, async (req, res) => {
         },
         {
           role: "user",
-          content: `Analise esta campanha:\n\n${JSON.stringify({ campaign, adsets, metrics }, null, 2)}`
+          content: prompt
         }
       ],
       max_tokens: 1100
