@@ -243,6 +243,57 @@ function buildCustomPreviousRange(since, until) {
   };
 }
 
+function getBrazilDateParts() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false
+  }).formatToParts(new Date());
+
+  const get = type => parts.find(p => p.type === type)?.value || "";
+  return {
+    date: `${get("year")}-${get("month")}-${get("day")}`,
+    hour: Number(get("hour") || 0)
+  };
+}
+
+async function hasMiddaySnapshotToday(fbAccountId, fbUserId) {
+  const { date } = getBrazilDateParts();
+  const label = `AUTO_MIDDAY_${date}`;
+  const { rows } = await db.pool.query(
+    `SELECT id FROM analysis_runs WHERE fb_account_id = $1 AND fb_user_id = $2 AND date_range = $3 LIMIT 1`,
+    [fbAccountId, fbUserId, label]
+  );
+  return !!rows[0];
+}
+
+async function saveAutomaticMiddaySnapshotIfNeeded({ fbAccountId, fbUserId, accountName, metrics, campaigns, aiAnalysis }) {
+  if (!process.env.DATABASE_URL) return;
+
+  const { date, hour } = getBrazilDateParts();
+  if (hour < 12) return;
+
+  const alreadySaved = await hasMiddaySnapshotToday(fbAccountId, fbUserId);
+  if (alreadySaved) return;
+
+  await db.saveRun({
+    fbAccountId,
+    fbUserId,
+    accountName,
+    dateRange: `AUTO_MIDDAY_${date}`,
+    metrics: {
+      ...metrics,
+      activeCampaigns: campaigns.filter(c => c.status === "ACTIVE").length,
+      totalCampaigns: campaigns.length
+    },
+    campaigns,
+    aiAnalysis
+  });
+}
+
 /* AUTH */
 app.get("/auth/facebook", (req, res) => {
   const scopes = ["ads_read", "ads_management", "business_management", "public_profile"].join(",");
@@ -736,6 +787,15 @@ app.post("/api/analyze", auth, async (req, res) => {
             activeCampaigns: decision.campaigns.filter(c => c.status === "ACTIVE").length,
             totalCampaigns: decision.campaigns.length
           },
+          campaigns: decision.campaigns,
+          aiAnalysis
+        });
+
+        await saveAutomaticMiddaySnapshotIfNeeded({
+          fbAccountId: accountData.account_id,
+          fbUserId: req.session.user.id,
+          accountName: accountData.name,
+          metrics,
           campaigns: decision.campaigns,
           aiAnalysis
         });
