@@ -1,3 +1,4 @@
+const decisionEngine = require('./decision-engine');
 // 🔍 Validação de variáveis críticas
 const requiredEnv = ['FB_APP_ID', 'FB_APP_SECRET', 'BASE_URL'];
 
