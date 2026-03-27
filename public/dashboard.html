@@ -51,23 +51,23 @@
   <div class="app">
     <aside class="sidebar">
       <div class="nav-title">Resumo</div>
-      <button class="nav-btn active">Visão Geral</button>
-      <button class="nav-btn">Insights IA</button>
-      <button class="nav-btn">Central de Decisão</button>
-      <button class="nav-btn">Campanhas</button>
+      <button class="nav-btn active" data-tab="overview">Visão Geral</button>
+      <button class="nav-btn" data-tab="analysis">Insights IA</button>
+      <button class="nav-btn" data-tab="decision">Central de Decisão</button>
+      <button class="nav-btn" data-tab="campaigns">Campanhas</button>
 
       <div class="nav-title">Análise</div>
-      <button class="nav-btn">Criativos</button>
-      <button class="nav-btn">Breakdown</button>
-      <button class="nav-btn">Tendência</button>
-      <button class="nav-btn">Métricas Diárias</button>
+      <button class="nav-btn" data-tab="creatives">Criativos</button>
+      <button class="nav-btn" data-tab="breakdown">Breakdown</button>
+      <button class="nav-btn" data-tab="trend">Tendência</button>
+      <button class="nav-btn" data-tab="history">Métricas Diárias</button>
     </aside>
 
     <main class="main">
       <div id="globalError" class="error-box hidden"></div>
       <div id="globalOk" class="ok-box hidden"></div>
 
-      <section>
+      <section id="tab-overview" class="tab-section">
         <div class="hero">
           <div class="card hero-card">
             <div id="healthScore" class="score">0</div>
@@ -90,7 +90,7 @@
             <div class="side-kpis">
               <div class="mini">
                 <div class="k-label">Conta selecionada</div>
-                <div class="k-value" id="selectedAccountName">—</div>
+                <div class="k-value smaller" id="selectedAccountName">—</div>
                 <div class="k-sub">Conta atual em foco</div>
               </div>
 
@@ -117,26 +117,22 @@
 
         <div class="section">
           <h2 class="section-title">Investimento e Retorno</h2>
-
           <div class="grid">
             <div class="metric-card">
               <div class="metric-label">Investimento</div>
               <div class="metric-value" id="mSpend">R$ 0,00</div>
               <div class="metric-sub">Gasto total no período</div>
             </div>
-
             <div class="metric-card">
               <div class="metric-label">Receita</div>
               <div class="metric-value" id="mRevenue">R$ 0,00</div>
               <div class="metric-sub">Receita rastreada</div>
             </div>
-
             <div class="metric-card">
               <div class="metric-label">ROAS</div>
               <div class="metric-value" id="mRoas">0.00x</div>
               <div class="metric-sub">Retorno sobre investimento</div>
             </div>
-
             <div class="metric-card">
               <div class="metric-label">Custo por Venda</div>
               <div class="metric-value" id="mCostPerPurchase">R$ 0,00</div>
@@ -146,8 +142,97 @@
         </div>
 
         <div class="section">
-          <h2 class="section-title">Campanhas</h2>
+          <h2 class="section-title">Entrega e Alcance</h2>
+          <div class="grid">
+            <div class="metric-card">
+              <div class="metric-label">Impressões</div>
+              <div class="metric-value" id="mImpressions">0</div>
+              <div class="metric-sub">Volume total de exibição</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Alcance</div>
+              <div class="metric-value" id="mReach">0</div>
+              <div class="metric-sub">Pessoas alcançadas</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Frequência</div>
+              <div class="metric-value" id="mFrequency">0.00</div>
+              <div class="metric-sub">Média por pessoa</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">CPM</div>
+              <div class="metric-value" id="mCpm">R$ 0,00</div>
+              <div class="metric-sub">Custo por mil impressões</div>
+            </div>
+          </div>
+        </div>
 
+        <div class="section">
+          <h2 class="section-title">Tráfego e Conversão</h2>
+          <div class="grid5">
+            <div class="metric-card">
+              <div class="metric-label">CTR</div>
+              <div class="metric-value" id="mCtr">0.00%</div>
+              <div class="metric-sub">Taxa de clique</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">CPC</div>
+              <div class="metric-value" id="mCpc">R$ 0,00</div>
+              <div class="metric-sub">Custo por clique</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Connect Rate</div>
+              <div class="metric-value" id="mConnectRate">0.00%</div>
+              <div class="metric-sub">Landing page views por clique</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Mensagens</div>
+              <div class="metric-value" id="mMessages">0</div>
+              <div class="metric-sub">Conversas iniciadas</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Compras</div>
+              <div class="metric-value" id="mPurchases">0</div>
+              <div class="metric-sub">Conversões de compra</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-analysis" class="tab-section hidden">
+        <div class="card">
+          <h2 class="section-title">Insights IA</h2>
+          <div id="analysisList" class="stack">
+            <div class="empty">Rode uma análise para ver os insights.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-decision" class="tab-section hidden">
+        <div class="card">
+          <h2 class="section-title">Central de Decisão</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Campanha</th>
+                  <th>Ação</th>
+                  <th>Motivo</th>
+                  <th>Gasto</th>
+                  <th>ROAS</th>
+                </tr>
+              </thead>
+              <tbody id="decisionBody">
+                <tr><td colspan="5" class="empty">Rode uma análise para ver decisões.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-campaigns" class="tab-section hidden">
+        <div class="card">
+          <h2 class="section-title">Campanhas</h2>
           <div class="table-wrap">
             <table>
               <thead>
@@ -163,12 +248,38 @@
                 </tr>
               </thead>
               <tbody id="campaignBody">
-                <tr>
-                  <td colspan="8" class="empty">Rode uma análise para ver campanhas.</td>
-                </tr>
+                <tr><td colspan="8" class="empty">Rode uma análise para ver campanhas.</td></tr>
               </tbody>
             </table>
           </div>
+        </div>
+      </section>
+
+      <section id="tab-creatives" class="tab-section hidden">
+        <div class="card">
+          <h2 class="section-title">Criativos</h2>
+          <div class="empty">Esta aba permanece clean por enquanto, sem alterar a lógica do app.</div>
+        </div>
+      </section>
+
+      <section id="tab-breakdown" class="tab-section hidden">
+        <div class="card">
+          <h2 class="section-title">Breakdown</h2>
+          <div class="empty">Esta aba permanece clean por enquanto, sem alterar a lógica do app.</div>
+        </div>
+      </section>
+
+      <section id="tab-trend" class="tab-section hidden">
+        <div class="card">
+          <h2 class="section-title">Tendência</h2>
+          <div class="empty">Esta aba permanece clean por enquanto, sem alterar a lógica do app.</div>
+        </div>
+      </section>
+
+      <section id="tab-history" class="tab-section hidden">
+        <div class="card">
+          <h2 class="section-title">Métricas Diárias</h2>
+          <div class="empty">Esta aba permanece clean por enquanto, sem alterar a lógica do app.</div>
         </div>
       </section>
     </main>
