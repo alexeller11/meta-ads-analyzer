@@ -109,6 +109,11 @@ body{min-height:100vh}
 
 .control.wide{min-width:290px}
 
+.control option{
+  color:#06212c;
+  background:#eefcff;
+}
+
 .btn{
   border:none;
   cursor:pointer;
@@ -116,6 +121,16 @@ body{min-height:100vh}
   color:#06212c;
   background:linear-gradient(135deg, var(--primary), #51d5b7);
   box-shadow:0 14px 40px rgba(56,212,207,.22);
+}
+
+.checkline{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--muted);
+  font-size:14px;
+  font-weight:700;
+  padding:0 4px;
 }
 
 .topbar-right{
@@ -302,6 +317,42 @@ body{min-height:100vh}
   letter-spacing:-.5px;
   font-weight:900;
   margin:0 0 14px;
+}
+
+.no-margin{
+  margin:0;
+}
+
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+
+.filters{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.filter-btn{
+  border:none;
+  padding:10px 14px;
+  border-radius:999px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--line);
+  color:var(--text);
+  cursor:pointer;
+  font-size:12px;
+  font-weight:900;
+}
+
+.filter-btn.active{
+  background:linear-gradient(135deg, rgba(56,212,207,.18), rgba(30,168,196,.10));
+  box-shadow:0 0 0 1px rgba(56,212,207,.08);
 }
 
 .grid{
