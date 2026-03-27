@@ -84,7 +84,8 @@ function fillAccountSelect(accounts) {
     accountSel.value = String(accounts[0].account_id);
     state.selectedAccountId = String(accounts[0].account_id);
     state.selectedAccount = accounts[0];
-    document.getElementById("selectedAccountName").textContent = accounts[0].name || "—";
+    document.getElementById("selectedAccountName").textContent =
+      accounts[0].name || "—";
   } else {
     document.getElementById("selectedAccountName").textContent = "—";
   }
@@ -104,6 +105,27 @@ function bindAccountSelect() {
   });
 }
 
+function bindTabs() {
+  const buttons = document.querySelectorAll(".nav-btn");
+  const sections = document.querySelectorAll(".tab-section");
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const tab = button.dataset.tab;
+      if (!tab) return;
+
+      buttons.forEach((btn) => btn.classList.remove("active"));
+      button.classList.add("active");
+
+      sections.forEach((section) => section.classList.add("hidden"));
+      const target = document.getElementById(`tab-${tab}`);
+      if (target) {
+        target.classList.remove("hidden");
+      }
+    });
+  });
+}
+
 function getLifecycleStatus(campaign) {
   const status = String(campaign.status || "").toUpperCase();
   const spend = Number(campaign.spend || 0);
@@ -115,6 +137,13 @@ function getLifecycleStatus(campaign) {
   if (status === "ACTIVE" && spend > 0) return "RODANDO";
   if (status === "ACTIVE") return "ATIVA";
   return "ATIVA";
+}
+
+function getActionBadgeClass(action) {
+  if (action === "ESCALAR") return "success";
+  if (action === "PAUSAR") return "danger";
+  if (action === "RENOVAR_CRIATIVO") return "warning";
+  return "primary";
 }
 
 function renderOverview() {
@@ -148,6 +177,26 @@ function renderOverview() {
     `${Number(metrics.roas || 0).toFixed(2)}x`;
   document.getElementById("mCostPerPurchase").textContent =
     brMoney(metrics.costPerPurchase);
+
+  document.getElementById("mImpressions").textContent =
+    brNum(metrics.totalImpressions);
+  document.getElementById("mReach").textContent =
+    brNum(metrics.totalReach);
+  document.getElementById("mFrequency").textContent =
+    Number(metrics.avgFrequency || 0).toFixed(2);
+  document.getElementById("mCpm").textContent =
+    brMoney(metrics.avgCpm);
+
+  document.getElementById("mCtr").textContent =
+    brPct(metrics.avgCtr);
+  document.getElementById("mCpc").textContent =
+    brMoney(metrics.avgCpc);
+  document.getElementById("mConnectRate").textContent =
+    brPct(metrics.connectRate);
+  document.getElementById("mMessages").textContent =
+    brNum(metrics.totalMessages);
+  document.getElementById("mPurchases").textContent =
+    brNum(metrics.totalPurchases);
 }
 
 function renderCampaigns() {
@@ -179,6 +228,51 @@ function renderCampaigns() {
       `
     )
     .join("");
+}
+
+function renderDecision() {
+  const body = document.getElementById("decisionBody");
+  const campaigns = state.decision?.campaigns || [];
+
+  if (!campaigns.length) {
+    body.innerHTML = `
+      <tr>
+        <td colspan="5" class="empty">Rode uma análise para ver decisões.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  body.innerHTML = campaigns
+    .map(
+      (campaign) => `
+        <tr>
+          <td>${campaign.name}</td>
+          <td><span class="badge ${getActionBadgeClass(campaign.decision?.action)}">${String(campaign.decision?.action || "MANTER").replaceAll("_", " ")}</span></td>
+          <td>${campaign.decision?.reason || "-"}</td>
+          <td>${brMoney(campaign.spend)}</td>
+          <td>${Number(campaign.roas || 0).toFixed(2)}x</td>
+        </tr>
+      `
+    )
+    .join("");
+}
+
+function renderInsights() {
+  const wrapper = document.getElementById("analysisList");
+  const insights = state.analysis?.otimizacoes_prioritarias || [];
+
+  if (!insights.length) {
+    wrapper.innerHTML = `<div class="empty">Rode uma análise para ver os insights.</div>`;
+    return;
+  }
+
+  wrapper.innerHTML = insights.map((item) => `
+    <div class="insight-item">
+      <div class="insight-item-title">${item.titulo || "Insight"}</div>
+      <div class="insight-item-text">${item.descricao || item.acao || ""}</div>
+    </div>
+  `).join("");
 }
 
 function getDateConfig() {
@@ -214,8 +308,6 @@ async function loadSessionAndAccounts() {
   document.getElementById("userName").textContent = me.user?.name || "Usuário";
 
   const rawAccounts = await api("/api/adaccounts");
-  console.log("RAW /api/adaccounts", rawAccounts);
-
   const accounts = normalizeAccounts(rawAccounts);
   state.accounts = accounts;
 
@@ -270,6 +362,9 @@ async function runAnalysis() {
 
     renderOverview();
     renderCampaigns();
+    renderDecision();
+    renderInsights();
+
     showOk(`Análise concluída para ${state.selectedAccount?.name || "a conta selecionada"}.`);
   } catch (error) {
     console.error(error);
@@ -282,6 +377,7 @@ async function runAnalysis() {
 
 function bindEvents() {
   bindAccountSelect();
+  bindTabs();
   document.getElementById("runBtn").addEventListener("click", runAnalysis);
 }
 
