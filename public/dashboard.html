@@ -38,7 +38,16 @@
       <option value="this_month">Este mês</option>
       <option value="last_month">Mês passado</option>
       <option value="last_90d">Últimos 90 dias</option>
+      <option value="custom">Personalizado</option>
     </select>
+
+    <input type="date" id="sinceDate" class="control hidden" />
+    <input type="date" id="untilDate" class="control hidden" />
+
+    <label class="checkline">
+      <input type="checkbox" id="comparePeriod" />
+      Comparar período anterior
+    </label>
 
     <button id="runBtn" class="btn">Analisar</button>
 
@@ -197,6 +206,25 @@
             </div>
           </div>
         </div>
+
+        <div class="section">
+          <h2 class="section-title">Comparação com período anterior</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Métrica</th>
+                  <th>Atual</th>
+                  <th>Anterior</th>
+                  <th>Variação</th>
+                </tr>
+              </thead>
+              <tbody id="comparisonBody">
+                <tr><td colspan="4" class="empty">Ative a comparação para visualizar.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <section id="tab-analysis" class="tab-section hidden">
@@ -210,12 +238,23 @@
 
       <section id="tab-decision" class="tab-section hidden">
         <div class="card">
-          <h2 class="section-title">Central de Decisão</h2>
+          <div class="section-head">
+            <h2 class="section-title no-margin">Central de Decisão</h2>
+            <div class="filters" id="decisionFilters">
+              <button class="filter-btn active" data-filter="TODAS">Todas</button>
+              <button class="filter-btn" data-filter="ATIVA">Ativa</button>
+              <button class="filter-btn" data-filter="PAUSADA">Pausada</button>
+              <button class="filter-btn" data-filter="CONCLUIDA">Concluída</button>
+              <button class="filter-btn" data-filter="RODANDO">Rodando</button>
+            </div>
+          </div>
+
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>Campanha</th>
+                  <th>Status</th>
                   <th>Ação</th>
                   <th>Motivo</th>
                   <th>Gasto</th>
@@ -223,7 +262,7 @@
                 </tr>
               </thead>
               <tbody id="decisionBody">
-                <tr><td colspan="5" class="empty">Rode uma análise para ver decisões.</td></tr>
+                <tr><td colspan="6" class="empty">Rode uma análise para ver decisões.</td></tr>
               </tbody>
             </table>
           </div>
@@ -232,7 +271,17 @@
 
       <section id="tab-campaigns" class="tab-section hidden">
         <div class="card">
-          <h2 class="section-title">Campanhas</h2>
+          <div class="section-head">
+            <h2 class="section-title no-margin">Campanhas</h2>
+            <div class="filters" id="campaignFilters">
+              <button class="filter-btn active" data-filter="TODAS">Todas</button>
+              <button class="filter-btn" data-filter="ATIVA">Ativa</button>
+              <button class="filter-btn" data-filter="PAUSADA">Pausada</button>
+              <button class="filter-btn" data-filter="CONCLUIDA">Concluída</button>
+              <button class="filter-btn" data-filter="RODANDO">Rodando</button>
+            </div>
+          </div>
+
           <div class="table-wrap">
             <table>
               <thead>
