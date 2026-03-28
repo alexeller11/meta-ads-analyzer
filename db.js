@@ -49,6 +49,8 @@ const SCHEMA = `
     avg_cpm NUMERIC(10,4),
     avg_frequency NUMERIC(8,4),
     roas NUMERIC(10,4),
+    connect_rate NUMERIC(8,4),
+    cost_per_purchase NUMERIC(10,4),
     active_campaigns INT,
     total_campaigns INT,
     health_score INT,
@@ -158,6 +160,8 @@ async function runMigrations() {
     ['avg_cpm', 'NUMERIC(10,4)'],
     ['avg_frequency', 'NUMERIC(8,4)'],
     ['roas', 'NUMERIC(10,4)'],
+    ['connect_rate', 'NUMERIC(8,4)'],
+    ['cost_per_purchase', 'NUMERIC(10,4)'],
     ['active_campaigns', 'INT'],
     ['total_campaigns', 'INT'],
     ['health_score', 'INT'],
@@ -213,9 +217,10 @@ async function saveRun({ fbAccountId, fbUserId, accountName, dateRange, metrics,
       total_spend, total_impressions, total_clicks, total_reach,
       total_purchases, total_messages, total_leads, total_revenue,
       avg_ctr, avg_cpc, avg_cpm, avg_frequency, roas,
+      connect_rate, cost_per_purchase,
       active_campaigns, total_campaigns,
       health_score, health_level, ai_analysis
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
     RETURNING id
   `, [
     fbAccountId, fbUserId, accountName, dateRange,
@@ -232,6 +237,8 @@ async function saveRun({ fbAccountId, fbUserId, accountName, dateRange, metrics,
     metrics.avgCpm || 0,
     metrics.avgFrequency || 0,
     metrics.roas || 0,
+    metrics.connectRate || 0,
+    metrics.costPerPurchase || 0,
     metrics.activeCampaigns || 0,
     metrics.totalCampaigns || 0,
     aiAnalysis?.resumo_geral?.score_saude || null,
@@ -291,10 +298,29 @@ async function getRunHistory(fbAccountId, limit = 60) {
            total_spend, total_impressions, total_clicks, total_reach,
            total_purchases, total_messages, total_revenue,
            avg_ctr, avg_cpc, avg_cpm, avg_frequency, roas,
+           connect_rate, cost_per_purchase,
            active_campaigns, total_campaigns,
            health_score, health_level
     FROM analysis_runs
     WHERE fb_account_id = $1
+    ORDER BY created_at DESC
+    LIMIT $2
+  `, [fbAccountId, limit]);
+  return rows;
+}
+
+async function getDailyRunHistory(fbAccountId, limit = 90) {
+  const { rows } = await pool.query(`
+    SELECT id, created_at, date_range, account_name,
+           total_spend, total_impressions, total_clicks, total_reach,
+           total_purchases, total_messages, total_revenue,
+           avg_ctr, avg_cpc, avg_cpm, avg_frequency, roas,
+           connect_rate, cost_per_purchase,
+           active_campaigns, total_campaigns,
+           health_score, health_level
+    FROM analysis_runs
+    WHERE fb_account_id = $1
+      AND date_range LIKE 'AUTO_DAILY_08_%'
     ORDER BY created_at DESC
     LIMIT $2
   `, [fbAccountId, limit]);
@@ -328,6 +354,8 @@ async function getAccountTrend(fbAccountId, days = 90) {
       AVG(avg_ctr)::NUMERIC(8,4) as avg_ctr,
       AVG(avg_cpc)::NUMERIC(10,4) as avg_cpc,
       AVG(avg_cpm)::NUMERIC(10,4) as avg_cpm,
+      AVG(connect_rate)::NUMERIC(8,4) as avg_connect_rate,
+      AVG(cost_per_purchase)::NUMERIC(10,4) as avg_cost_per_purchase,
       SUM(total_spend)::NUMERIC(14,2) as total_spend,
       SUM(total_revenue)::NUMERIC(14,2) as total_revenue,
       AVG(roas)::NUMERIC(10,4) as avg_roas,
@@ -347,6 +375,7 @@ async function compareRuns(runId1, runId2, fbUserId) {
   const { rows } = await pool.query(`
     SELECT id, created_at, date_range, total_spend, total_impressions,
            total_clicks, avg_ctr, avg_cpc, avg_cpm, avg_frequency,
+           connect_rate, cost_per_purchase,
            health_score, health_level, active_campaigns, roas
     FROM analysis_runs
     WHERE id = ANY($1) AND fb_user_id = $2
@@ -434,6 +463,7 @@ module.exports = {
   },
   saveRun,
   getRunHistory,
+  getDailyRunHistory,
   getRunDetail,
   getCampaignHistory,
   getAccountTrend,
