@@ -108,6 +108,7 @@ body{min-height:100vh}
 }
 
 .control.wide{min-width:290px}
+.control.small-control{min-width:180px;height:44px;border-radius:14px}
 
 .control option{
   background:#eefcff;
@@ -121,6 +122,15 @@ body{min-height:100vh}
   color:#06212c;
   background:linear-gradient(135deg, var(--primary), #51d5b7);
   box-shadow:0 14px 40px rgba(56,212,207,.22);
+}
+
+.btn.secondary{
+  background:rgba(255,255,255,.05);
+  color:var(--text);
+  border:1px solid var(--line);
+  box-shadow:none;
+  height:44px;
+  border-radius:14px;
 }
 
 .checkline{
@@ -330,6 +340,13 @@ body{min-height:100vh}
   margin-bottom:14px;
 }
 
+.inline-controls{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
 .filters{
   display:flex;
   gap:8px;
@@ -474,6 +491,10 @@ th{
   font-size:14px;
 }
 
+.full-span{
+  grid-column:1 / -1;
+}
+
 .stack{
   display:flex;
   flex-direction:column;
@@ -497,6 +518,48 @@ th{
   color:var(--muted);
   line-height:1.6;
   font-size:14px;
+}
+
+.creative-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+  gap:16px;
+}
+
+.creative-card{
+  border-radius:22px;
+  overflow:hidden;
+  background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+  border:1px solid rgba(255,255,255,.07);
+}
+
+.creative-card img{
+  width:100%;
+  aspect-ratio:1 / 1;
+  object-fit:cover;
+  display:block;
+  background:#0a1620;
+}
+
+.creative-info{
+  padding:14px;
+}
+
+.creative-name{
+  font-size:14px;
+  font-weight:800;
+  margin-bottom:10px;
+  line-height:1.45;
+}
+
+.creative-line{
+  color:var(--muted);
+  font-size:12px;
+  margin-bottom:6px;
+}
+
+.chart-wrap{
+  height:360px;
 }
 
 @media (max-width:1280px){
