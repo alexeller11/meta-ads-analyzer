@@ -1064,339 +1064,6 @@ Formato obrigatório:
   }
 });
 
-// ============================================================================
-// V2 FEATURES - Auditoria Profunda, Benchmarking, Landing Page Audit
-// ============================================================================
-
-// ── AUDIT ENDPOINTS ────────────────────────────────────────────────────────
-
-/**
- * GET /api/audit-summary/:accountId
- * Returns comprehensive audit summary with 46+ checks
- */
-app.get("/api/audit-summary/:accountId", auth, async (req, res) => {
-  try {
-    const { accountId } = req.params;
-    const { dateRange = "7d" } = req.query;
-
-    // Get campaigns for account
-    const campaigns = await db.query(
-      `SELECT id, name, status, spend, impressions, clicks, reach, frequency, 
-              roas, purchases, messages, leads FROM campaigns WHERE account_id = $1 LIMIT 50`,
-      [accountId]
-    );
-
-    if (!campaigns.rows.length) {
-      return res.json({ status: "success", audit: { campaigns: [], summary: {} } });
-    }
-
-    // Run V2 audit on all campaigns
-    const auditResults = decisionEngineV2.analyzeAccount(campaigns.rows);
-
-    res.json({
-      status: "success",
-      audit: auditResults,
-      timestamp: new Date().toISOString()
-    });
-  } catch (e) {
-    console.error("Audit error:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/**
- * GET /api/campaign-audit/:campaignId
- * Returns detailed audit for a specific campaign
- */
-app.get("/api/campaign-audit/:campaignId", auth, async (req, res) => {
-  try {
-    const { campaignId } = req.params;
-
-    // Get campaign data
-    const result = await db.query(
-      `SELECT id, name, status, spend, impressions, clicks, reach, frequency, 
-              roas, purchases, messages, leads, ctr, cvr, cpc FROM campaigns WHERE id = $1`,
-      [campaignId]
-    );
-
-    if (!result.rows.length) {
-      return res.status(404).json({ error: "Campaign not found" });
-    }
-
-    const campaign = result.rows[0];
-    const auditResults = decisionEngineV2.analyzeCampaign(campaign);
-
-    res.json({
-      status: "success",
-      campaign_id: campaignId,
-      audit: auditResults,
-      timestamp: new Date().toISOString()
-    });
-  } catch (e) {
-    console.error("Campaign audit error:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/**
- * GET /api/audit-checks
- * Get list of all 46+ audit checks
- */
-app.get("/api/audit-checks", auth, (req, res) => {
-  try {
-    const checks = Object.values(decisionEngineV2.auditChecks).map(check => ({
-      id: check.id,
-      name: check.name,
-      category: check.category,
-      severity: check.severity,
-      description: check.description || ""
-    }));
-
-    res.json({
-      status: "success",
-      total_checks: checks.length,
-      checks: checks.sort((a, b) => a.category.localeCompare(b.category))
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ── BENCHMARK ENDPOINTS ────────────────────────────────────────────────────
-
-/**
- * GET /api/benchmarks
- * Returns list of all available niches
- */
-app.get("/api/benchmarks", auth, (req, res) => {
-  try {
-    const niches = Object.keys(benchmarksV2.benchmarks);
-
-    res.json({
-      status: "success",
-      niches,
-      count: niches.length
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/**
- * GET /api/benchmarks/:niche
- * Returns benchmarks for a specific niche
- */
-app.get("/api/benchmarks/:niche", auth, (req, res) => {
-  try {
-    const { niche } = req.params;
-    const benchmark = benchmarksV2.getBenchmark(niche);
-
-    res.json({
-      status: "success",
-      niche,
-      benchmark,
-      timestamp: new Date().toISOString()
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/**
- * POST /api/compare-to-benchmark
- * Compare campaign metrics to industry benchmark
- */
-app.post("/api/compare-to-benchmark", auth, async (req, res) => {
-  try {
-    const { niche, metrics } = req.body;
-
-    if (!niche || !metrics) {
-      return res.status(400).json({ error: "niche and metrics required" });
-    }
-
-    const comparison = benchmarksV2.compareToBenchmark(niche, metrics);
-    const recommendations = benchmarksV2.getRecommendationsByBenchmark(niche, metrics);
-
-    res.json({
-      status: "success",
-      comparison,
-      recommendations,
-      timestamp: new Date().toISOString()
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/**
- * POST /api/benchmark-recommendations
- * Get actionable recommendations based on benchmark comparison
- */
-app.post("/api/benchmark-recommendations", auth, async (req, res) => {
-  try {
-    const { niche, metrics } = req.body;
-
-    if (!niche || !metrics) {
-      return res.status(400).json({ error: "niche and metrics required" });
-    }
-
-    const recommendations = benchmarksV2.getRecommendationsByBenchmark(niche, metrics);
-
-    res.json({
-      status: "success",
-      niche,
-      recommendations,
-      timestamp: new Date().toISOString()
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ── LANDING PAGE AUDIT ENDPOINTS ───────────────────────────────────────────
-
-/**
- * POST /api/audit-landing-page
- * Audit a landing page for conversion optimization
- */
-app.post("/api/audit-landing-page", auth, async (req, res) => {
-  try {
-    const { url, campaignId } = req.body;
-
-    if (!url) {
-      return res.status(400).json({ error: "url required" });
-    }
-
-    // Placeholder: In production, would use Playwright to analyze page
-    const pageMetrics = {
-      lcp_ms: 2100,
-      cls: 0.05,
-      ttfb_ms: 450,
-      dom_content_loaded_ms: 1800,
-      page_size_mb: 2.5,
-      cta_above_fold: true,
-      form_present: true,
-      form_fields: 4,
-      phone_number: true,
-      chat_widget: false,
-      viewport_meta: true,
-      horizontal_scroll: false,
-      font_readable: true,
-      testimonials: true,
-      trust_badges: true,
-      reviews_schema: true,
-      company_info: true,
-      guarantee: false,
-      cta_clarity: "high",
-      h1_count: 1,
-      meta_description: "Example meta description",
-      schema_types: ["Organization", "Product"]
-    };
-
-    // Run audit
-    const auditResults = await landingPageAudit.runLandingPageAudit(pageMetrics);
-
-    res.json({
-      status: "success",
-      url,
-      audit: auditResults,
-      timestamp: new Date().toISOString()
-    });
-  } catch (e) {
-    console.error("Landing page audit error:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/**
- * GET /api/landing-page-checks
- * Get list of all landing page audit checks
- */
-app.get("/api/landing-page-checks", auth, (req, res) => {
-  try {
-    const checks = Object.values(landingPageAudit.landingPageChecks).map(check => ({
-      id: check.id,
-      name: check.name,
-      category: check.category,
-      severity: check.severity,
-      description: check.description
-    }));
-
-    res.json({
-      status: "success",
-      total_checks: checks.length,
-      checks: checks.sort((a, b) => a.category.localeCompare(b.category))
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/**
- * POST /api/full-analysis
- * Run full analysis: campaign audit + benchmark + landing page
- */
-app.post("/api/full-analysis", auth, async (req, res) => {
-  try {
-    const { campaignId, landingPageUrl, niche } = req.body;
-
-    if (!campaignId) {
-      return res.status(400).json({ error: "campaignId required" });
-    }
-
-    // 1. Campaign Audit
-    const campaignResult = await db.query(
-      `SELECT id, name, status, spend, impressions, clicks, reach, frequency, 
-              roas, purchases, messages, leads, ctr, cvr, cpc FROM campaigns WHERE id = $1`,
-      [campaignId]
-    );
-
-    if (!campaignResult.rows.length) {
-      return res.status(404).json({ error: "Campaign not found" });
-    }
-
-    const campaign = campaignResult.rows[0];
-    const campaignAudit = decisionEngineV2.analyzeCampaign(campaign);
-
-    // 2. Benchmark Comparison
-    let benchmarkComparison = null;
-    if (niche) {
-      benchmarkComparison = benchmarksV2.compareToBenchmark(niche, {
-        roas: campaign.roas,
-        ctr: campaign.ctr,
-        cvr: campaign.cvr,
-        cpc: campaign.cpc,
-        frequency: campaign.frequency
-      });
-    }
-
-    // 3. Landing Page Audit (if URL provided)
-    let landingPageResults = null;
-    if (landingPageUrl) {
-      const pageMetrics = {
-        lcp_ms: 2100,
-        cls: 0.05,
-        cta_above_fold: true,
-        form_present: true,
-        form_fields: 4
-      };
-      landingPageResults = await landingPageAudit.runLandingPageAudit(pageMetrics);
-    }
-
-    res.json({
-      status: "success",
-      campaign_audit: campaignAudit,
-      benchmark_comparison: benchmarkComparison,
-      landing_page_audit: landingPageResults,
-      timestamp: new Date().toISOString()
-    });
-  } catch (e) {
-    console.error("Full analysis error:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/* ROUTES */
 app.get("/dashboard", (req, res) => {
   if (!req.session.user) return res.redirect("/");
   res.sendFile(path.resolve(__dirname, "public", "dashboard.html"));
@@ -1411,8 +1078,149 @@ app.get("*", (req, res, next) => {
   res.sendFile(path.resolve(__dirname, "public", "index.html"));
 });
 
+// ============================================================================
+// V2 ENDPOINTS - Auditoria, Benchmarking, Landing Page
+// ============================================================================
+
+app.get("/api/audit-summary/:accountId", auth, async (req, res) => {
+  try {
+    const { accountId } = req.params;
+    const campaigns = await db.query(
+      `SELECT id, name, status, spend, impressions, clicks, reach, frequency, roas, purchases, messages, leads, ctr, cvr, cpc FROM campaigns WHERE account_id = $1 LIMIT 50`,
+      [accountId]
+    );
+    if (!campaigns.rows.length) return res.json({ status: "success", audit: { campaigns: [], summary: {} } });
+    const auditResults = decisionEngineV2.analyzeAccount(campaigns.rows);
+    res.json({ status: "success", audit: auditResults, timestamp: new Date().toISOString() });
+  } catch (e) {
+    console.error("Audit error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/campaign-audit/:campaignId", auth, async (req, res) => {
+  try {
+    const { campaignId } = req.params;
+    const result = await db.query(
+      `SELECT id, name, status, spend, impressions, clicks, reach, frequency, roas, purchases, messages, leads, ctr, cvr, cpc FROM campaigns WHERE id = $1`,
+      [campaignId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: "Campaign not found" });
+    const auditResults = decisionEngineV2.analyzeCampaign(result.rows[0]);
+    res.json({ status: "success", campaign_id: campaignId, audit: auditResults, timestamp: new Date().toISOString() });
+  } catch (e) {
+    console.error("Campaign audit error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/audit-checks", auth, (req, res) => {
+  try {
+    const checks = Object.values(decisionEngineV2.auditChecks).map(check => ({
+      id: check.id, name: check.name, category: check.category, severity: check.severity, description: check.description || ""
+    }));
+    res.json({ status: "success", total_checks: checks.length, checks: checks.sort((a, b) => a.category.localeCompare(b.category)) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/benchmarks", auth, (req, res) => {
+  try {
+    const niches = Object.keys(benchmarksV2.benchmarks);
+    res.json({ status: "success", niches, count: niches.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/benchmarks/:niche", auth, (req, res) => {
+  try {
+    const { niche } = req.params;
+    const benchmark = benchmarksV2.getBenchmark(niche);
+    res.json({ status: "success", niche, benchmark, timestamp: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/compare-to-benchmark", auth, (req, res) => {
+  try {
+    const { niche, metrics } = req.body;
+    if (!niche || !metrics) return res.status(400).json({ error: "niche and metrics required" });
+    const comparison = benchmarksV2.compareToBenchmark(niche, metrics);
+    const recommendations = benchmarksV2.getRecommendationsByBenchmark(niche, metrics);
+    res.json({ status: "success", comparison, recommendations, timestamp: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/benchmark-recommendations", auth, (req, res) => {
+  try {
+    const { niche, metrics } = req.body;
+    if (!niche || !metrics) return res.status(400).json({ error: "niche and metrics required" });
+    const recommendations = benchmarksV2.getRecommendationsByBenchmark(niche, metrics);
+    res.json({ status: "success", niche, recommendations, timestamp: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/audit-landing-page", auth, async (req, res) => {
+  try {
+    const { url, campaignId } = req.body;
+    if (!url) return res.status(400).json({ error: "url required" });
+    const pageMetrics = { lcp_ms: 2100, cls: 0.05, ttfb_ms: 450, dom_content_loaded_ms: 1800, page_size_mb: 2.5, cta_above_fold: true, form_present: true, form_fields: 4, phone_number: true, chat_widget: false, viewport_meta: true, horizontal_scroll: false, font_readable: true, testimonials: true, trust_badges: true, reviews_schema: true, company_info: true, guarantee: false, cta_clarity: "high", h1_count: 1, meta_description: "Example", schema_types: ["Organization"] };
+    const auditResults = await landingPageAudit.runLandingPageAudit(pageMetrics);
+    res.json({ status: "success", url, audit: auditResults, timestamp: new Date().toISOString() });
+  } catch (e) {
+    console.error("Landing page audit error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/landing-page-checks", auth, (req, res) => {
+  try {
+    const checks = Object.values(landingPageAudit.landingPageChecks).map(check => ({
+      id: check.id, name: check.name, category: check.category, severity: check.severity, description: check.description
+    }));
+    res.json({ status: "success", total_checks: checks.length, checks: checks.sort((a, b) => a.category.localeCompare(b.category)) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/full-analysis", auth, async (req, res) => {
+  try {
+    const { campaignId, landingPageUrl, niche } = req.body;
+    if (!campaignId) return res.status(400).json({ error: "campaignId required" });
+    const campaignResult = await db.query(
+      `SELECT id, name, status, spend, impressions, clicks, reach, frequency, roas, purchases, messages, leads, ctr, cvr, cpc FROM campaigns WHERE id = $1`,
+      [campaignId]
+    );
+    if (!campaignResult.rows.length) return res.status(404).json({ error: "Campaign not found" });
+    const campaign = campaignResult.rows[0];
+    const campaignAudit = decisionEngineV2.analyzeCampaign(campaign);
+    let benchmarkComparison = null;
+    if (niche) {
+      benchmarkComparison = benchmarksV2.compareToBenchmark(niche, { roas: campaign.roas, ctr: campaign.ctr, cvr: campaign.cvr, cpc: campaign.cpc, frequency: campaign.frequency });
+    }
+    let landingPageResults = null;
+    if (landingPageUrl) {
+      const pageMetrics = { lcp_ms: 2100, cls: 0.05, cta_above_fold: true, form_present: true, form_fields: 4 };
+      landingPageResults = await landingPageAudit.runLandingPageAudit(pageMetrics);
+    }
+    res.json({ status: "success", campaign_audit: campaignAudit, benchmark_comparison: benchmarkComparison, landing_page_audit: landingPageResults, timestamp: new Date().toISOString() });
+  } catch (e) {
+    console.error("Full analysis error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
   console.log(`✅ Servidor rodando na porta ${PORT}`);
   if (process.env.DATABASE_URL) await db.initDB();
 });
+/* ROUTES */
