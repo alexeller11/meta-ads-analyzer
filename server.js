@@ -260,9 +260,9 @@ function getBrazilDateParts() {
   };
 }
 
-async function hasMiddaySnapshotToday(fbAccountId, fbUserId) {
+async function hasDaily8amSnapshotToday(fbAccountId, fbUserId) {
   const { date } = getBrazilDateParts();
-  const label = `AUTO_MIDDAY_${date}`;
+  const label = `AUTO_DAILY_08_${date}`;
   const { rows } = await db.pool.query(
     `SELECT id FROM analysis_runs WHERE fb_account_id = $1 AND fb_user_id = $2 AND date_range = $3 LIMIT 1`,
     [fbAccountId, fbUserId, label]
@@ -270,20 +270,20 @@ async function hasMiddaySnapshotToday(fbAccountId, fbUserId) {
   return !!rows[0];
 }
 
-async function saveAutomaticMiddaySnapshotIfNeeded({ fbAccountId, fbUserId, accountName, metrics, campaigns, aiAnalysis }) {
+async function saveAutomaticDaily8amSnapshotIfNeeded({ fbAccountId, fbUserId, accountName, metrics, campaigns, aiAnalysis }) {
   if (!process.env.DATABASE_URL) return;
 
   const { date, hour } = getBrazilDateParts();
-  if (hour < 12) return;
+  if (hour < 8) return;
 
-  const alreadySaved = await hasMiddaySnapshotToday(fbAccountId, fbUserId);
+  const alreadySaved = await hasDaily8amSnapshotToday(fbAccountId, fbUserId);
   if (alreadySaved) return;
 
   await db.saveRun({
     fbAccountId,
     fbUserId,
     accountName,
-    dateRange: `AUTO_MIDDAY_${date}`,
+    dateRange: `AUTO_DAILY_08_${date}`,
     metrics: {
       ...metrics,
       activeCampaigns: campaigns.filter(c => c.status === "ACTIVE").length,
@@ -669,7 +669,7 @@ app.get("/api/alerts/:accountId", auth, async (req, res) => {
 app.get("/api/history/:accountId", auth, async (req, res) => {
   try {
     if (!process.env.DATABASE_URL) return res.json([]);
-    const history = await db.getRunHistory(req.params.accountId);
+    const history = await db.getDailyRunHistory(req.params.accountId);
     res.json(history);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -768,7 +768,8 @@ app.post("/api/analyze", auth, async (req, res) => {
         escala_sugestao: escala,
         costPerMsg,
         costPerPur,
-        costPerLead
+        costPerLead,
+        actions: c.actions || []
       };
     });
 
@@ -791,7 +792,7 @@ app.post("/api/analyze", auth, async (req, res) => {
           aiAnalysis
         });
 
-        await saveAutomaticMiddaySnapshotIfNeeded({
+        await saveAutomaticDaily8amSnapshotIfNeeded({
           fbAccountId: accountData.account_id,
           fbUserId: req.session.user.id,
           accountName: accountData.name,
