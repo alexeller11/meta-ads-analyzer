@@ -10,6 +10,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-grid"></div>
+
   <header class="topbar">
     <div class="brand">
       <div class="brand-mark">◆</div>
@@ -19,58 +23,69 @@
       </div>
     </div>
 
-    <select id="accountSel" class="control wide">
-      <option value="">Carregando contas...</option>
-    </select>
+    <div class="topbar-group">
+      <select id="accountSel" class="control wide">
+        <option value="">Carregando contas...</option>
+      </select>
 
-    <select id="nicheSel" class="control">
-      <option value="Geral">Geral</option>
-      <option value="E-commerce">E-commerce</option>
-      <option value="Infoprodutos">Infoprodutos</option>
-      <option value="Negócios Locais">Negócios Locais</option>
-      <option value="Serviços B2B">Serviços B2B</option>
-      <option value="Imobiliário">Imobiliário</option>
-    </select>
+      <select id="nicheSel" class="control">
+        <option value="Geral">Geral</option>
+        <option value="E-commerce">E-commerce</option>
+        <option value="Infoprodutos">Infoprodutos</option>
+        <option value="Negócios Locais">Negócios Locais</option>
+        <option value="Serviços B2B">Serviços B2B</option>
+        <option value="Imobiliário">Imobiliário</option>
+      </select>
 
-    <select id="dateSel" class="control">
-      <option value="last_7d">Últimos 7 dias</option>
-      <option value="last_14d">Últimos 14 dias</option>
-      <option value="last_30d" selected>Últimos 30 dias</option>
-      <option value="this_month">Este mês</option>
-      <option value="last_month">Mês passado</option>
-      <option value="last_90d">Últimos 90 dias</option>
-      <option value="custom">Personalizado</option>
-    </select>
+      <select id="dateSel" class="control">
+        <option value="last_7d">Últimos 7 dias</option>
+        <option value="last_14d">Últimos 14 dias</option>
+        <option value="last_30d" selected>Últimos 30 dias</option>
+        <option value="this_month">Este mês</option>
+        <option value="last_month">Mês passado</option>
+        <option value="last_90d">Últimos 90 dias</option>
+        <option value="custom">Personalizado</option>
+      </select>
 
-    <input type="date" id="sinceDate" class="control hidden" />
-    <input type="date" id="untilDate" class="control hidden" />
+      <input type="date" id="sinceDate" class="control hidden" />
+      <input type="date" id="untilDate" class="control hidden" />
 
-    <label class="checkline">
-      <input type="checkbox" id="comparePeriod" />
-      Comparar período anterior
-    </label>
+      <label class="checkline">
+        <input type="checkbox" id="comparePeriod" />
+        <span>Comparar período anterior</span>
+      </label>
 
-    <button id="runBtn" class="btn">Analisar</button>
+      <button id="runBtn" class="btn">Analisar</button>
+    </div>
 
     <div class="topbar-right">
-      <span id="userName">Carregando...</span>
-      <a href="/auth/logout">Sair</a>
+      <div class="user-pill">
+        <span class="user-dot"></span>
+        <span id="userName">Carregando...</span>
+      </div>
+      <a class="logout-link" href="/auth/logout">Sair</a>
     </div>
   </header>
 
   <div class="app">
     <aside class="sidebar">
-      <div class="nav-title">Resumo</div>
-      <button class="nav-btn active" data-tab="overview">Visão Geral</button>
-      <button class="nav-btn" data-tab="analysis">Insights IA</button>
-      <button class="nav-btn" data-tab="decision">Central de Decisão</button>
-      <button class="nav-btn" data-tab="campaigns">Campanhas</button>
+      <div class="sidebar-inner">
+        <div class="nav-block">
+          <div class="nav-title">Resumo</div>
+          <button class="nav-btn active" data-tab="overview">Visão Geral</button>
+          <button class="nav-btn" data-tab="analysis">Insights IA</button>
+          <button class="nav-btn" data-tab="decision">Central de Decisão</button>
+          <button class="nav-btn" data-tab="campaigns">Campanhas</button>
+        </div>
 
-      <div class="nav-title">Análise</div>
-      <button class="nav-btn" data-tab="creatives">Criativos</button>
-      <button class="nav-btn" data-tab="breakdown">Breakdown</button>
-      <button class="nav-btn" data-tab="trend">Tendência</button>
-      <button class="nav-btn" data-tab="history">Métricas Diárias</button>
+        <div class="nav-block">
+          <div class="nav-title">Análise</div>
+          <button class="nav-btn" data-tab="creatives">Criativos</button>
+          <button class="nav-btn" data-tab="breakdown">Breakdown</button>
+          <button class="nav-btn" data-tab="trend">Tendência</button>
+          <button class="nav-btn" data-tab="history">Métricas Diárias</button>
+        </div>
+      </div>
     </aside>
 
     <main class="main">
@@ -78,11 +93,18 @@
       <div id="globalOk" class="ok-box hidden"></div>
 
       <section id="tab-overview" class="tab-section">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Painel executivo</div>
+            <h1 class="page-title">Visão geral da conta</h1>
+          </div>
+        </div>
+
         <div class="hero">
-          <div class="card hero-card">
+          <div class="card hero-card hero-main">
             <div id="healthScore" class="score">0</div>
-            <div>
-              <h1 id="healthTitle" class="summary-title">Sem análise ainda</h1>
+            <div class="hero-copy">
+              <h2 id="healthTitle" class="summary-title">Sem análise ainda</h2>
               <div id="healthSummary" class="summary-text">
                 Selecione uma conta no topo e rode a análise.
               </div>
@@ -96,37 +118,42 @@
             </div>
           </div>
 
-          <div class="card">
-            <div class="side-kpis">
-              <div class="mini">
-                <div class="k-label">Conta selecionada</div>
-                <div class="k-value smaller" id="selectedAccountName">—</div>
-                <div class="k-sub">Conta atual em foco</div>
-              </div>
+          <div class="hero-side">
+            <div class="card">
+              <div class="side-kpis">
+                <div class="mini">
+                  <div class="k-label">Conta selecionada</div>
+                  <div class="k-value smaller" id="selectedAccountName">—</div>
+                  <div class="k-sub">Conta atual em foco</div>
+                </div>
 
-              <div class="mini">
-                <div class="k-label">Total de contas</div>
-                <div class="k-value" id="accountsCount">0</div>
-                <div class="k-sub">Contas carregadas da Meta</div>
-              </div>
+                <div class="mini">
+                  <div class="k-label">Total de contas</div>
+                  <div class="k-value" id="accountsCount">0</div>
+                  <div class="k-sub">Contas carregadas da Meta</div>
+                </div>
 
-              <div class="mini">
-                <div class="k-label">Escalar</div>
-                <div class="k-value" id="heroScale">0</div>
-                <div class="k-sub">Campanhas prontas para subir verba</div>
-              </div>
+                <div class="mini">
+                  <div class="k-label">Escalar</div>
+                  <div class="k-value" id="heroScale">0</div>
+                  <div class="k-sub">Campanhas prontas para subir verba</div>
+                </div>
 
-              <div class="mini">
-                <div class="k-label">Pausar</div>
-                <div class="k-value" id="heroPause">0</div>
-                <div class="k-sub">Campanhas queimando orçamento</div>
+                <div class="mini">
+                  <div class="k-label">Pausar</div>
+                  <div class="k-value" id="heroPause">0</div>
+                  <div class="k-sub">Campanhas queimando orçamento</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         <div class="section">
-          <h2 class="section-title">Investimento e Retorno</h2>
+          <div class="section-head">
+            <h2 class="section-title no-margin">Investimento e Retorno</h2>
+          </div>
+
           <div class="grid">
             <div class="metric-card">
               <div class="metric-label">Investimento</div>
@@ -152,7 +179,10 @@
         </div>
 
         <div class="section">
-          <h2 class="section-title">Entrega e Alcance</h2>
+          <div class="section-head">
+            <h2 class="section-title no-margin">Entrega e Alcance</h2>
+          </div>
+
           <div class="grid">
             <div class="metric-card">
               <div class="metric-label">Impressões</div>
@@ -178,7 +208,10 @@
         </div>
 
         <div class="section">
-          <h2 class="section-title">Tráfego e Conversão</h2>
+          <div class="section-head">
+            <h2 class="section-title no-margin">Tráfego e Conversão</h2>
+          </div>
+
           <div class="grid5">
             <div class="metric-card">
               <div class="metric-label">CTR</div>
@@ -209,7 +242,9 @@
         </div>
 
         <div class="section">
-          <h2 class="section-title">Comparação com período anterior</h2>
+          <div class="section-head">
+            <h2 class="section-title no-margin">Comparação com período anterior</h2>
+          </div>
           <div class="table-wrap">
             <table>
               <thead>
@@ -229,8 +264,14 @@
       </section>
 
       <section id="tab-analysis" class="tab-section hidden">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Leitura estratégica</div>
+            <h1 class="page-title">Insights IA</h1>
+          </div>
+        </div>
+
         <div class="card">
-          <h2 class="section-title">Insights IA</h2>
           <div id="analysisList" class="stack">
             <div class="empty">Rode uma análise para ver os insights.</div>
           </div>
@@ -238,9 +279,16 @@
       </section>
 
       <section id="tab-decision" class="tab-section hidden">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Ação prática</div>
+            <h1 class="page-title">Central de Decisão</h1>
+          </div>
+        </div>
+
         <div class="card">
           <div class="section-head">
-            <h2 class="section-title no-margin">Central de Decisão</h2>
+            <h2 class="section-title no-margin">Decisões por campanha</h2>
             <div class="filters" id="decisionFilters">
               <button class="filter-btn active" data-filter="TODAS">Todas</button>
               <button class="filter-btn" data-filter="ATIVA">Ativa</button>
@@ -271,9 +319,16 @@
       </section>
 
       <section id="tab-campaigns" class="tab-section hidden">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Visão operacional</div>
+            <h1 class="page-title">Campanhas</h1>
+          </div>
+        </div>
+
         <div class="card">
           <div class="section-head">
-            <h2 class="section-title no-margin">Campanhas</h2>
+            <h2 class="section-title no-margin">Lista de campanhas</h2>
             <div class="filters" id="campaignFilters">
               <button class="filter-btn active" data-filter="TODAS">Todas</button>
               <button class="filter-btn" data-filter="ATIVA">Ativa</button>
@@ -306,9 +361,16 @@
       </section>
 
       <section id="tab-creatives" class="tab-section hidden">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Criativos e ranking</div>
+            <h1 class="page-title">Criativos</h1>
+          </div>
+        </div>
+
         <div class="card">
           <div class="section-head">
-            <h2 class="section-title no-margin">Criativos</h2>
+            <h2 class="section-title no-margin">Performance por criativo</h2>
             <div class="filters" id="creativeFilters">
               <button class="filter-btn active" data-filter="CAMPEAO">Criativo campeão</button>
               <button class="filter-btn" data-filter="MENSAGENS">Mais mensagens</button>
@@ -322,9 +384,16 @@
       </section>
 
       <section id="tab-breakdown" class="tab-section hidden">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Corte de performance</div>
+            <h1 class="page-title">Breakdown</h1>
+          </div>
+        </div>
+
         <div class="card">
           <div class="section-head">
-            <h2 class="section-title no-margin">Breakdown</h2>
+            <h2 class="section-title no-margin">Detalhamento</h2>
             <div class="inline-controls">
               <select id="breakdownType" class="control small-control">
                 <option value="platform">Plataforma</option>
@@ -360,8 +429,14 @@
       </section>
 
       <section id="tab-trend" class="tab-section hidden">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Leitura temporal</div>
+            <h1 class="page-title">Tendência</h1>
+          </div>
+        </div>
+
         <div class="card">
-          <h2 class="section-title">Tendência</h2>
           <div class="chart-wrap">
             <canvas id="trendChart"></canvas>
           </div>
@@ -370,8 +445,14 @@
       </section>
 
       <section id="tab-history" class="tab-section hidden">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Histórico salvo</div>
+            <h1 class="page-title">Métricas Diárias</h1>
+          </div>
+        </div>
+
         <div class="card">
-          <h2 class="section-title">Métricas Diárias</h2>
           <div class="table-wrap">
             <table>
               <thead>
