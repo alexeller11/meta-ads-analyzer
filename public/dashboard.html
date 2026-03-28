@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
   <link rel="stylesheet" href="/styles/dashboard.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -306,29 +307,94 @@
 
       <section id="tab-creatives" class="tab-section hidden">
         <div class="card">
-          <h2 class="section-title">Criativos</h2>
-          <div class="empty">Esta aba permanece clean por enquanto, sem alterar a lógica do app.</div>
+          <div class="section-head">
+            <h2 class="section-title no-margin">Criativos</h2>
+            <div class="filters" id="creativeFilters">
+              <button class="filter-btn active" data-filter="CAMPEAO">Criativo campeão</button>
+              <button class="filter-btn" data-filter="MENSAGENS">Mais mensagens</button>
+              <button class="filter-btn" data-filter="COMPRAS">Mais compras</button>
+            </div>
+          </div>
+          <div id="creativesGrid" class="creative-grid">
+            <div class="empty full-span">Rode uma análise para carregar os criativos.</div>
+          </div>
         </div>
       </section>
 
       <section id="tab-breakdown" class="tab-section hidden">
         <div class="card">
-          <h2 class="section-title">Breakdown</h2>
-          <div class="empty">Esta aba permanece clean por enquanto, sem alterar a lógica do app.</div>
+          <div class="section-head">
+            <h2 class="section-title no-margin">Breakdown</h2>
+            <div class="inline-controls">
+              <select id="breakdownType" class="control small-control">
+                <option value="platform">Plataforma</option>
+                <option value="position">Posicionamento</option>
+                <option value="gender">Sexo</option>
+                <option value="age">Idade</option>
+                <option value="region">Região</option>
+                <option value="city">Cidade</option>
+                <option value="device">Dispositivo</option>
+              </select>
+              <button id="loadBreakdownBtn" class="btn secondary">Carregar</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Segmento</th>
+                  <th>Gasto</th>
+                  <th>Impressões</th>
+                  <th>Alcance</th>
+                  <th>CTR</th>
+                  <th>CPC</th>
+                </tr>
+              </thead>
+              <tbody id="breakdownBody">
+                <tr><td colspan="6" class="empty">Selecione o tipo e clique em carregar.</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
       <section id="tab-trend" class="tab-section hidden">
         <div class="card">
           <h2 class="section-title">Tendência</h2>
-          <div class="empty">Esta aba permanece clean por enquanto, sem alterar a lógica do app.</div>
+          <div class="chart-wrap">
+            <canvas id="trendChart"></canvas>
+          </div>
+          <div id="trendFallback" class="empty hidden">Sem histórico suficiente para montar tendência.</div>
         </div>
       </section>
 
       <section id="tab-history" class="tab-section hidden">
         <div class="card">
           <h2 class="section-title">Métricas Diárias</h2>
-          <div class="empty">Esta aba permanece clean por enquanto, sem alterar a lógica do app.</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Período</th>
+                  <th>Gasto</th>
+                  <th>Impressões</th>
+                  <th>Cliques</th>
+                  <th>Alcance</th>
+                  <th>CTR</th>
+                  <th>CPC</th>
+                  <th>CPM</th>
+                  <th>Frequência</th>
+                  <th>ROAS</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody">
+                <tr><td colspan="12" class="empty">Rode uma análise para popular o histórico.</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </main>
