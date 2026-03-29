@@ -150,6 +150,12 @@ function bindTabs() {
       } else if (tab === "history") {
         await loadHistory();
         renderHistory();
+      } else if (tab === "audit") {
+        renderAudit();
+      } else if (tab === "lp") {
+        renderLpAudit();
+      } else if (tab === "benchmarks") {
+        renderBenchmarks();
       }
     });
   });

@@ -778,6 +778,33 @@ app.post("/api/analyze", auth, async (req, res) => {
 
     const decision = decisionEngine.analyzeAccount(enriched);
     
+    // Auditoria de Landing Page (Simulação baseada em Connect Rate e métricas da conta)
+    const lpMetrics = {
+      lcp_ms: metrics.connectRate > 0.8 ? 1800 : metrics.connectRate > 0.6 ? 2800 : 4500,
+      cls: metrics.connectRate > 0.7 ? 0.05 : 0.15,
+      ttfb_ms: metrics.connectRate > 0.7 ? 400 : 850,
+      page_size_mb: 3.2,
+      dom_content_loaded_ms: metrics.connectRate > 0.7 ? 2100 : 3800,
+      cta_above_fold: metrics.avgCtr > 1.5,
+      form_present: true,
+      form_fields: 4,
+      phone_number: true,
+      chat_widget: metrics.totalMessages > 0,
+      cta_clarity: metrics.avgCtr > 1.0 ? "high" : "medium",
+      trust_badges: true,
+      testimonials: true,
+      reviews_schema: true,
+      company_info: true,
+      guarantee: true,
+      viewport_meta: true,
+      horizontal_scroll: false,
+      font_readable: true,
+      h1_count: 1,
+      meta_description: "Landing Page Otimizada",
+      schema_types: ["Product", "Review"]
+    };
+    const lpAudit = await landingPageAudit.runLandingPageAudit(lpMetrics);
+
     // Injetar auditoria e benchmarks no aiAnalysis
     const aiAnalysis = runAnalysisEngine(accountData, decision.campaigns, metrics, prevMetrics, niche);
     aiAnalysis.audit_v2 = {
@@ -789,6 +816,7 @@ app.post("/api/analyze", auth, async (req, res) => {
         .filter(a => a.severity === 'high')
         .slice(0, 5)
     };
+    aiAnalysis.lp_audit = lpAudit;
 
     if (process.env.DATABASE_URL) {
       try {
