@@ -93,210 +93,71 @@ function fillAccountSelect(accounts) {
     accountSel.appendChild(option);
   });
 
-  const accountsCount = document.getElementById("accountsCount");
-  if (accountsCount) accountsCount.textContent = String(accounts.length);
-
   if (accounts.length > 0) {
     accountSel.value = String(accounts[0].account_id);
-    state.selectedAccountId = String(accounts[0].account_id);
-    state.selectedAccount = accounts[0];
-
-    const selectedName = document.getElementById("selectedAccountName");
-    if (selectedName) selectedName.textContent = accounts[0].name || "—";
-  } else {
-    const selectedName = document.getElementById("selectedAccountName");
-    if (selectedName) selectedName.textContent = "—";
   }
 }
 
-function bindAccountSelect() {
-  const accountSel = document.getElementById("accountSel");
-  if (!accountSel) return;
-
-  accountSel.addEventListener("change", () => {
-    const selectedId = String(accountSel.value || "");
-    state.selectedAccountId = selectedId;
-    state.selectedAccount =
-      state.accounts.find((acc) => String(acc.account_id) === selectedId) || null;
-
-    const selectedName = document.getElementById("selectedAccountName");
-    if (selectedName) selectedName.textContent = state.selectedAccount?.name || "—";
-  });
-}
-
-function bindTabs() {
-  const buttons = document.querySelectorAll(".nav-btn");
-  const sections = document.querySelectorAll(".tab-section");
-
-  buttons.forEach((button) => {
-    button.addEventListener("click", async () => {
-      const tab = button.dataset.tab;
-      if (!tab) return;
-
-      buttons.forEach((btn) => btn.classList.remove("active"));
-      button.classList.add("active");
-
-      sections.forEach((section) => section.classList.add("hidden"));
-      const target = document.getElementById(`tab-${tab}`);
-      if (target) target.classList.remove("hidden");
-
-      if (tab === "creatives") {
-        await loadCreatives();
-      } else if (tab === "breakdown") {
-        renderBreakdown();
-      } else if (tab === "trend") {
-        await loadHistory();
-        renderTrend();
-      } else if (tab === "history") {
-        await loadHistory();
-        renderHistory();
-      } else if (tab === "audit") {
-        renderAudit();
-      } else if (tab === "lp") {
-        renderLpAudit();
-      } else if (tab === "benchmarks") {
-        renderBenchmarks();
-      }
-    });
-  });
-}
-
-function bindFilterGroup(groupId, callback) {
-  const root = document.getElementById(groupId);
-  if (!root) return;
-
-  root.querySelectorAll(".filter-btn").forEach((button) => {
-    button.addEventListener("click", () => {
-      root.querySelectorAll(".filter-btn").forEach((btn) => btn.classList.remove("active"));
-      button.classList.add("active");
-      callback();
-    });
-  });
-}
-
 function getActiveFilter(groupId) {
-  return document.querySelector(`#${groupId} .filter-btn.active`)?.dataset.filter || "TODAS";
+  const root = document.getElementById(groupId);
+  if (!root) return "TODAS";
+  const active = root.querySelector(".filter-btn.active");
+  return active ? active.dataset.filter : "TODAS";
 }
 
 function getLifecycleStatus(campaign) {
   const status = String(campaign.status || "").toUpperCase();
-  const spend = Number(campaign.spend || 0);
-  const stopTime = campaign.stop_time ? new Date(campaign.stop_time) : null;
-  const now = new Date();
-
   if (status === "PAUSED") return "PAUSADA";
-  if (stopTime && stopTime < now) return "CONCLUIDA";
-  if (status === "ACTIVE" && spend > 0) return "RODANDO";
-  if (status === "ACTIVE") return "ATIVA";
+  if (campaign.spend > 0) return "RODANDO";
   return "ATIVA";
 }
 
 function getActionBadgeClass(action) {
+  if (!action) return "secondary";
   if (action === "ESCALAR") return "success";
   if (action === "PAUSAR") return "danger";
-  if (action === "RENOVAR_CRIATIVO") return "warning";
   return "primary";
 }
 
-function getMetricsFromActions(actions = [], values = []) {
-  const getVal = (arr, types) => {
-    if (!arr) return 0;
-    const found = arr.find(x => types.includes(x.action_type));
-    return parseFloat(found?.value || 0);
-  };
-  return {
-    pur: getVal(actions, ["purchase", "offsite_conversion.fb_pixel_purchase"]),
-    msg: getVal(actions, ["onsite_conversion.messaging_conversation_started_7d", "onsite_conversion.total_messaging_connection"]),
-    rev: getVal(values, ["purchase", "offsite_conversion.fb_pixel_purchase"])
-  };
-}
-
 function renderOverview() {
-  const metrics = state.metrics || {};
-  const summary = state.analysis?.resumo_geral || {};
-  const decision = state.decision || {};
+  const m = state.metrics;
+  if (!m) return;
 
-  const setText = (id, value) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = value;
-  };
+  document.getElementById("mSpend").textContent = brMoney(m.totalSpend);
+  document.getElementById("mRevenue").textContent = brMoney(m.totalRevenue);
+  document.getElementById("mRoas").textContent = `${Number(m.avgRoas || 0).toFixed(2)}x`;
+  document.getElementById("mCostPerPurchase").textContent = brMoney(m.avgCostPerPurchase);
 
-  setText("healthScore", summary.score_saude || 0);
-  setText("healthTitle", summary.nivel_saude || "Sem análise ainda");
-  setText("healthSummary", summary.resumo_historico || "Selecione uma conta no topo e rode a análise.");
+  document.getElementById("mImpressions").textContent = brNum(m.totalImpressions);
+  document.getElementById("mReach").textContent = brNum(m.totalReach);
+  document.getElementById("mFrequency").textContent = Number(m.avgFrequency || 0).toFixed(2);
+  document.getElementById("mCpm").textContent = brMoney(m.avgCpm);
 
-  setText("summarySpend", `Investimento: ${brMoney(metrics.totalSpend)}`);
-  setText("summaryRoas", `ROAS: ${Number(metrics.roas || 0).toFixed(2)}x`);
-  setText("summaryCtr", `CTR: ${brPct(metrics.avgCtr)}`);
-  setText("summaryConnect", `Connect Rate: ${brPct(metrics.connectRate)}`);
-
-  setText("heroScale", decision.summary?.scaleCount || 0);
-  setText("heroPause", decision.summary?.pauseCount || 0);
-
-  setText("mSpend", brMoney(metrics.totalSpend));
-  setText("mRevenue", brMoney(metrics.totalRev));
-  setText("mRoas", `${Number(metrics.roas || 0).toFixed(2)}x`);
-  setText("mCostPerPurchase", brMoney(metrics.costPerPurchase));
-  setText("mImpressions", brNum(metrics.totalImpressions));
-  setText("mReach", brNum(metrics.totalReach));
-  setText("mFrequency", Number(metrics.avgFrequency || 0).toFixed(2));
-  setText("mCpm", brMoney(metrics.avgCpm));
-  setText("mCtr", brPct(metrics.avgCtr));
-  setText("mCpc", brMoney(metrics.avgCpc));
-  setText("mConnectRate", brPct(metrics.connectRate));
-  setText("mMessages", brNum(metrics.totalMessages));
-  setText("mPurchases", brNum(metrics.totalPurchases));
-}
-
-function renderComparison() {
-  const body = document.getElementById("comparisonBody");
-  if (!body) return;
-
-  if (!state.comparison || !state.comparison.current || !state.comparison.previous) {
-    body.innerHTML = `<tr><td colspan="4" class="empty">Ative a comparação para visualizar.</td></tr>`;
-    return;
-  }
-
-  const current = state.comparison.current;
-  const previous = state.comparison.previous;
-  const comp = state.comparison.comparison || {};
-
-  const rows = [
-    ["Investimento", brMoney(current.totalSpend), brMoney(previous.totalSpend), `${Number(comp.spendChange || 0).toFixed(2)}%`],
-    ["ROAS", `${Number(current.roas || 0).toFixed(2)}x`, `${Number(previous.roas || 0).toFixed(2)}x`, `${Number(comp.roasChange || 0).toFixed(2)}%`],
-    ["CTR", brPct(current.avgCtr), brPct(previous.avgCtr), `${Number(comp.ctrChange || 0).toFixed(2)}%`],
-    ["Compras", brNum(current.totalPurchases), brNum(previous.totalPurchases), `${Number(comp.purchasesChange || 0).toFixed(2)}%`],
-    ["Connect Rate", brPct(current.connectRate), brPct(previous.connectRate), `${Number(comp.connectRateChange || 0).toFixed(2)}%`]
-  ];
-
-  body.innerHTML = rows.map((row) => `
-    <tr>
-      <td>${row[0]}</td>
-      <td>${row[1]}</td>
-      <td>${row[2]}</td>
-      <td>${row[3]}</td>
-    </tr>
-  `).join("");
+  document.getElementById("mCtr").textContent = brPct(m.avgCtr);
+  document.getElementById("mCpc").textContent = brMoney(m.avgCpc);
+  document.getElementById("mConnectRate").textContent = brPct(m.connectRate);
+  document.getElementById("mMessages").textContent = brNum(m.totalMessages);
+  document.getElementById("mPurchases").textContent = brNum(m.totalPurchases);
 }
 
 function renderCampaigns() {
-  const body = document.getElementById("campaignBody");
-  if (!body) return;
-
-  const campaigns = state.analysis?.campanhas_analise || [];
-  const filter = getActiveFilter("campaignFilters");
-
-  const filtefunction renderCampaigns() {
   const body = document.getElementById("campaignsBody");
   if (!body) return;
 
   const list = state.campaigns || [];
-  if (!list.length) {
-    body.innerHTML = `<tr><td colspan="12" class="empty">Nenhuma campanha encontrada.</td></tr>`;
+  const filter = getActiveFilter("campaignFilters");
+
+  const filtered = list.filter((campaign) => {
+    if (filter === "TODAS") return true;
+    return getLifecycleStatus(campaign) === filter;
+  });
+
+  if (!filtered.length) {
+    body.innerHTML = `<tr><td colspan="11" class="empty">Nenhuma campanha encontrada.</td></tr>`;
     return;
   }
 
-  body.innerHTML = list.map((campaign) => `
+  body.innerHTML = filtered.map((campaign) => `
     <tr>
       <td>${campaign.name}</td>
       <td><span class="badge primary">${getLifecycleStatus(campaign)}</span></td>
@@ -311,7 +172,7 @@ function renderCampaigns() {
       <td>${brPct(campaign.connectRate)}</td>
     </tr>
   `).join("");
-}}
+}
 
 function renderDecision() {
   const body = document.getElementById("decisionBody");
@@ -369,7 +230,6 @@ function renderAudit() {
   
   if (!state.analysis?.audit_v2) return;
   const audit = state.analysis.audit_v2;
-  const lp = state.analysis.lp_audit;
   const scalePro = state.analysis.scale_pro;
 
   if (summary) {
@@ -434,6 +294,43 @@ function renderAudit() {
       </div>
     `;
   }
+}
+
+function renderLpAudit() {
+  const container = document.getElementById("lpContent");
+  if (!container || !state.analysis?.lp_audit) return;
+  
+  const lp = state.analysis.lp_audit;
+  container.innerHTML = `
+    <div class="grid">
+      <div class="metric-card">
+        <div class="metric-label">LP Score</div>
+        <div class="metric-value">${lp.overall_score}/100</div>
+        <div class="metric-sub">Nota: ${lp.grade}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Perda de Conversão</div>
+        <div class="metric-value">${lp.impact_on_conversion.estimated_cvr_loss}%</div>
+        <div class="metric-sub">${lp.impact_on_conversion.message}</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top: 20px;">
+      <div class="card-head"><h3 class="card-title">Checklist de Otimização</h3></div>
+      <div class="rec-list">
+        ${lp.issues.map(i => `
+          <div class="rec-item">
+            <div class="rec-title" style="color: var(--danger)">[${i.category}] ${i.name}</div>
+            <div class="rec-desc">${i.message}</div>
+          </div>
+        `).join("")}
+        ${lp.passed_checks.map(i => `
+          <div class="rec-item">
+            <div class="rec-title" style="color: var(--success)">[${i.category}] ${i.name} - OK</div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
 }
 
 async function renderBenchmarks() {
@@ -587,7 +484,7 @@ async function loadBreakdown() {
   if (!body) return;
 
   if (!state.selectedAccountId) {
-    body.innerHTML = `<tr><td colspan="6" class="empty">Selecione uma conta primeiro.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="8" class="empty">Selecione uma conta primeiro.</td></tr>`;
     return;
   }
 
@@ -603,19 +500,8 @@ async function loadBreakdown() {
     renderBreakdown();
   } catch (error) {
     console.error(error);
-    body.innerHTML = `<tr><td colspan="6" class="empty">Erro ao carregar breakdown.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="8" class="empty">Erro ao carregar breakdown.</td></tr>`;
   }
-}
-
-function getBreakdownLabel(row, type) {
-  if (type === "platform") return row.publisher_platform || "N/A";
-  if (type === "position") return row.platform_position || "N/A";
-  if (type === "gender") return row.gender || "N/A";
-  if (type === "age") return row.age || "N/A";
-  if (type === "region") return row.region || "N/A";
-  if (type === "city") return row.city || "N/A";
-  if (type === "device") return row.device_platform || "N/A";
-  return "N/A";
 }
 
 function renderBreakdown() {
@@ -623,48 +509,43 @@ function renderBreakdown() {
   if (!body) return;
 
   const type = document.getElementById("breakdownType")?.value || "platform";
-  const rows = [...(state.breakdownRows || [])];
+  const rows = state.breakdownRows || [];
 
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="6" class="empty">Selecione o tipo e clique em carregar.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="8" class="empty">Nenhum dado encontrado para esse breakdown.</td></tr>`;
     return;
   }
 
-  rows.sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0));
-
   body.innerHTML = rows.map((row) => {
-    const m = getMetricsFromActions(row.actions, row.action_values);
-    const roas = row.spend > 0 ? m.rev / row.spend : 0;
+    const label = row.publisher_platform || row.platform_position || row.gender || row.age || row.region || "N/A";
+    const spend = Number(row.spend || 0);
+    const revenue = Number(row.action_values?.find(x => x.action_type.includes('purchase'))?.value || 0);
+    const roas = spend > 0 ? revenue / spend : 0;
+    const messages = Number(row.actions?.find(x => x.action_type.includes('message'))?.value || 0);
+    const purchases = Number(row.actions?.find(x => x.action_type.includes('purchase'))?.value || 0);
+
     return `
       <tr>
-        <td>${getBreakdownLabel(row, type)}</td>
-        <td>${brMoney(row.spend)}</td>
-        <td>${brNum(m.msg)}</td>
-        <td>${brNum(m.pur)}</td>
-        <td>${brMoney(m.rev)}</td>
+        <td>${label}</td>
+        <td>${brMoney(spend)}</td>
+        <td>${brNum(messages)}</td>
+        <td>${brNum(purchases)}</td>
+        <td>${brMoney(revenue)}</td>
         <td>${roas.toFixed(2)}x</td>
         <td>${brPct(row.ctr)}</td>
-        <td>${brMoney(row.cpc)}</td>
+        <td>${brMoney(row.cpm)}</td>
       </tr>
     `;
   }).join("");
 }
 
 async function loadHistory() {
-  const body = document.getElementById("historyBody");
-  if (!body) return;
-
-  if (!state.selectedAccountId) {
-    body.innerHTML = `<tr><td colspan="12" class="empty">Selecione uma conta primeiro.</td></tr>`;
-    return;
-  }
-
+  if (!state.selectedAccountId) return;
   try {
-    const res = await api(`/api/history/${state.selectedAccountId}`);
-    state.historyRows = Array.isArray(res) ? res : [];
+    const res = await api(`/api/adaccounts/${state.selectedAccountId}/history`);
+    state.historyRows = res.data || [];
   } catch (error) {
-    console.error(error);
-    state.historyRows = [];
+    console.error("Erro ao carregar histórico:", error);
   }
 }
 
@@ -674,7 +555,7 @@ function renderHistory() {
 
   const rows = state.historyRows || [];
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="12" class="empty">Sem histórico salvo ainda.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="12" class="empty">Rode uma análise para popular o histórico.</td></tr>`;
     return;
   }
 
@@ -683,15 +564,15 @@ function renderHistory() {
       <td>${new Date(row.created_at).toLocaleDateString("pt-BR")}</td>
       <td>${row.date_range || "-"}</td>
       <td>${brMoney(row.total_spend)}</td>
-      <td>${brNum(row.total_messages || 0)}</td>
-      <td>${brNum(row.total_purchases || 0)}</td>
-      <td>${brMoney(row.total_revenue || 0)}</td>
+      <td>${brNum(row.total_messages)}</td>
+      <td>${brNum(row.total_purchases)}</td>
+      <td>${brMoney(row.total_revenue)}</td>
       <td>${Number(row.roas || 0).toFixed(2)}x</td>
       <td>${brPct(row.avg_ctr)}</td>
       <td>${brMoney(row.avg_cpc)}</td>
       <td>${brMoney(row.avg_cpm)}</td>
       <td>${Number(row.avg_frequency || 0).toFixed(2)}</td>
-      <td>${brNum(row.health_score)}</td>
+      <td>${row.health_score || 0}</td>
     </tr>
   `).join("");
 }
@@ -743,56 +624,16 @@ async function loadSessionAndAccounts() {
   }
 
   state.me = me.user;
-  const userName = document.getElementById("userName");
-  if (userName) userName.textContent = me.user?.name || "Usuário";
-
   const rawAccounts = await api("/api/adaccounts");
   const accounts = normalizeAccounts(rawAccounts);
   state.accounts = accounts;
 
   if (!accounts.length) {
-    throw new Error("A API respondeu, mas nenhuma conta válida foi encontrada para montar o seletor.");
+    throw new Error("Nenhuma conta de anúncios encontrada.");
   }
 
   fillAccountSelect(accounts);
-  showOk(`${accounts.length} conta(s) carregada(s) com sucesso.`);
-}
-
-async function loadComparison(dateConfig) {
-  const compareEl = document.getElementById("comparePeriod");
-  const compareEnabled = compareEl?.checked;
-
-  if (!compareEnabled) {
-    state.comparison = null;
-    renderComparison();
-    return;
-  }
-
-  if (!state.selectedAccountId) return;
-
-  if (dateConfig.type === "custom") {
-    state.comparison = null;
-    renderComparison();
-    return;
-  }
-
-  const supported = ["last_7d", "last_30d", "last_90d"];
-  if (!supported.includes(dateConfig.date_preset)) {
-    state.comparison = null;
-    renderComparison();
-    return;
-  }
-
-  try {
-    state.comparison = await api(
-      `/api/adaccounts/${state.selectedAccountId}/comparison?${toQuery({ date_preset: dateConfig.date_preset })}`
-    );
-  } catch (error) {
-    console.error("Erro ao carregar comparação:", error);
-    state.comparison = null;
-  }
-
-  renderComparison();
+  showOk(`${accounts.length} conta(s) carregada(s).`);
 }
 
 async function runAnalysis() {
@@ -812,11 +653,6 @@ async function runAnalysis() {
 
   try {
     const dateConfig = getDateConfig();
-
-    if (dateConfig.type === "custom" && (!dateConfig.since || !dateConfig.until)) {
-      throw new Error("Preencha as duas datas do período personalizado.");
-    }
-
     const query = dateConfig.type === "custom"
       ? toQuery({ since: dateConfig.since, until: dateConfig.until })
       : toQuery({ date_preset: dateConfig.date_preset });
@@ -841,8 +677,8 @@ async function runAnalysis() {
     state.analysis = analyzeRes.analysis;
     state.metrics = analyzeRes.metrics;
     state.decision = analyzeRes.decision;
+    state.campaigns = analyzeRes.decision?.campaigns || [];
 
-    await loadComparison(dateConfig);
     await loadHistory();
 
     renderOverview();
@@ -855,16 +691,76 @@ async function runAnalysis() {
     renderLpAudit();
     renderBenchmarks();
 
-    showOk(`Análise concluída para ${state.selectedAccount?.name || "a conta selecionada"}.`);
+    showOk(`Análise concluída com sucesso.`);
   } catch (error) {
     console.error(error);
     showError(error.message || "Erro ao analisar.");
   } finally {
     if (runBtn) {
       runBtn.disabled = false;
-      runBtn.textContent = "Analisar";
+      runBtn.textContent = "Rodar Auditoria V2";
     }
   }
+}
+
+function bindTabs() {
+  const buttons = document.querySelectorAll(".nav-btn");
+  const sections = document.querySelectorAll(".tab-section");
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", async () => {
+      const tab = button.dataset.tab;
+      if (!tab) return;
+
+      buttons.forEach((btn) => btn.classList.remove("active"));
+      button.classList.add("active");
+
+      sections.forEach((section) => section.classList.add("hidden"));
+      const target = document.getElementById(`tab-${tab}`);
+      if (target) target.classList.remove("hidden");
+
+      if (tab === "creatives") {
+        await loadCreatives();
+      } else if (tab === "breakdown") {
+        renderBreakdown();
+      } else if (tab === "trend") {
+        await loadHistory();
+        renderTrend();
+      } else if (tab === "history") {
+        await loadHistory();
+        renderHistory();
+      } else if (tab === "audit") {
+        renderAudit();
+      } else if (tab === "lp") {
+        renderLpAudit();
+      } else if (tab === "benchmarks") {
+        renderBenchmarks();
+      }
+    });
+  });
+}
+
+function bindFilterGroup(groupId, callback) {
+  const root = document.getElementById(groupId);
+  if (!root) return;
+
+  root.querySelectorAll(".filter-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      root.querySelectorAll(".filter-btn").forEach((btn) => btn.classList.remove("active"));
+      button.classList.add("active");
+      callback();
+    });
+  });
+}
+
+function bindAccountSelect() {
+  const accountSel = document.getElementById("accountSel");
+  if (!accountSel) return;
+
+  accountSel.addEventListener("change", () => {
+    state.selectedAccountId = accountSel.value;
+    state.selectedAccount = state.accounts.find(a => String(a.account_id) === String(state.selectedAccountId));
+  });
 }
 
 function bindEvents() {
@@ -878,16 +774,12 @@ function bindEvents() {
   if (dateSel) {
     dateSel.addEventListener("change", () => {
       const isCustom = dateSel.value === "custom";
-      document.getElementById("sinceDate")?.classList.toggle("hidden", !isCustom);
-      document.getElementById("untilDate")?.classList.toggle("hidden", !isCustom);
+      document.getElementById("customDates")?.classList.toggle("hidden", !isCustom);
     });
   }
 
   const runBtn = document.getElementById("runBtn");
   if (runBtn) runBtn.addEventListener("click", runAnalysis);
-
-  const loadBreakdownBtn = document.getElementById("loadBreakdownBtn");
-  if (loadBreakdownBtn) loadBreakdownBtn.addEventListener("click", loadBreakdown);
 
   const exportBtn = document.getElementById("exportBtn");
   if (exportBtn) {
@@ -919,14 +811,9 @@ async function init() {
   try {
     bindEvents();
     await loadSessionAndAccounts();
-    renderComparison();
   } catch (error) {
     console.error("Erro no init:", error);
     showError(error.message || "Erro ao iniciar dashboard.");
-    const accountSel = document.getElementById("accountSel");
-    if (accountSel) {
-      accountSel.innerHTML = `<option value="">Erro ao carregar contas</option>`;
-    }
   }
 }
 
