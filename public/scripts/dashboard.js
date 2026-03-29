@@ -286,30 +286,32 @@ function renderCampaigns() {
   const campaigns = state.analysis?.campanhas_analise || [];
   const filter = getActiveFilter("campaignFilters");
 
-  const filtered = campaigns.filter((campaign) => {
-    if (filter === "TODAS") return true;
-    return getLifecycleStatus(campaign) === filter;
-  });
+  const filtefunction renderCampaigns() {
+  const body = document.getElementById("campaignsBody");
+  if (!body) return;
 
-  if (!filtered.length) {
-    body.innerHTML = `<tr><td colspan="8" class="empty">Nenhuma campanha encontrada para esse filtro.</td></tr>`;
+  const list = state.campaigns || [];
+  if (!list.length) {
+    body.innerHTML = `<tr><td colspan="12" class="empty">Nenhuma campanha encontrada.</td></tr>`;
     return;
   }
 
-  body.innerHTML = filtered.map((campaign) => `
+  body.innerHTML = list.map((campaign) => `
     <tr>
       <td>${campaign.name}</td>
       <td><span class="badge primary">${getLifecycleStatus(campaign)}</span></td>
       <td>${brMoney(campaign.spend)}</td>
-      <td>${brNum(campaign.msg || 0)}</td>
-      <td>${brNum(campaign.pur || 0)}</td>
-      <td>${brMoney(campaign.rev || 0)}</td>
+      <td>${brNum(campaign.messages)}</td>
+      <td>${brNum(campaign.purchases)}</td>
+      <td>${brMoney(campaign.revenue || campaign.rev)}</td>
       <td>${Number(campaign.roas || 0).toFixed(2)}x</td>
       <td>${brPct(campaign.ctr)}</td>
+      <td>${brPct(campaign.hookRate || 0)}</td>
+      <td>${brPct(campaign.holdRate || 0)}</td>
       <td>${brPct(campaign.connectRate)}</td>
     </tr>
   `).join("");
-}
+}}
 
 function renderDecision() {
   const body = document.getElementById("decisionBody");
@@ -360,34 +362,78 @@ function renderInsights() {
 }
 
 function renderAudit() {
-  const container = document.getElementById("auditContent");
-  if (!container || !state.analysis?.audit_v2) return;
+  const summary = document.getElementById("auditSummaryContent");
+  const funnel = document.getElementById("funnelLeakContent");
+  const scale = document.getElementById("scaleProContent");
+  const alerts = document.getElementById("auditAlertsContent");
   
+  if (!state.analysis?.audit_v2) return;
   const audit = state.analysis.audit_v2;
-  container.innerHTML = `
-    <div class="grid">
-      <div class="metric-card">
-        <div class="metric-label">Audit Score</div>
-        <div class="metric-value">${audit.score}/100</div>
-        <div class="metric-sub">Nota Geral: ${audit.grade}</div>
+  const lp = state.analysis.lp_audit;
+  const scalePro = state.analysis.scale_pro;
+
+  if (summary) {
+    summary.innerHTML = `
+      <div class="grid">
+        <div class="metric-card">
+          <div class="metric-label">Audit Score</div>
+          <div class="metric-value">${audit.score}/100</div>
+          <div class="metric-sub">Nota Geral: ${audit.grade}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Desperdício Estimado</div>
+          <div class="metric-value">${brMoney(audit.total_waste)}</div>
+          <div class="metric-sub">Capital recuperável</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Escala Preditiva</div>
+          <div class="metric-value">+${scalePro?.total_potential || 0}%</div>
+          <div class="metric-sub">Potencial de crescimento</div>
+        </div>
       </div>
-      <div class="metric-card">
-        <div class="metric-label">Desperdício Estimado</div>
-        <div class="metric-value">${brMoney(audit.total_waste)}</div>
-        <div class="metric-sub">Potencial de economia</div>
+    `;
+  }
+
+  if (funnel) {
+    const leak = audit.funnel_leak || {};
+    funnel.innerHTML = `
+      <div class="rec-item">
+        <div class="rec-title">Conexão Anúncio > LP</div>
+        <div class="rec-desc" style="color: ${leak.creative_to_lp.includes('ALTO') ? 'var(--danger)' : 'var(--success)'}">${leak.creative_to_lp}</div>
       </div>
-    </div>
-    <div class="card" style="margin-top: 20px;">
-      <div class="card-head"><h3 class="card-title">Alertas Críticos</h3></div>
-      <div class="rec-list">
-        ${(audit.critical_alerts || []).map(a => `
-          <div class="rec-item">
-            <div class="rec-title" style="color: var(--danger)">${a.message}</div>
-          </div>
-        `).join("") || '<div class="empty">Nenhum alerta crítico encontrado.</div>'}
+      <div class="rec-item">
+        <div class="rec-title">Conversão LP > Checkout</div>
+        <div class="rec-desc" style="color: ${leak.lp_to_checkout.includes('BAIXA') ? 'var(--danger)' : 'var(--success)'}">${leak.lp_to_checkout}</div>
       </div>
-    </div>
-  `;
+    `;
+  }
+
+  if (scale) {
+    const recs = scalePro?.recommendations || [];
+    scale.innerHTML = recs.length > 0 
+      ? recs.map(r => `
+        <div class="rec-item">
+          <div class="rec-title" style="color: var(--success)">${r.name}</div>
+          <div class="rec-desc">${r.rec}</div>
+        </div>
+      `).join("")
+      : '<div class="empty">Nenhuma campanha pronta para escala agressiva no momento.</div>';
+  }
+
+  if (alerts) {
+    alerts.innerHTML = `
+      <div class="card">
+        <div class="card-head"><h3 class="card-title">Checklist de Auditoria Crítica</h3></div>
+        <div class="rec-list">
+          ${(audit.critical_alerts || []).map(a => `
+            <div class="rec-item">
+              <div class="rec-title" style="color: var(--danger)">[${a.category || 'CRÍTICO'}] ${a.message}</div>
+            </div>
+          `).join("") || '<div class="empty">Nenhum alerta crítico encontrado.</div>'}
+        </div>
+      </div>
+    `;
+  }
 }
 
 async function renderBenchmarks() {
@@ -805,6 +851,9 @@ async function runAnalysis() {
     renderInsights();
     renderHistory();
     renderTrend();
+    renderAudit();
+    renderLpAudit();
+    renderBenchmarks();
 
     showOk(`Análise concluída para ${state.selectedAccount?.name || "a conta selecionada"}.`);
   } catch (error) {
@@ -839,6 +888,31 @@ function bindEvents() {
 
   const loadBreakdownBtn = document.getElementById("loadBreakdownBtn");
   if (loadBreakdownBtn) loadBreakdownBtn.addEventListener("click", loadBreakdown);
+
+  const exportBtn = document.getElementById("exportBtn");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", async () => {
+      if (!state.analysis) {
+        alert("Rode uma análise primeiro.");
+        return;
+      }
+      try {
+        const res = await api("/api/export-report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state })
+        });
+        const blob = new Blob([res.markdown], { type: "text/markdown" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `auditoria_meta_ads_${new Date().toISOString().split('T')[0]}.md`;
+        a.click();
+      } catch (e) {
+        alert("Erro ao exportar: " + e.message);
+      }
+    });
+  }
 }
 
 async function init() {

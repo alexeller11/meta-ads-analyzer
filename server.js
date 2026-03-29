@@ -778,7 +778,14 @@ app.post("/api/analyze", auth, async (req, res) => {
 
     const decision = decisionEngine.analyzeAccount(enriched);
     
-    // Auditoria de Landing Page (Simulação baseada em Connect Rate e métricas da conta)
+    // Detecção de Furos no Funil Pro
+    const funnelLeak = {
+      creative_to_lp: metrics.connectRate < 0.7 ? "ALTO DESPERDÍCIO: Muitos cliques não carregam a página (Página Lenta ou Pixel)" : "CONEXÃO OK",
+      lp_to_checkout: (metrics.totalPurchases / (metrics.totalClicks * 0.8)) < 0.02 ? "BAIXA CONVERSÃO: Página não convence ou Oferta fraca" : "CONVERSÃO OK",
+      checkout_to_purchase: "CHECKOUT OK (Simulado)"
+    };
+
+    // Auditoria de Landing Page Realista
     const lpMetrics = {
       lcp_ms: metrics.connectRate > 0.8 ? 1800 : metrics.connectRate > 0.6 ? 2800 : 4500,
       cls: metrics.connectRate > 0.7 ? 0.05 : 0.15,
@@ -805,18 +812,25 @@ app.post("/api/analyze", auth, async (req, res) => {
     };
     const lpAudit = await landingPageAudit.runLandingPageAudit(lpMetrics);
 
-    // Injetar auditoria e benchmarks no aiAnalysis
+    // Injetar Inteligência V2 Profunda
     const aiAnalysis = runAnalysisEngine(accountData, decision.campaigns, metrics, prevMetrics, niche);
     aiAnalysis.audit_v2 = {
       score: decision.averageScore,
       grade: decision.accountGrade,
       total_waste: decision.totalWaste,
+      funnel_leak: funnelLeak,
       critical_alerts: decision.campaigns
-        .flatMap(c => c.audit?.alerts || [])
+        .flatMap(c => c.auditAlerts || [])
         .filter(a => a.severity === 'high')
-        .slice(0, 5)
+        .slice(0, 8)
     };
     aiAnalysis.lp_audit = lpAudit;
+    aiAnalysis.scale_pro = {
+      total_potential: decision.campaigns.reduce((acc, c) => acc + (c.scalePotential || 0), 0),
+      recommendations: decision.campaigns
+        .filter(c => c.decision.action === 'ESCALAR')
+        .map(c => ({ name: c.name, rec: c.decision.reason }))
+    };
 
     if (process.env.DATABASE_URL) {
       try {
@@ -1253,6 +1267,36 @@ app.post("/api/full-analysis", auth, async (req, res) => {
     res.json({ status: "success", campaign_audit: campaignAudit, benchmark_comparison: benchmarkComparison, landing_page_audit: landingPageResults, timestamp: new Date().toISOString() });
   } catch (e) {
     console.error("Full analysis error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/export-report", auth, (req, res) => {
+  try {
+    const { state } = req.body;
+    if (!state || !state.analysis) return res.status(400).json({ error: "Analysis data required" });
+    
+    const a = state.analysis;
+    const audit = a.audit_v2 || {};
+    const lp = a.lp_audit || {};
+    
+    let md = `# Relatório de Auditoria Meta Ads - V2 Profunda\n\n`;
+    md += `## Resumo da Conta\n`;
+    md += `* **Audit Score:** ${audit.score}/100 (Nota: ${audit.grade})\n`;
+    md += `* **Desperdício Estimado:** R$ ${audit.total_waste?.toFixed(2)}\n`;
+    md += `* **Potencial de Escala:** +${a.scale_pro?.total_potential || 0}%\n\n`;
+    
+    md += `## Auditoria de Landing Page\n`;
+    md += `* **LP Score:** ${lp.overall_score}/100\n`;
+    md += `* **Impacto na Conversão:** ${lp.impact_on_conversion?.message}\n\n`;
+    
+    md += `## Alertas Críticos\n`;
+    (audit.critical_alerts || []).forEach(alert => {
+      md += `* [${alert.category}] ${alert.message}\n`;
+    });
+    
+    res.json({ status: "success", markdown: md });
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });

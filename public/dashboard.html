@@ -1,78 +1,72 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ideale.id — Meta Ads Analyzer</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
-  <link rel="stylesheet" href="/styles/dashboard.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meta Ads Analyzer - V2 Profunda</title>
+  <link rel="stylesheet" href="/styles/main.css">
 </head>
 <body>
-  <div class="bg-orb orb-1"></div>
-  <div class="bg-orb orb-2"></div>
-  <div class="bg-grid"></div>
-
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-mark">◆</div>
-      <div class="brand-text">
-        <strong>IDEALE.ID</strong>
-        <span>Meta Ads Analyzer</span>
-      </div>
-    </div>
-
-    <div class="topbar-group">
-      <select id="accountSel" class="control wide">
-        <option value="">Carregando contas...</option>
-      </select>
-
-      <select id="nicheSel" class="control">
-        <option value="Geral">Geral</option>
-        <option value="E-commerce">E-commerce</option>
-        <option value="Infoprodutos">Infoprodutos</option>
-        <option value="Negócios Locais">Negócios Locais</option>
-        <option value="Serviços B2B">Serviços B2B</option>
-        <option value="Imobiliário">Imobiliário</option>
-      </select>
-
-      <select id="dateSel" class="control">
-        <option value="last_7d">Últimos 7 dias</option>
-        <option value="last_14d">Últimos 14 dias</option>
-        <option value="last_30d" selected>Últimos 30 dias</option>
-        <option value="this_month">Este mês</option>
-        <option value="last_month">Mês passado</option>
-        <option value="last_90d">Últimos 90 dias</option>
-        <option value="custom">Personalizado</option>
-      </select>
-
-      <input type="date" id="sinceDate" class="control hidden" />
-      <input type="date" id="untilDate" class="control hidden" />
-
-      <label class="checkline">
-        <input type="checkbox" id="comparePeriod" />
-        <span>Comparar período anterior</span>
-      </label>
-
-      <button id="runBtn" class="btn">Analisar</button>
-    </div>
-
-    <div class="topbar-right">
-      <div class="user-pill">
-        <span class="user-dot"></span>
-        <span id="userName">Carregando...</span>
-      </div>
-      <a class="logout-link" href="/auth/logout">Sair</a>
-    </div>
-  </header>
-
   <div class="app">
     <aside class="sidebar">
-      <div class="sidebar-inner">
+      <div class="sidebar-head">
+        <div class="logo">
+          <div class="logo-icon">M</div>
+          <div class="logo-text">Meta Ads Analyzer</div>
+        </div>
+      </div>
+
+      <div class="sidebar-nav">
         <div class="nav-block">
-          <div class="nav-title">Resumo</div>
-          <button class="nav-btn active" data-tab="overview">Visão Geral</button>
+          <div class="nav-title">Configuração</div>
+          <div class="field">
+            <label>Conta de Anúncios</label>
+            <select id="accountSel">
+              <option value="">Selecione uma conta...</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Nicho</label>
+            <select id="nicheSel">
+              <option value="Geral">Geral</option>
+              <option value="E-commerce">E-commerce</option>
+              <option value="Infoprodutos">Infoprodutos</option>
+              <option value="Negócio Local">Negócio Local</option>
+              <option value="SaaS">SaaS</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Período</label>
+            <select id="dateSel">
+              <option value="today">Hoje</option>
+              <option value="yesterday">Ontem</option>
+              <option value="last_3d">Últimos 3 dias</option>
+              <option value="last_7d">Últimos 7 dias</option>
+              <option value="last_14d">Últimos 14 dias</option>
+              <option value="last_30d" selected>Últimos 30 dias</option>
+              <option value="this_month">Este mês</option>
+              <option value="last_month">Mês passado</option>
+              <option value="custom">Personalizado</option>
+            </select>
+          </div>
+          <div id="customDates" class="field hidden">
+            <div class="grid">
+              <div>
+                <label>Desde</label>
+                <input type="date" id="sinceDate">
+              </div>
+              <div>
+                <label>Até</label>
+                <input type="date" id="untilDate">
+              </div>
+            </div>
+          </div>
+          <button id="runBtn" class="btn primary full">Rodar Auditoria V2</button>
+        </div>
+
+        <div class="nav-block">
+          <div class="nav-title">Visão Geral</div>
+          <button class="nav-btn active" data-tab="dashboard">Dashboard</button>
           <button class="nav-btn" data-tab="analysis">Insights IA</button>
           <button class="nav-btn" data-tab="decision">Central de Decisão</button>
           <button class="nav-btn" data-tab="campaigns">Campanhas</button>
@@ -99,78 +93,32 @@
       <div id="globalError" class="error-box hidden"></div>
       <div id="globalOk" class="ok-box hidden"></div>
 
-      <section id="tab-overview" class="tab-section">
+      <section id="tab-dashboard" class="tab-section">
         <div class="page-head">
           <div>
-            <div class="eyebrow">Painel executivo</div>
-            <h1 class="page-title">Visão geral da conta</h1>
+            <div class="eyebrow">Visão geral da conta</div>
+            <h1 class="page-title" id="accountName">Dashboard Principal</h1>
           </div>
-        </div>
-
-        <div class="hero">
-          <div class="card hero-card hero-main">
-            <div id="healthScore" class="score">0</div>
-            <div class="hero-copy">
-              <h2 id="healthTitle" class="summary-title">Sem análise ainda</h2>
-              <div id="healthSummary" class="summary-text">
-                Selecione uma conta no topo e rode a análise.
-              </div>
-
-              <div class="pill-row">
-                <span class="pill" id="summarySpend">Investimento: R$ 0,00</span>
-                <span class="pill" id="summaryRoas">ROAS: 0.00x</span>
-                <span class="pill" id="summaryCtr">CTR: 0.00%</span>
-                <span class="pill" id="summaryConnect">Connect Rate: 0.00%</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="hero-side">
-            <div class="card">
-              <div class="side-kpis">
-                <div class="mini">
-                  <div class="k-label">Conta selecionada</div>
-                  <div class="k-value smaller" id="selectedAccountName">—</div>
-                  <div class="k-sub">Conta atual em foco</div>
-                </div>
-
-                <div class="mini">
-                  <div class="k-label">Total de contas</div>
-                  <div class="k-value" id="accountsCount">0</div>
-                  <div class="k-sub">Contas carregadas da Meta</div>
-                </div>
-
-                <div class="mini">
-                  <div class="k-label">Escalar</div>
-                  <div class="k-value" id="heroScale">0</div>
-                  <div class="k-sub">Campanhas prontas para subir verba</div>
-                </div>
-
-                <div class="mini">
-                  <div class="k-label">Pausar</div>
-                  <div class="k-value" id="heroPause">0</div>
-                  <div class="k-sub">Campanhas queimando orçamento</div>
-                </div>
-              </div>
-            </div>
+          <div class="actions">
+            <button id="exportBtn" class="btn secondary">Exportar Relatório</button>
           </div>
         </div>
 
         <div class="section">
           <div class="section-head">
-            <h2 class="section-title no-margin">Investimento e Retorno</h2>
+            <h2 class="section-title no-margin">Faturamento e Investimento</h2>
           </div>
 
           <div class="grid">
             <div class="metric-card">
               <div class="metric-label">Investimento</div>
               <div class="metric-value" id="mSpend">R$ 0,00</div>
-              <div class="metric-sub">Gasto total no período</div>
+              <div class="metric-sub">Total gasto no período</div>
             </div>
             <div class="metric-card">
               <div class="metric-label">Receita</div>
               <div class="metric-value" id="mRevenue">R$ 0,00</div>
-              <div class="metric-sub">Receita rastreada</div>
+              <div class="metric-sub">Valor total de conversão</div>
             </div>
             <div class="metric-card">
               <div class="metric-label">ROAS</div>
@@ -354,14 +302,16 @@
                   <th>Gasto</th>
                   <th>Mensagens</th>
                   <th>Compras</th>
-                  <th>Valor</th>
+                  <th>Receita</th>
                   <th>ROAS</th>
                   <th>CTR</th>
+                  <th>Hook Rate</th>
+                  <th>Hold Rate</th>
                   <th>Connect Rate</th>
                 </tr>
               </thead>
-              <tbody id="campaignBody">
-                <tr><td colspan="8" class="empty">Rode uma análise para ver campanhas.</td></tr>
+              <tbody id="campaignsBody">
+                <tr><td colspan="11" class="empty">Rode uma análise para ver campanhas.</td></tr>
               </tbody>
             </table>
           </div>
@@ -371,51 +321,44 @@
       <section id="tab-creatives" class="tab-section hidden">
         <div class="page-head">
           <div>
-            <div class="eyebrow">Criativos e ranking</div>
+            <div class="eyebrow">Análise visual</div>
             <h1 class="page-title">Criativos</h1>
           </div>
         </div>
 
-        <div class="card">
-          <div class="section-head">
-            <h2 class="section-title no-margin">Performance por criativo</h2>
-            <div class="filters" id="creativeFilters">
-              <button class="filter-btn active" data-filter="CAMPEAO">Criativo campeão</button>
-              <button class="filter-btn" data-filter="MENSAGENS">Mais mensagens</button>
-              <button class="filter-btn" data-filter="COMPRAS">Mais compras</button>
-            </div>
+        <div class="filters-bar">
+          <div class="filters" id="creativeFilters">
+            <button class="filter-btn active" data-filter="RECENTE">Mais recentes</button>
+            <button class="filter-btn" data-filter="CAMPEAO">Campeões de ROAS</button>
+            <button class="filter-btn" data-filter="MENSAGENS">Mais Mensagens</button>
+            <button class="filter-btn" data-filter="COMPRAS">Mais Compras</button>
           </div>
-          <div id="creativesGrid" class="creative-grid">
-            <div class="empty full-span">Rode uma análise para carregar os criativos.</div>
-          </div>
+        </div>
+
+        <div id="creativesGrid" class="creative-grid">
+          <div class="empty full-span">Rode uma análise para ver os criativos.</div>
         </div>
       </section>
 
       <section id="tab-breakdown" class="tab-section hidden">
         <div class="page-head">
           <div>
-            <div class="eyebrow">Corte de performance</div>
+            <div class="eyebrow">Detalhamento de dados</div>
             <h1 class="page-title">Breakdown</h1>
           </div>
         </div>
 
-        <div class="card">
-          <div class="section-head">
-            <h2 class="section-title no-margin">Detalhamento</h2>
-            <div class="inline-controls">
-              <select id="breakdownType" class="control small-control">
-                <option value="platform">Plataforma</option>
-                <option value="position">Posicionamento</option>
-                <option value="gender">Sexo</option>
-                <option value="age">Idade</option>
-                <option value="region">Região</option>
-                <option value="city">Cidade</option>
-                <option value="device">Dispositivo</option>
-              </select>
-              <button id="loadBreakdownBtn" class="btn secondary">Carregar</button>
-            </div>
-          </div>
+        <div class="filters-bar">
+          <select id="breakdownType">
+            <option value="platform">Plataforma</option>
+            <option value="position">Posicionamento</option>
+            <option value="gender">Gênero</option>
+            <option value="age">Idade</option>
+            <option value="region">Região</option>
+          </select>
+        </div>
 
+        <div class="card">
           <div class="table-wrap">
             <table>
               <thead>
@@ -424,14 +367,14 @@
                   <th>Gasto</th>
                   <th>Mensagens</th>
                   <th>Compras</th>
-                  <th>Valor</th>
+                  <th>Receita</th>
                   <th>ROAS</th>
                   <th>CTR</th>
-                  <th>CPC</th>
+                  <th>CPM</th>
                 </tr>
               </thead>
               <tbody id="breakdownBody">
-                <tr><td colspan="6" class="empty">Selecione o tipo e clique em carregar.</td></tr>
+                <tr><td colspan="8" class="empty">Selecione uma conta para ver o breakdown.</td></tr>
               </tbody>
             </table>
           </div>
@@ -441,15 +384,13 @@
       <section id="tab-trend" class="tab-section hidden">
         <div class="page-head">
           <div>
-            <div class="eyebrow">Leitura temporal</div>
+            <div class="eyebrow">Evolução temporal</div>
             <h1 class="page-title">Tendência</h1>
           </div>
         </div>
 
         <div class="card">
-          <div class="chart-wrap">
-            <canvas id="trendChart"></canvas>
-          </div>
+          <div id="trendChart" class="chart-container"></div>
           <div id="trendFallback" class="empty hidden">Sem histórico suficiente para montar tendência.</div>
         </div>
       </section>
@@ -497,8 +438,31 @@
             <h1 class="page-title">Auditoria Técnica</h1>
           </div>
         </div>
-        <div id="auditContent">
-          <div class="card empty">Rode uma análise para visualizar a auditoria técnica.</div>
+        
+        <div id="auditSummaryContent"></div>
+
+        <div class="grid" style="margin-top: 20px;">
+          <div class="card">
+            <div class="card-head"><h3 class="card-title">Furos no Funil</h3></div>
+            <div id="funnelLeakContent" class="rec-list">
+              <div class="empty">Rode uma análise para detectar furos no funil.</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3 class="card-title">Escala Preditiva</h3></div>
+            <div id="scaleProContent" class="rec-list">
+              <div class="empty">Rode uma análise para ver o potencial de escala.</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="auditAlertsContent" style="margin-top: 20px;">
+          <div class="card">
+            <div class="card-head"><h3 class="card-title">Checklist de Auditoria Crítica</h3></div>
+            <div class="rec-list">
+              <div class="empty">Nenhum alerta crítico encontrado.</div>
+            </div>
+          </div>
         </div>
       </section>
 
