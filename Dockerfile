@@ -19,11 +19,12 @@ COPY --chown=node:node . .
 # Mudar para o usuário 'node' (que já tem UID 1000 nesta imagem)
 USER node
 
-# Expor a porta padrão do Hugging Face Spaces
-EXPOSE 7860
+# Expor a porta padrão do Railway
+EXPOSE 3000
 
 # Definir a porta como variável de ambiente para o Express
-ENV PORT=7860
+ENV PORT=3000
+ENV NODE_ENV=production
 
 # Comando para iniciar a aplicação
 CMD ["npm", "start"]
