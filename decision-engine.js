@@ -103,11 +103,17 @@ function analyzeCampaign(campaign) {
     priority = 2;
     waste = c.spend * 0.2;
     reason = "Muitos cliques não estão virando visita real.";
-  } else if (c.roas >= 2.5 || c.purchases >= 3 || c.messages >= 10) {
+  } else if (c.roas >= 3.0 || (c.roas >= 2.0 && c.purchases >= 5)) {
     action = "ESCALAR";
     priority = 1;
     waste = 0;
-    reason = "Campanha com resultado consistente.";
+    const scalePercent = c.roas >= 4.0 ? 20 : 10;
+    reason = `Excelente performance (ROAS ${c.roas.toFixed(2)}). Sugestão: Aumentar orçamento em ${scalePercent}% a cada 48h.`;
+  } else if (c.roas >= 1.5 || c.messages >= 10 || c.leads >= 5) {
+    action = "MANTER_E_OTIMIZAR";
+    priority = 3;
+    waste = 0;
+    reason = "Resultado dentro do esperado. Manter monitoramento e otimizar criativos se necessário.";
   }
 
   return {

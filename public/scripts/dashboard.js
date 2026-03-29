@@ -192,6 +192,19 @@ function getActionBadgeClass(action) {
   return "primary";
 }
 
+function getMetricsFromActions(actions = [], values = []) {
+  const getVal = (arr, types) => {
+    if (!arr) return 0;
+    const found = arr.find(x => types.includes(x.action_type));
+    return parseFloat(found?.value || 0);
+  };
+  return {
+    pur: getVal(actions, ["purchase", "offsite_conversion.fb_pixel_purchase"]),
+    msg: getVal(actions, ["onsite_conversion.messaging_conversation_started_7d", "onsite_conversion.total_messaging_connection"]),
+    rev: getVal(values, ["purchase", "offsite_conversion.fb_pixel_purchase"])
+  };
+}
+
 function renderOverview() {
   const metrics = state.metrics || {};
   const summary = state.analysis?.resumo_geral || {};
@@ -282,11 +295,12 @@ function renderCampaigns() {
       <td>${campaign.name}</td>
       <td><span class="badge primary">${getLifecycleStatus(campaign)}</span></td>
       <td>${brMoney(campaign.spend)}</td>
-      <td>${brNum(campaign.impressions)}</td>
-      <td>${brNum(campaign.reach)}</td>
+      <td>${brNum(campaign.msg || 0)}</td>
+      <td>${brNum(campaign.pur || 0)}</td>
+      <td>${brMoney(campaign.rev || 0)}</td>
+      <td>${Number(campaign.roas || 0).toFixed(2)}x</td>
       <td>${brPct(campaign.ctr)}</td>
       <td>${brPct(campaign.connectRate)}</td>
-      <td>${Number(campaign.roas || 0).toFixed(2)}x</td>
     </tr>
   `).join("");
 }
@@ -337,6 +351,69 @@ function renderInsights() {
       <div class="insight-item-text">${item.descricao || item.acao || ""}</div>
     </div>
   `).join("");
+}
+
+function renderAudit() {
+  const container = document.getElementById("auditContent");
+  if (!container || !state.analysis?.audit_v2) return;
+  
+  const audit = state.analysis.audit_v2;
+  container.innerHTML = `
+    <div class="grid">
+      <div class="metric-card">
+        <div class="metric-label">Audit Score</div>
+        <div class="metric-value">${audit.score}/100</div>
+        <div class="metric-sub">Nota Geral: ${audit.grade}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Desperdício Estimado</div>
+        <div class="metric-value">${brMoney(audit.total_waste)}</div>
+        <div class="metric-sub">Potencial de economia</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top: 20px;">
+      <div class="card-head"><h3 class="card-title">Alertas Críticos</h3></div>
+      <div class="rec-list">
+        ${(audit.critical_alerts || []).map(a => `
+          <div class="rec-item">
+            <div class="rec-title" style="color: var(--danger)">${a.message}</div>
+          </div>
+        `).join("") || '<div class="empty">Nenhum alerta crítico encontrado.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+async function renderBenchmarks() {
+  const container = document.getElementById("benchmarksContent");
+  if (!container) return;
+  
+  const niche = document.getElementById("nicheSel")?.value || "Geral";
+  try {
+    const res = await api(`/api/benchmarks/${niche}`);
+    const b = res.benchmark || {};
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-head"><h3 class="card-title">Referência de Mercado: ${niche}</h3></div>
+        <div class="grid">
+          <div class="metric-card">
+            <div class="metric-label">CTR Alvo</div>
+            <div class="metric-value">${b.ctr}%</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">ROAS Alvo</div>
+            <div class="metric-value">${b.roas}x</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">CPC Alvo</div>
+            <div class="metric-value">${brMoney(b.cpc)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    container.innerHTML = `<div class="card error">Erro ao carregar benchmarks: ${e.message}</div>`;
+  }
 }
 
 function getDateConfig() {
@@ -503,16 +580,22 @@ function renderBreakdown() {
 
   rows.sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0));
 
-  body.innerHTML = rows.map((row) => `
-    <tr>
-      <td>${getBreakdownLabel(row, type)}</td>
-      <td>${brMoney(row.spend)}</td>
-      <td>${brNum(row.impressions)}</td>
-      <td>${brNum(row.reach)}</td>
-      <td>${brPct(row.ctr)}</td>
-      <td>${brMoney(row.cpc)}</td>
-    </tr>
-  `).join("");
+  body.innerHTML = rows.map((row) => {
+    const m = getMetricsFromActions(row.actions, row.action_values);
+    const roas = row.spend > 0 ? m.rev / row.spend : 0;
+    return `
+      <tr>
+        <td>${getBreakdownLabel(row, type)}</td>
+        <td>${brMoney(row.spend)}</td>
+        <td>${brNum(m.msg)}</td>
+        <td>${brNum(m.pur)}</td>
+        <td>${brMoney(m.rev)}</td>
+        <td>${roas.toFixed(2)}x</td>
+        <td>${brPct(row.ctr)}</td>
+        <td>${brMoney(row.cpc)}</td>
+      </tr>
+    `;
+  }).join("");
 }
 
 async function loadHistory() {
@@ -548,14 +631,14 @@ function renderHistory() {
       <td>${new Date(row.created_at).toLocaleDateString("pt-BR")}</td>
       <td>${row.date_range || "-"}</td>
       <td>${brMoney(row.total_spend)}</td>
-      <td>${brNum(row.total_impressions)}</td>
-      <td>${brNum(row.total_clicks)}</td>
-      <td>${brNum(row.total_reach)}</td>
+      <td>${brNum(row.total_messages || 0)}</td>
+      <td>${brNum(row.total_purchases || 0)}</td>
+      <td>${brMoney(row.total_revenue || 0)}</td>
+      <td>${Number(row.roas || 0).toFixed(2)}x</td>
       <td>${brPct(row.avg_ctr)}</td>
       <td>${brMoney(row.avg_cpc)}</td>
       <td>${brMoney(row.avg_cpm)}</td>
       <td>${Number(row.avg_frequency || 0).toFixed(2)}</td>
-      <td>${Number(row.roas || 0).toFixed(2)}x</td>
       <td>${brNum(row.health_score)}</td>
     </tr>
   `).join("");

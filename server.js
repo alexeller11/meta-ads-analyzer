@@ -7,7 +7,7 @@ const db = require("./db");
 const benchmarks = require("./benchmarks");
 const nodemailer = require("nodemailer");
 const { OpenAI } = require("openai");
-const decisionEngine = require("./decision-engine");
+const decisionEngine = require("./decision-engine-v2");
 const decisionEngineV2 = require("./decision-engine-v2");
 const benchmarksV2 = require("./benchmarks-v2");
 const landingPageAudit = require("./landing-page-audit");
@@ -777,7 +777,18 @@ app.post("/api/analyze", auth, async (req, res) => {
     });
 
     const decision = decisionEngine.analyzeAccount(enriched);
+    
+    // Injetar auditoria e benchmarks no aiAnalysis
     const aiAnalysis = runAnalysisEngine(accountData, decision.campaigns, metrics, prevMetrics, niche);
+    aiAnalysis.audit_v2 = {
+      score: decision.averageScore,
+      grade: decision.accountGrade,
+      total_waste: decision.totalWaste,
+      critical_alerts: decision.campaigns
+        .flatMap(c => c.audit?.alerts || [])
+        .filter(a => a.severity === 'high')
+        .slice(0, 5)
+    };
 
     if (process.env.DATABASE_URL) {
       try {

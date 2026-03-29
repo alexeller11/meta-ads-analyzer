@@ -85,6 +85,12 @@
           <button class="nav-btn" data-tab="trend">Tendência</button>
           <button class="nav-btn" data-tab="history">Métricas Diárias</button>
         </div>
+
+        <div class="nav-block">
+          <div class="nav-title">V2 - Inteligência</div>
+          <button class="nav-btn" data-tab="audit">Auditoria Técnica</button>
+          <button class="nav-btn" data-tab="benchmarks">Benchmarks</button>
+        </div>
       </div>
     </aside>
 
@@ -345,11 +351,12 @@
                   <th>Campanha</th>
                   <th>Status</th>
                   <th>Gasto</th>
-                  <th>Impressões</th>
-                  <th>Alcance</th>
+                  <th>Mensagens</th>
+                  <th>Compras</th>
+                  <th>Valor</th>
+                  <th>ROAS</th>
                   <th>CTR</th>
                   <th>Connect Rate</th>
-                  <th>ROAS</th>
                 </tr>
               </thead>
               <tbody id="campaignBody">
@@ -414,8 +421,10 @@
                 <tr>
                   <th>Segmento</th>
                   <th>Gasto</th>
-                  <th>Impressões</th>
-                  <th>Alcance</th>
+                  <th>Mensagens</th>
+                  <th>Compras</th>
+                  <th>Valor</th>
+                  <th>ROAS</th>
                   <th>CTR</th>
                   <th>CPC</th>
                 </tr>
@@ -460,14 +469,14 @@
                   <th>Data</th>
                   <th>Período</th>
                   <th>Gasto</th>
-                  <th>Impressões</th>
-                  <th>Cliques</th>
-                  <th>Alcance</th>
+                  <th>Mensagens</th>
+                  <th>Compras</th>
+                  <th>Receita</th>
+                  <th>ROAS</th>
                   <th>CTR</th>
                   <th>CPC</th>
                   <th>CPM</th>
                   <th>Frequência</th>
-                  <th>ROAS</th>
                   <th>Score</th>
                 </tr>
               </thead>
@@ -476,6 +485,32 @@
               </tbody>
             </table>
           </div>
+        </div>
+      </section>
+
+      <!-- Auditoria Técnica V2 -->
+      <section id="tab-audit" class="tab-section hidden">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Deep Audit V2</div>
+            <h1 class="page-title">Auditoria Técnica</h1>
+          </div>
+        </div>
+        <div id="auditContent">
+          <div class="card empty">Rode uma análise para visualizar a auditoria técnica.</div>
+        </div>
+      </section>
+
+      <!-- Benchmarks V2 -->
+      <section id="tab-benchmarks" class="tab-section hidden">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Market Comparison</div>
+            <h1 class="page-title">Benchmarks de Mercado</h1>
+          </div>
+        </div>
+        <div id="benchmarksContent">
+          <div class="card empty">Rode uma análise para visualizar os benchmarks do seu nicho.</div>
         </div>
       </section>
     </main>
