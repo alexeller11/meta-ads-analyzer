@@ -2,498 +2,127 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meta Ads Analyzer - V2 Profunda</title>
-  <link rel="stylesheet" href="/styles/main.css">
+  <title>Meta Ads Analyzer</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
-  <div class="app">
-    <aside class="sidebar">
-      <div class="sidebar-head">
-        <div class="logo">
-          <div class="logo-icon">M</div>
-          <div class="logo-text">Meta Ads Analyzer</div>
-        </div>
-      </div>
 
-      <div class="sidebar-nav">
-        <div class="nav-block">
-          <div class="nav-title">Configuração</div>
-          <div class="field">
-            <label>Conta de Anúncios</label>
-            <select id="accountSel">
-              <option value="">Selecione uma conta...</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Nicho</label>
-            <select id="nicheSel">
-              <option value="Geral">Geral</option>
-              <option value="E-commerce">E-commerce</option>
-              <option value="Infoprodutos">Infoprodutos</option>
-              <option value="Negócio Local">Negócio Local</option>
-              <option value="SaaS">SaaS</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Período</label>
-            <select id="dateSel">
-              <option value="today">Hoje</option>
-              <option value="yesterday">Ontem</option>
-              <option value="last_3d">Últimos 3 dias</option>
-              <option value="last_7d">Últimos 7 dias</option>
-              <option value="last_14d">Últimos 14 dias</option>
-              <option value="last_30d" selected>Últimos 30 dias</option>
-              <option value="this_month">Este mês</option>
-              <option value="last_month">Mês passado</option>
-              <option value="custom">Personalizado</option>
-            </select>
-          </div>
-          <div id="customDates" class="field hidden">
-            <div class="grid">
-              <div>
-                <label>Desde</label>
-                <input type="date" id="sinceDate">
-              </div>
-              <div>
-                <label>Até</label>
-                <input type="date" id="untilDate">
-              </div>
-            </div>
-          </div>
-          <button id="runBtn" class="btn primary full">Rodar Auditoria V2</button>
-        </div>
+<div id="globalError" class="hidden error"></div>
+<div id="globalOk" class="hidden success"></div>
 
-        <div class="nav-block">
-          <div class="nav-title">Visão Geral</div>
-          <button class="nav-btn active" data-tab="dashboard">Dashboard</button>
-          <button class="nav-btn" data-tab="analysis">Insights IA</button>
-          <button class="nav-btn" data-tab="decision">Central de Decisão</button>
-          <button class="nav-btn" data-tab="campaigns">Campanhas</button>
-        </div>
+<header>
+  <h1>Meta Ads Analyzer</h1>
+</header>
 
-        <div class="nav-block">
-          <div class="nav-title">Análise</div>
-          <button class="nav-btn" data-tab="creatives">Criativos</button>
-          <button class="nav-btn" data-tab="breakdown">Breakdown</button>
-          <button class="nav-btn" data-tab="trend">Tendência</button>
-          <button class="nav-btn" data-tab="history">Métricas Diárias</button>
-        </div>
+<section class="controls">
+  <select id="accountSel"></select>
 
-        <div class="nav-block">
-          <div class="nav-title">V2 - Inteligência</div>
-          <button class="nav-btn" data-tab="audit">Auditoria Técnica</button>
-          <button class="nav-btn" data-tab="lp">Auditoria Landing Page</button>
-          <button class="nav-btn" data-tab="benchmarks">Benchmarks</button>
-        </div>
-      </div>
-    </aside>
+  <select id="dateSel">
+    <option value="last_7d">Últimos 7 dias</option>
+    <option value="last_30d" selected>Últimos 30 dias</option>
+  </select>
 
-    <main class="main">
-      <div id="globalError" class="error-box hidden"></div>
-      <div id="globalOk" class="ok-box hidden"></div>
+  <button id="runBtn">Rodar Análise</button>
+</section>
 
-      <section id="tab-dashboard" class="tab-section">
-        <div class="page-head">
-          <div>
-            <div class="eyebrow">Visão geral da conta</div>
-            <h1 class="page-title" id="accountName">Dashboard Principal</h1>
-          </div>
-          <div class="actions">
-            <button id="exportBtn" class="btn secondary">Exportar Relatório</button>
-          </div>
-        </div>
+<!-- =================== VISÃO GERAL =================== -->
+<section>
+  <h2>Visão Geral</h2>
+  <div class="grid">
+    <div>Investimento: <span id="mSpend"></span></div>
+    <div>Receita: <span id="mRevenue"></span></div>
+    <div>ROAS: <span id="mRoas"></span></div>
+    <div>Custo/Venda: <span id="mCostPerPurchase"></span></div>
 
-        <div class="section">
-          <div class="section-head">
-            <h2 class="section-title no-margin">Faturamento e Investimento</h2>
-          </div>
+    <div>Impressões: <span id="mImpressions"></span></div>
+    <div>Alcance: <span id="mReach"></span></div>
+    <div>Frequência: <span id="mFrequency"></span></div>
+    <div>CPM: <span id="mCpm"></span></div>
 
-          <div class="grid">
-            <div class="metric-card">
-              <div class="metric-label">Investimento</div>
-              <div class="metric-value" id="mSpend">R$ 0,00</div>
-              <div class="metric-sub">Total gasto no período</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Receita</div>
-              <div class="metric-value" id="mRevenue">R$ 0,00</div>
-              <div class="metric-sub">Valor total de conversão</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">ROAS</div>
-              <div class="metric-value" id="mRoas">0.00x</div>
-              <div class="metric-sub">Retorno sobre investimento</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Custo por Venda</div>
-              <div class="metric-value" id="mCostPerPurchase">R$ 0,00</div>
-              <div class="metric-sub">CPA de compra</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-head">
-            <h2 class="section-title no-margin">Entrega e Alcance</h2>
-          </div>
-
-          <div class="grid">
-            <div class="metric-card">
-              <div class="metric-label">Impressões</div>
-              <div class="metric-value" id="mImpressions">0</div>
-              <div class="metric-sub">Volume total de exibição</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Alcance</div>
-              <div class="metric-value" id="mReach">0</div>
-              <div class="metric-sub">Pessoas alcançadas</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Frequência</div>
-              <div class="metric-value" id="mFrequency">0.00</div>
-              <div class="metric-sub">Média por pessoa</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">CPM</div>
-              <div class="metric-value" id="mCpm">R$ 0,00</div>
-              <div class="metric-sub">Custo por mil impressões</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-head">
-            <h2 class="section-title no-margin">Tráfego e Conversão</h2>
-          </div>
-
-          <div class="grid5">
-            <div class="metric-card">
-              <div class="metric-label">CTR</div>
-              <div class="metric-value" id="mCtr">0.00%</div>
-              <div class="metric-sub">Taxa de clique</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">CPC</div>
-              <div class="metric-value" id="mCpc">R$ 0,00</div>
-              <div class="metric-sub">Custo por clique</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Connect Rate</div>
-              <div class="metric-value" id="mConnectRate">0.00%</div>
-              <div class="metric-sub">Landing page views por clique</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Mensagens</div>
-              <div class="metric-value" id="mMessages">0</div>
-              <div class="metric-sub">Conversas iniciadas</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Compras</div>
-              <div class="metric-value" id="mPurchases">0</div>
-              <div class="metric-sub">Conversões de compra</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-head">
-            <h2 class="section-title no-margin">Comparação com período anterior</h2>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Métrica</th>
-                  <th>Atual</th>
-                  <th>Anterior</th>
-                  <th>Variação</th>
-                </tr>
-              </thead>
-              <tbody id="comparisonBody">
-                <tr><td colspan="4" class="empty">Ative a comparação para visualizar.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-analysis" class="tab-section hidden">
-        <div class="page-head">
-          <div>
-            <div class="eyebrow">Leitura estratégica</div>
-            <h1 class="page-title">Insights IA</h1>
-          </div>
-        </div>
-
-        <div class="card">
-          <div id="analysisList" class="stack">
-            <div class="empty">Rode uma análise para ver os insights.</div>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-decision" class="tab-section hidden">
-        <div class="page-head">
-          <div>
-            <div class="eyebrow">Ação prática</div>
-            <h1 class="page-title">Central de Decisão</h1>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="section-head">
-            <h2 class="section-title no-margin">Decisões por campanha</h2>
-            <div class="filters" id="decisionFilters">
-              <button class="filter-btn active" data-filter="TODAS">Todas</button>
-              <button class="filter-btn" data-filter="ATIVA">Ativa</button>
-              <button class="filter-btn" data-filter="PAUSADA">Pausada</button>
-              <button class="filter-btn" data-filter="CONCLUIDA">Concluída</button>
-              <button class="filter-btn" data-filter="RODANDO">Rodando</button>
-            </div>
-          </div>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Campanha</th>
-                  <th>Status</th>
-                  <th>Ação</th>
-                  <th>Motivo</th>
-                  <th>Gasto</th>
-                  <th>ROAS</th>
-                </tr>
-              </thead>
-              <tbody id="decisionBody">
-                <tr><td colspan="6" class="empty">Rode uma análise para ver decisões.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-campaigns" class="tab-section hidden">
-        <div class="page-head">
-          <div>
-            <div class="eyebrow">Visão operacional</div>
-            <h1 class="page-title">Campanhas</h1>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="section-head">
-            <h2 class="section-title no-margin">Lista de campanhas</h2>
-            <div class="filters" id="campaignFilters">
-              <button class="filter-btn active" data-filter="TODAS">Todas</button>
-              <button class="filter-btn" data-filter="ATIVA">Ativa</button>
-              <button class="filter-btn" data-filter="PAUSADA">Pausada</button>
-              <button class="filter-btn" data-filter="CONCLUIDA">Concluída</button>
-              <button class="filter-btn" data-filter="RODANDO">Rodando</button>
-            </div>
-          </div>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Campanha</th>
-                  <th>Status</th>
-                  <th>Gasto</th>
-                  <th>Mensagens</th>
-                  <th>Compras</th>
-                  <th>Receita</th>
-                  <th>ROAS</th>
-                  <th>CTR</th>
-                  <th>Hook Rate</th>
-                  <th>Hold Rate</th>
-                  <th>Connect Rate</th>
-                </tr>
-              </thead>
-              <tbody id="campaignsBody">
-                <tr><td colspan="11" class="empty">Rode uma análise para ver campanhas.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-creatives" class="tab-section hidden">
-        <div class="page-head">
-          <div>
-            <div class="eyebrow">Análise visual</div>
-            <h1 class="page-title">Criativos</h1>
-          </div>
-        </div>
-
-        <div class="filters-bar">
-          <div class="filters" id="creativeFilters">
-            <button class="filter-btn active" data-filter="RECENTE">Mais recentes</button>
-            <button class="filter-btn" data-filter="CAMPEAO">Campeões de ROAS</button>
-            <button class="filter-btn" data-filter="MENSAGENS">Mais Mensagens</button>
-            <button class="filter-btn" data-filter="COMPRAS">Mais Compras</button>
-          </div>
-        </div>
-
-        <div id="creativesGrid" class="creative-grid">
-          <div class="empty full-span">Rode uma análise para ver os criativos.</div>
-        </div>
-      </section>
-
-      <section id="tab-breakdown" class="tab-section hidden">
-        <div class="page-head">
-          <div>
-            <div class="eyebrow">Detalhamento de dados</div>
-            <h1 class="page-title">Breakdown</h1>
-          </div>
-        </div>
-
-        <div class="filters-bar">
-          <select id="breakdownType">
-            <option value="platform">Plataforma</option>
-            <option value="position">Posicionamento</option>
-            <option value="gender">Gênero</option>
-            <option value="age">Idade</option>
-            <option value="region">Região</option>
-          </select>
-        </div>
-
-        <div class="card">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Segmento</th>
-                  <th>Gasto</th>
-                  <th>Mensagens</th>
-                  <th>Compras</th>
-                  <th>Receita</th>
-                  <th>ROAS</th>
-                  <th>CTR</th>
-                  <th>CPM</th>
-                </tr>
-              </thead>
-              <tbody id="breakdownBody">
-                <tr><td colspan="8" class="empty">Selecione uma conta para ver o breakdown.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-trend" class="tab-section hidden">
-        <div class="page-head">
-          <div>
-            <div class="eyebrow">Evolução temporal</div>
-            <h1 class="page-title">Tendência</h1>
-          </div>
-        </div>
-
-        <div class="card">
-          <div id="trendChart" class="chart-container"></div>
-          <div id="trendFallback" class="empty hidden">Sem histórico suficiente para montar tendência.</div>
-        </div>
-      </section>
-
-      <section id="tab-history" class="tab-section hidden">
-        <div class="page-head">
-          <div>
-            <div class="eyebrow">Histórico salvo</div>
-            <h1 class="page-title">Métricas Diárias</h1>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Período</th>
-                  <th>Gasto</th>
-                  <th>Mensagens</th>
-                  <th>Compras</th>
-                  <th>Receita</th>
-                  <th>ROAS</th>
-                  <th>CTR</th>
-                  <th>CPC</th>
-                  <th>CPM</th>
-                  <th>Frequência</th>
-                  <th>Score</th>
-                </tr>
-              </thead>
-              <tbody id="historyBody">
-                <tr><td colspan="12" class="empty">Rode uma análise para popular o histórico.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- Auditoria Técnica V2 -->
-      <section id="tab-audit" class="tab-section hidden">
-        <div class="page-head">
-          <div>
-            <div class="eyebrow">Deep Audit V2</div>
-            <h1 class="page-title">Auditoria Técnica</h1>
-          </div>
-        </div>
-        
-        <div id="auditSummaryContent"></div>
-
-        <div class="grid" style="margin-top: 20px;">
-          <div class="card">
-            <div class="card-head"><h3 class="card-title">Furos no Funil</h3></div>
-            <div id="funnelLeakContent" class="rec-list">
-              <div class="empty">Rode uma análise para detectar furos no funil.</div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-head"><h3 class="card-title">Escala Preditiva</h3></div>
-            <div id="scaleProContent" class="rec-list">
-              <div class="empty">Rode uma análise para ver o potencial de escala.</div>
-            </div>
-          </div>
-        </div>
-
-        <div id="auditAlertsContent" style="margin-top: 20px;">
-          <div class="card">
-            <div class="card-head"><h3 class="card-title">Checklist de Auditoria Crítica</h3></div>
-            <div class="rec-list">
-              <div class="empty">Nenhum alerta crítico encontrado.</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Auditoria Landing Page V2 -->
-      <section id="tab-lp" class="tab-section hidden">
-        <div class="page-head">
-          <div>
-            <div class="eyebrow">Funnel Optimization</div>
-            <h1 class="page-title">Auditoria Landing Page</h1>
-          </div>
-        </div>
-        <div id="lpContent">
-          <div class="card empty">Rode uma análise para visualizar a auditoria da landing page.</div>
-        </div>
-      </section>
-
-      <!-- Benchmarks V2 -->
-      <section id="tab-benchmarks" class="tab-section hidden">
-        <div class="page-head">
-          <div>
-            <div class="eyebrow">Market Comparison</div>
-            <h1 class="page-title">Benchmarks de Mercado</h1>
-          </div>
-        </div>
-        <div id="benchmarksContent">
-          <div class="card empty">Rode uma análise para visualizar os benchmarks do seu nicho.</div>
-        </div>
-      </section>
-    </main>
+    <div>CTR: <span id="mCtr"></span></div>
+    <div>CPC: <span id="mCpc"></span></div>
+    <div>Connect Rate: <span id="mConnectRate"></span></div>
+    <div>Mensagens: <span id="mMessages"></span></div>
+    <div>Compras: <span id="mPurchases"></span></div>
   </div>
+</section>
 
-  <script src="/scripts/dashboard.js"></script>
+<!-- =================== CAMPANHAS =================== -->
+<section>
+  <h2>Campanhas</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Status</th>
+        <th>Gasto</th>
+        <th>Mensagens</th>
+        <th>Compras</th>
+        <th>Receita</th>
+        <th>ROAS</th>
+        <th>CTR</th>
+        <th>Connect</th>
+      </tr>
+    </thead>
+    <tbody id="campaignBody"></tbody>
+  </table>
+</section>
+
+<!-- =================== BREAKDOWN =================== -->
+<section>
+  <h2>Breakdown</h2>
+
+  <select id="breakdownType">
+    <option value="platform">Plataforma</option>
+    <option value="device">Dispositivo</option>
+    <option value="gender">Sexo</option>
+    <option value="age">Idade</option>
+  </select>
+
+  <button onclick="loadBreakdown()">Carregar</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Segmento</th>
+        <th>Gasto</th>
+        <th>Mensagens</th>
+        <th>Compras</th>
+        <th>Receita</th>
+        <th>ROAS</th>
+        <th>CTR</th>
+        <th>CPM</th>
+      </tr>
+    </thead>
+    <tbody id="breakdownBody"></tbody>
+  </table>
+</section>
+
+<!-- =================== HISTÓRICO =================== -->
+<section>
+  <h2>Métricas Diárias</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Investimento</th>
+        <th>Mensagens</th>
+        <th>Compras</th>
+        <th>Receita</th>
+        <th>ROAS</th>
+        <th>CTR</th>
+        <th>CPC</th>
+        <th>CPM</th>
+        <th>Freq</th>
+        <th>Score</th>
+      </tr>
+    </thead>
+    <tbody id="historyBody"></tbody>
+  </table>
+</section>
+
+<script src="scripts/dashboard.js"></script>
 </body>
 </html>
