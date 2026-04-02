@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meta Ads Analyzer</title>
   <link rel="stylesheet" href="/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -36,7 +37,16 @@
           <option value="last_7d">Últimos 7 dias</option>
           <option value="last_30d" selected>Últimos 30 dias</option>
           <option value="last_90d">Últimos 90 dias</option>
+          <option value="custom">Personalizado</option>
         </select>
+      </div>
+
+      <div class="field hidden" id="customDates">
+        <label>Datas</label>
+        <div class="inline-controls">
+          <input type="date" id="sinceDate">
+          <input type="date" id="untilDate">
+        </div>
       </div>
 
       <div class="field action-field">
@@ -45,110 +55,184 @@
       </div>
     </section>
 
-    <section class="card">
-      <h2>Visão Geral</h2>
-      <div class="grid metrics-grid">
-        <div class="metric"><span>Investimento</span><strong id="mSpend">R$ 0,00</strong></div>
-        <div class="metric"><span>Receita</span><strong id="mRevenue">R$ 0,00</strong></div>
-        <div class="metric"><span>ROAS</span><strong id="mRoas">0.00x</strong></div>
-        <div class="metric"><span>Custo por venda</span><strong id="mCostPerPurchase">R$ 0,00</strong></div>
+    <nav class="tabs card">
+      <button class="tab-btn active" data-tab="overview">Visão Geral</button>
+      <button class="tab-btn" data-tab="decision">Central de Decisão</button>
+      <button class="tab-btn" data-tab="campaigns">Campanhas</button>
+      <button class="tab-btn" data-tab="creatives">Criativos</button>
+      <button class="tab-btn" data-tab="breakdown">Breakdown</button>
+      <button class="tab-btn" data-tab="trend">Tendência</button>
+      <button class="tab-btn" data-tab="history">Métricas Diárias</button>
+    </nav>
 
-        <div class="metric"><span>Impressões</span><strong id="mImpressions">0</strong></div>
-        <div class="metric"><span>Alcance</span><strong id="mReach">0</strong></div>
-        <div class="metric"><span>Frequência</span><strong id="mFrequency">0.00</strong></div>
-        <div class="metric"><span>CPM</span><strong id="mCpm">R$ 0,00</strong></div>
-
-        <div class="metric"><span>CTR</span><strong id="mCtr">0.00%</strong></div>
-        <div class="metric"><span>CPC</span><strong id="mCpc">R$ 0,00</strong></div>
-        <div class="metric"><span>Connect Rate</span><strong id="mConnectRate">0.00%</strong></div>
-        <div class="metric"><span>Mensagens</span><strong id="mMessages">0</strong></div>
-        <div class="metric"><span>Compras</span><strong id="mPurchases">0</strong></div>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Campanhas</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Status</th>
-              <th>Gasto</th>
-              <th>Mensagens</th>
-              <th>Compras</th>
-              <th>Receita</th>
-              <th>ROAS</th>
-              <th>CTR</th>
-              <th>Connect</th>
-            </tr>
-          </thead>
-          <tbody id="campaignBody">
-            <tr><td colspan="9" class="empty">Rode uma análise para visualizar.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Breakdown</h2>
-        <div class="inline-controls">
-          <select id="breakdownType">
-            <option value="platform">Plataforma</option>
-            <option value="device">Dispositivo</option>
-            <option value="gender">Sexo</option>
-            <option value="age">Idade</option>
-          </select>
-          <button id="breakdownBtn" type="button">Carregar</button>
+    <section id="tab-overview" class="tab-panel">
+      <section class="card">
+        <h2>Visão Geral</h2>
+        <div class="grid metrics-grid">
+          <div class="metric"><span>Investimento</span><strong id="mSpend">R$ 0,00</strong></div>
+          <div class="metric"><span>Receita</span><strong id="mRevenue">R$ 0,00</strong></div>
+          <div class="metric"><span>ROAS</span><strong id="mRoas">0.00x</strong></div>
+          <div class="metric"><span>Custo por venda</span><strong id="mCostPerPurchase">R$ 0,00</strong></div>
+          <div class="metric"><span>Impressões</span><strong id="mImpressions">0</strong></div>
+          <div class="metric"><span>Alcance</span><strong id="mReach">0</strong></div>
+          <div class="metric"><span>Frequência</span><strong id="mFrequency">0.00</strong></div>
+          <div class="metric"><span>CPM</span><strong id="mCpm">R$ 0,00</strong></div>
+          <div class="metric"><span>CTR</span><strong id="mCtr">0.00%</strong></div>
+          <div class="metric"><span>CPC</span><strong id="mCpc">R$ 0,00</strong></div>
+          <div class="metric"><span>Connect Rate</span><strong id="mConnectRate">0.00%</strong></div>
+          <div class="metric"><span>Mensagens</span><strong id="mMessages">0</strong></div>
+          <div class="metric"><span>Compras</span><strong id="mPurchases">0</strong></div>
         </div>
-      </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Segmento</th>
-              <th>Gasto</th>
-              <th>Mensagens</th>
-              <th>Compras</th>
-              <th>Receita</th>
-              <th>ROAS</th>
-              <th>CTR</th>
-              <th>CPM</th>
-            </tr>
-          </thead>
-          <tbody id="breakdownBody">
-            <tr><td colspan="8" class="empty">Selecione uma conta e clique em carregar.</td></tr>
-          </tbody>
-        </table>
-      </div>
+      </section>
     </section>
 
-    <section class="card">
-      <h2>Métricas Diárias</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Investimento</th>
-              <th>Mensagens</th>
-              <th>Compras</th>
-              <th>Receita</th>
-              <th>ROAS</th>
-              <th>CTR</th>
-              <th>CPC</th>
-              <th>CPM</th>
-              <th>Freq</th>
-              <th>Score</th>
-            </tr>
-          </thead>
-          <tbody id="historyBody">
-            <tr><td colspan="11" class="empty">Rode uma análise para popular o histórico.</td></tr>
-          </tbody>
-        </table>
-      </div>
+    <section id="tab-decision" class="tab-panel hidden">
+      <section class="card">
+        <h2>Central de Decisão</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Campanha</th>
+                <th>Status</th>
+                <th>Ação</th>
+                <th>Motivo</th>
+                <th>Gasto</th>
+                <th>ROAS</th>
+                <th>Connect</th>
+              </tr>
+            </thead>
+            <tbody id="decisionBody">
+              <tr><td colspan="7" class="empty">Rode uma análise para visualizar.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="tab-campaigns" class="tab-panel hidden">
+      <section class="card">
+        <h2>Campanhas</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Status</th>
+                <th>Gasto</th>
+                <th>Mensagens</th>
+                <th>Compras</th>
+                <th>Receita</th>
+                <th>ROAS</th>
+                <th>CTR</th>
+                <th>Connect</th>
+              </tr>
+            </thead>
+            <tbody id="campaignBody">
+              <tr><td colspan="9" class="empty">Rode uma análise para visualizar.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="tab-creatives" class="tab-panel hidden">
+      <section class="card">
+        <div class="section-head">
+          <h2>Criativos</h2>
+          <div class="inline-controls">
+            <select id="creativeSort">
+              <option value="champion">Criativo campeão</option>
+              <option value="messages">Mais mensagens</option>
+              <option value="purchases">Mais compras</option>
+            </select>
+            <button id="creativeBtn" type="button">Carregar</button>
+          </div>
+        </div>
+        <div id="creativesGrid" class="creatives-grid">
+          <div class="empty-card">Selecione uma conta e carregue os criativos.</div>
+        </div>
+      </section>
+    </section>
+
+    <section id="tab-breakdown" class="tab-panel hidden">
+      <section class="card">
+        <div class="section-head">
+          <h2>Breakdown</h2>
+          <div class="inline-controls">
+            <select id="breakdownType">
+              <option value="platform">Plataforma</option>
+              <option value="device">Dispositivo</option>
+              <option value="gender">Sexo</option>
+              <option value="age">Idade</option>
+              <option value="region">Região</option>
+              <option value="city">Cidade</option>
+            </select>
+            <button id="breakdownBtn" type="button">Carregar</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Segmento</th>
+                <th>Gasto</th>
+                <th>Mensagens</th>
+                <th>Conversões</th>
+                <th>Valor de Compras</th>
+                <th>ROAS</th>
+                <th>CTR</th>
+                <th>CPM</th>
+              </tr>
+            </thead>
+            <tbody id="breakdownBody">
+              <tr><td colspan="8" class="empty">Selecione uma conta e clique em carregar.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="tab-trend" class="tab-panel hidden">
+      <section class="card">
+        <h2>Tendência</h2>
+        <div class="chart-box">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </section>
+    </section>
+
+    <section id="tab-history" class="tab-panel hidden">
+      <section class="card">
+        <h2>Métricas Diárias</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Investimento</th>
+                <th>Receita</th>
+                <th>ROAS</th>
+                <th>Custo/Venda</th>
+                <th>Impressões</th>
+                <th>Alcance</th>
+                <th>Frequência</th>
+                <th>CPM</th>
+                <th>CTR</th>
+                <th>CPC</th>
+                <th>Connect</th>
+                <th>Mensagens</th>
+                <th>Compras</th>
+                <th>Score</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr><td colspan="15" class="empty">Rode uma análise para popular o histórico.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </section>
   </div>
 
