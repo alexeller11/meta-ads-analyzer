@@ -6,7 +6,9 @@ const state = {
   campaigns: [],
   metrics: null,
   historyRows: [],
-  breakdownRows: []
+  breakdownRows: [],
+  creatives: [],
+  trendChart: null
 };
 
 const brMoney = (v) =>
@@ -72,6 +74,16 @@ function getActionValue(arr, typeList) {
   return 0;
 }
 
+function getDateQuery() {
+  const preset = document.getElementById("dateSel").value;
+  if (preset === "custom") {
+    const since = document.getElementById("sinceDate").value;
+    const until = document.getElementById("untilDate").value;
+    return `since=${encodeURIComponent(since)}&until=${encodeURIComponent(until)}`;
+  }
+  return `date_preset=${encodeURIComponent(preset)}`;
+}
+
 async function loadSession() {
   const me = await api("/api/me");
   if (!me.authenticated) {
@@ -98,11 +110,6 @@ async function loadAccounts() {
   const sel = document.getElementById("accountSel");
   sel.innerHTML = "";
 
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Selecione a conta";
-  sel.appendChild(placeholder);
-
   accounts.forEach((a) => {
     const opt = document.createElement("option");
     opt.value = a.account_id;
@@ -110,9 +117,9 @@ async function loadAccounts() {
     sel.appendChild(opt);
   });
 
-  sel.value = accounts[0].account_id;
   state.selectedAccountId = accounts[0].account_id;
   state.selectedAccount = accounts[0];
+  sel.value = accounts[0].account_id;
 
   sel.addEventListener("change", () => {
     state.selectedAccountId = sel.value;
@@ -130,12 +137,10 @@ function renderOverview() {
   document.getElementById("mRevenue").textContent = brMoney(m.totalRev);
   document.getElementById("mRoas").textContent = `${Number(m.roas || 0).toFixed(2)}x`;
   document.getElementById("mCostPerPurchase").textContent = brMoney(m.costPerPurchase);
-
   document.getElementById("mImpressions").textContent = brNum(m.totalImpressions);
   document.getElementById("mReach").textContent = brNum(m.totalReach);
   document.getElementById("mFrequency").textContent = Number(m.avgFrequency || 0).toFixed(2);
   document.getElementById("mCpm").textContent = brMoney(m.avgCpm);
-
   document.getElementById("mCtr").textContent = brPct(m.avgCtr);
   document.getElementById("mCpc").textContent = brMoney(m.avgCpc);
   document.getElementById("mConnectRate").textContent = brPct(m.connectRate);
@@ -152,19 +157,49 @@ function renderCampaigns() {
     return;
   }
 
-  body.innerHTML = state.campaigns.map((c) => `
-    <tr>
-      <td>${c.name || "-"}</td>
-      <td>${c.status || "-"}</td>
-      <td>${brMoney(c.spend)}</td>
-      <td>${brNum(c.messages)}</td>
-      <td>${brNum(c.purchases)}</td>
-      <td>${brMoney(c.revenue)}</td>
-      <td>${Number(c.roas || 0).toFixed(2)}x</td>
-      <td>${brPct(c.ctr)}</td>
-      <td>${brPct(c.connectRate)}</td>
-    </tr>
-  `).join("");
+  body.innerHTML = state.campaigns
+    .map(
+      (c) => `
+      <tr>
+        <td>${c.name || "-"}</td>
+        <td>${c.lifecycleStatus || c.status || "-"}</td>
+        <td>${brMoney(c.spend)}</td>
+        <td>${brNum(c.messages)}</td>
+        <td>${brNum(c.purchases)}</td>
+        <td>${brMoney(c.revenue)}</td>
+        <td>${Number(c.roas || 0).toFixed(2)}x</td>
+        <td>${brPct(c.ctr)}</td>
+        <td>${brPct(c.connectRate)}</td>
+      </tr>
+    `
+    )
+    .join("");
+}
+
+function renderDecision() {
+  const body = document.getElementById("decisionBody");
+  if (!body) return;
+
+  if (!state.campaigns.length) {
+    body.innerHTML = `<tr><td colspan="7" class="empty">Nenhuma decisão para exibir.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = state.campaigns
+    .map(
+      (c) => `
+      <tr>
+        <td>${c.name || "-"}</td>
+        <td>${c.lifecycleStatus || c.status || "-"}</td>
+        <td>${c.decision?.action || "MANTER"}</td>
+        <td>${c.decision?.reason || "-"}</td>
+        <td>${brMoney(c.spend)}</td>
+        <td>${Number(c.roas || 0).toFixed(2)}x</td>
+        <td>${brPct(c.connectRate)}</td>
+      </tr>
+    `
+    )
+    .join("");
 }
 
 async function loadBreakdown() {
@@ -178,7 +213,7 @@ async function loadBreakdown() {
 
   try {
     const type = document.getElementById("breakdownType").value;
-    const res = await api(`/api/adaccounts/${state.selectedAccountId}/breakdown/${type}`);
+    const res = await api(`/api/adaccounts/${state.selectedAccountId}/breakdown/${type}?${getDateQuery()}`);
     state.breakdownRows = Array.isArray(res?.data) ? res.data : [];
     renderBreakdown();
   } catch (error) {
@@ -196,52 +231,54 @@ function renderBreakdown() {
     return;
   }
 
-  body.innerHTML = state.breakdownRows.map((row) => {
-    const spend = Number(row.spend || 0);
+  body.innerHTML = state.breakdownRows
+    .map((row) => {
+      const spend = Number(row.spend || 0);
 
-    const revenue = getActionValue(row.action_values, [
-      "offsite_conversion.fb_pixel_purchase",
-      "purchase",
-      "omni_purchase"
-    ]);
+      const revenue = getActionValue(row.action_values, [
+        "offsite_conversion.fb_pixel_purchase",
+        "purchase",
+        "omni_purchase"
+      ]);
 
-    const purchases = getActionValue(row.actions, [
-      "offsite_conversion.fb_pixel_purchase",
-      "purchase",
-      "omni_purchase"
-    ]);
+      const purchases = getActionValue(row.actions, [
+        "offsite_conversion.fb_pixel_purchase",
+        "purchase",
+        "omni_purchase"
+      ]);
 
-    const messages = getActionValue(row.actions, [
-      "onsite_conversion.messaging_conversation_started_7d",
-      "onsite_conversion.messaging_first_reply",
-      "onsite_conversion.total_messaging_connection"
-    ]);
+      const messages = getActionValue(row.actions, [
+        "onsite_conversion.messaging_conversation_started_7d",
+        "onsite_conversion.messaging_first_reply",
+        "onsite_conversion.total_messaging_connection"
+      ]);
 
-    const roas = spend > 0 ? revenue / spend : 0;
+      const roas = spend > 0 ? revenue / spend : 0;
 
-    const label =
-      row.publisher_platform ||
-      row.device_platform ||
-      row.gender ||
-      row.age ||
-      row.region ||
-      row.city ||
-      row.platform_position ||
-      "N/A";
+      const label =
+        row.publisher_platform ||
+        row.device_platform ||
+        row.gender ||
+        row.age ||
+        row.region ||
+        row.city ||
+        row.platform_position ||
+        "N/A";
 
-    return `
-      <tr>
-        <td>${label}</td>
-        <td>${brMoney(spend)}</td>
-        <td>${brNum(messages)}</td>
-        <td>${brNum(purchases)}</td>
-        <td>${brMoney(revenue)}</td>
-        <td>${roas.toFixed(2)}x</td>
-        <td>${brPct(row.ctr)}</td>
-        <td>${brMoney(row.cpm)}</td>
-      </tr>
-    `;
-  }).join("");
+      return `
+        <tr>
+          <td>${label}</td>
+          <td>${brMoney(spend)}</td>
+          <td>${brNum(messages)}</td>
+          <td>${brNum(purchases)}</td>
+          <td>${brMoney(revenue)}</td>
+          <td>${roas.toFixed(2)}x</td>
+          <td>${brPct(row.ctr)}</td>
+          <td>${brMoney(row.cpm)}</td>
+        </tr>
+      `;
+    })
+    .join("");
 }
 
 async function loadHistory() {
@@ -255,25 +292,165 @@ function renderHistory() {
   if (!body) return;
 
   if (!state.historyRows.length) {
-    body.innerHTML = `<tr><td colspan="11" class="empty">Sem histórico salvo ainda.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="15" class="empty">Sem histórico salvo ainda.</td></tr>`;
     return;
   }
 
-  body.innerHTML = state.historyRows.map((r) => `
-    <tr>
-      <td>${new Date(r.created_at).toLocaleDateString("pt-BR")}</td>
-      <td>${brMoney(r.total_spend)}</td>
-      <td>${brNum(r.total_messages)}</td>
-      <td>${brNum(r.total_purchases)}</td>
-      <td>${brMoney(r.total_revenue)}</td>
-      <td>${Number(r.roas || 0).toFixed(2)}x</td>
-      <td>${brPct(r.avg_ctr)}</td>
-      <td>${brMoney(r.avg_cpc)}</td>
-      <td>${brMoney(r.avg_cpm)}</td>
-      <td>${Number(r.avg_frequency || 0).toFixed(2)}</td>
-      <td>${brNum(r.health_score)}</td>
-    </tr>
-  `).join("");
+  body.innerHTML = state.historyRows
+    .map(
+      (r) => `
+      <tr>
+        <td>${new Date(r.created_at).toLocaleDateString("pt-BR")}</td>
+        <td>${brMoney(r.total_spend)}</td>
+        <td>${brMoney(r.total_revenue)}</td>
+        <td>${Number(r.roas || 0).toFixed(2)}x</td>
+        <td>${brMoney(r.cost_per_purchase)}</td>
+        <td>${brNum(r.total_impressions)}</td>
+        <td>${brNum(r.total_reach)}</td>
+        <td>${Number(r.avg_frequency || 0).toFixed(2)}</td>
+        <td>${brMoney(r.avg_cpm)}</td>
+        <td>${brPct(r.avg_ctr)}</td>
+        <td>${brMoney(r.avg_cpc)}</td>
+        <td>${brPct(r.connect_rate)}</td>
+        <td>${brNum(r.total_messages)}</td>
+        <td>${brNum(r.total_purchases)}</td>
+        <td>${brNum(r.health_score)}</td>
+      </tr>
+    `
+    )
+    .join("");
+}
+
+async function loadCreatives() {
+  hideError();
+
+  if (!state.selectedAccountId) {
+    showError("Selecione uma conta antes de carregar criativos.");
+    return;
+  }
+
+  try {
+    const res = await api(`/api/adaccounts/${state.selectedAccountId}/creatives?${getDateQuery()}`);
+    state.creatives = Array.isArray(res?.data) ? res.data : [];
+    renderCreatives();
+  } catch (error) {
+    console.error(error);
+    showError(`Erro ao carregar criativos: ${error.message}`);
+  }
+}
+
+function creativeMetrics(item) {
+  const ins = item?.insights?.data?.[0] || {};
+  const spend = Number(ins.spend || 0);
+  const revenue = getActionValue(ins.action_values, [
+    "offsite_conversion.fb_pixel_purchase",
+    "purchase",
+    "omni_purchase"
+  ]);
+  const purchases = getActionValue(ins.actions, [
+    "offsite_conversion.fb_pixel_purchase",
+    "purchase",
+    "omni_purchase"
+  ]);
+  const messages = getActionValue(ins.actions, [
+    "onsite_conversion.messaging_conversation_started_7d",
+    "onsite_conversion.messaging_first_reply",
+    "onsite_conversion.total_messaging_connection"
+  ]);
+  const roas = spend > 0 ? revenue / spend : 0;
+  return {
+    spend,
+    revenue,
+    purchases,
+    messages,
+    roas,
+    ctr: Number(ins.ctr || 0)
+  };
+}
+
+function renderCreatives() {
+  const grid = document.getElementById("creativesGrid");
+  if (!grid) return;
+
+  if (!state.creatives.length) {
+    grid.innerHTML = `<div class="empty-card">Nenhum criativo encontrado.</div>`;
+    return;
+  }
+
+  const sort = document.getElementById("creativeSort").value;
+  const list = [...state.creatives];
+
+  list.sort((a, b) => {
+    const ma = creativeMetrics(a);
+    const mb = creativeMetrics(b);
+    if (sort === "messages") return mb.messages - ma.messages;
+    if (sort === "purchases") return mb.purchases - ma.purchases;
+    return mb.roas - ma.roas;
+  });
+
+  grid.innerHTML = list
+    .map((item, index) => {
+      const m = creativeMetrics(item);
+      const image =
+        item?.creative?.image_url ||
+        item?.creative?.thumbnail_url ||
+        "";
+
+      return `
+        <div class="creative-card">
+          ${image ? `<img src="${image}" alt="Criativo">` : `<div class="creative-image-placeholder">Sem imagem</div>`}
+          <div class="creative-info">
+            <div class="creative-title">${item.name || "Criativo sem nome"}</div>
+            <div class="creative-line">Gasto: ${brMoney(m.spend)}</div>
+            <div class="creative-line">Receita: ${brMoney(m.revenue)}</div>
+            <div class="creative-line">ROAS: ${m.roas.toFixed(2)}x</div>
+            <div class="creative-line">CTR: ${brPct(m.ctr)}</div>
+            <div class="creative-line">Mensagens: ${brNum(m.messages)}</div>
+            <div class="creative-line">Compras: ${brNum(m.purchases)}</div>
+            ${sort === "champion" && index === 0 ? `<div class="creative-badge">Criativo campeão</div>` : ""}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderTrend() {
+  const canvas = document.getElementById("trendChart");
+  if (!canvas) return;
+
+  if (state.trendChart) {
+    state.trendChart.destroy();
+    state.trendChart = null;
+  }
+
+  const rows = [...state.historyRows].reverse();
+  if (!rows.length) return;
+
+  state.trendChart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: rows.map((r) => new Date(r.created_at).toLocaleDateString("pt-BR")),
+      datasets: [
+        {
+          label: "ROAS",
+          data: rows.map((r) => Number(r.roas || 0))
+        },
+        {
+          label: "Investimento",
+          data: rows.map((r) => Number(r.total_spend || 0))
+        },
+        {
+          label: "Score",
+          data: rows.map((r) => Number(r.health_score || 0))
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
 }
 
 async function runAnalysis() {
@@ -290,10 +467,8 @@ async function runAnalysis() {
   runBtn.textContent = "Analisando...";
 
   try {
-    const date_preset = document.getElementById("dateSel").value;
-
     const campaigns = await api(`/api/adaccounts/${state.selectedAccountId}/campaigns`);
-    const insights = await api(`/api/adaccounts/${state.selectedAccountId}/insights?date_preset=${date_preset}`);
+    const insights = await api(`/api/adaccounts/${state.selectedAccountId}/insights?${getDateQuery()}`);
 
     const res = await api("/api/analyze", {
       method: "POST",
@@ -302,7 +477,7 @@ async function runAnalysis() {
         accountData: state.selectedAccount,
         campaigns: campaigns.data || [],
         insights,
-        dateRange: JSON.stringify({ type: "preset", date_preset })
+        dateRange: getDateQuery()
       })
     });
 
@@ -313,7 +488,9 @@ async function runAnalysis() {
 
     renderOverview();
     renderCampaigns();
+    renderDecision();
     renderHistory();
+    renderTrend();
 
     showOk("Análise concluída com sucesso.");
   } catch (error) {
@@ -325,6 +502,18 @@ async function runAnalysis() {
   }
 }
 
+function bindTabs() {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.add("hidden"));
+
+      btn.classList.add("active");
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.remove("hidden");
+    });
+  });
+}
+
 async function init() {
   try {
     const ok = await loadSession();
@@ -332,8 +521,17 @@ async function init() {
 
     await loadAccounts();
 
+    bindTabs();
+
     document.getElementById("runBtn").addEventListener("click", runAnalysis);
     document.getElementById("breakdownBtn").addEventListener("click", loadBreakdown);
+    document.getElementById("creativeBtn").addEventListener("click", loadCreatives);
+    document.getElementById("creativeSort").addEventListener("change", renderCreatives);
+
+    document.getElementById("dateSel").addEventListener("change", () => {
+      const custom = document.getElementById("dateSel").value === "custom";
+      document.getElementById("customDates").classList.toggle("hidden", !custom);
+    });
   } catch (error) {
     console.error(error);
     showError(`Erro ao iniciar dashboard: ${error.message}`);
