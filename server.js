@@ -8,9 +8,6 @@ const benchmarks = require("./benchmarks");
 const nodemailer = require("nodemailer");
 const { OpenAI } = require("openai");
 const decisionEngine = require("./decision-engine-v2");
-const decisionEngineV2 = require("./decision-engine-v2");
-const benchmarksV2 = require("./benchmarks-v2");
-const landingPageAudit = require("./landing-page-audit");
 
 const app = express();
 
@@ -19,16 +16,18 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-app.use(session({
-  secret: process.env.SESSION_SECRET || "meta-analyzer-ultra-v9",
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 24 * 60 * 60 * 1000,
-    sameSite: "lax"
-  }
-}));
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "meta-analyzer-ultra-v9",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60 * 1000,
+      sameSite: "lax"
+    }
+  })
+);
 
 const FB_APP_ID = process.env.FB_APP_ID;
 const FB_APP_SECRET = process.env.FB_APP_SECRET;
@@ -70,7 +69,7 @@ function auth(req, res, next) {
 
 function getAct(arr, type) {
   if (!Array.isArray(arr) || !type) return 0;
-  const found = arr.find(x => x && x.action_type === type);
+  const found = arr.find((x) => x && x.action_type === type);
   const val = parseFloat(found?.value || 0);
   return Number.isFinite(val) ? Math.max(0, val) : 0;
 }
@@ -86,12 +85,23 @@ function getActMulti(arr, types) {
 
 function getMetrics(dataRows) {
   const rows = Array.isArray(dataRows) ? dataRows : [];
-  let tSpend = 0, tImpr = 0, tClicks = 0, tPur = 0, tLds = 0, tMsg = 0;
-  let tSess = 0, tRev = 0, tReach = 0, tFreq = 0, tAddCart = 0, tInitiateCheckout = 0;
-  let tCalls = 0, tVideoViews = 0;
+  let tSpend = 0,
+    tImpr = 0,
+    tClicks = 0,
+    tPur = 0,
+    tLds = 0,
+    tMsg = 0;
+  let tSess = 0,
+    tRev = 0,
+    tReach = 0,
+    tFreq = 0,
+    tAddCart = 0,
+    tInitiateCheckout = 0;
+  let tCalls = 0,
+    tVideoViews = 0;
   const byId = {};
 
-  rows.forEach(m => {
+  rows.forEach((m) => {
     const sp = Math.max(0, parseFloat(m?.spend || 0) || 0);
     const cl = Math.max(0, parseInt(m?.clicks || 0) || 0);
     const impr = Math.max(0, parseInt(m?.impressions || 0) || 0);
@@ -103,10 +113,14 @@ function getMetrics(dataRows) {
     tReach += reach;
 
     const pur = getActMulti(m.actions, [
-      "offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase"
+      "offsite_conversion.fb_pixel_purchase",
+      "purchase",
+      "omni_purchase"
     ]);
     const lds = getActMulti(m.actions, [
-      "offsite_conversion.fb_pixel_lead", "lead", "onsite_conversion.lead_grouped"
+      "offsite_conversion.fb_pixel_lead",
+      "lead",
+      "onsite_conversion.lead_grouped"
     ]);
     const msg = getActMulti(m.actions, [
       "onsite_conversion.messaging_conversation_started_7d",
@@ -115,19 +129,22 @@ function getMetrics(dataRows) {
     ]);
     const sess = getAct(m.actions, "landing_page_view");
     const addCart = getActMulti(m.actions, [
-      "offsite_conversion.fb_pixel_add_to_cart", "add_to_cart"
+      "offsite_conversion.fb_pixel_add_to_cart",
+      "add_to_cart"
     ]);
     const initCheck = getActMulti(m.actions, [
-      "offsite_conversion.fb_pixel_initiate_checkout", "initiate_checkout"
+      "offsite_conversion.fb_pixel_initiate_checkout",
+      "initiate_checkout"
     ]);
     const calls = getActMulti(m.actions, [
-      "onsite_conversion.call_now_click_mobile", "click_to_call_call_confirm"
+      "onsite_conversion.call_now_click_mobile",
+      "click_to_call_call_confirm"
     ]);
-    const videoViews = getActMulti(m.actions, [
-      "video_view", "video_plays_unique"
-    ]);
+    const videoViews = getActMulti(m.actions, ["video_view", "video_plays_unique"]);
     const rev = getActMulti(m.action_values, [
-      "offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase"
+      "offsite_conversion.fb_pixel_purchase",
+      "purchase",
+      "omni_purchase"
     ]);
 
     tPur += pur;
@@ -143,8 +160,19 @@ function getMetrics(dataRows) {
     const campId = m.campaign_id || "unknown";
     if (!byId[campId]) {
       byId[campId] = {
-        sp: 0, cl: 0, impr: 0, reach: 0, pur: 0, lds: 0, msg: 0,
-        sess: 0, rev: 0, addCart: 0, initCheck: 0, calls: 0, videoViews: 0
+        sp: 0,
+        cl: 0,
+        impr: 0,
+        reach: 0,
+        pur: 0,
+        lds: 0,
+        msg: 0,
+        sess: 0,
+        rev: 0,
+        addCart: 0,
+        initCheck: 0,
+        calls: 0,
+        videoViews: 0
       };
     }
 
@@ -165,7 +193,7 @@ function getMetrics(dataRows) {
 
   tFreq = tReach > 0 ? tImpr / tReach : 0;
 
-  const safe = n => {
+  const safe = (n) => {
     const x = Number(n || 0);
     return Number.isFinite(x) ? x : 0;
   };
@@ -233,7 +261,7 @@ function buildCustomPreviousRange(since, until) {
   const prevStart = new Date(prevEnd);
   prevStart.setDate(prevStart.getDate() - (diffDays - 1));
 
-  const formatDate = d => {
+  const formatDate = (d) => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
@@ -256,7 +284,7 @@ function getBrazilDateParts() {
     hour12: false
   }).formatToParts(new Date());
 
-  const get = type => parts.find(p => p.type === type)?.value || "";
+  const get = (type) => parts.find((p) => p.type === type)?.value || "";
   return {
     date: `${get("year")}-${get("month")}-${get("day")}`,
     hour: Number(get("hour") || 0)
@@ -273,7 +301,14 @@ async function hasDaily8amSnapshotToday(fbAccountId, fbUserId) {
   return !!rows[0];
 }
 
-async function saveAutomaticDaily8amSnapshotIfNeeded({ fbAccountId, fbUserId, accountName, metrics, campaigns, aiAnalysis }) {
+async function saveAutomaticDaily8amSnapshotIfNeeded({
+  fbAccountId,
+  fbUserId,
+  accountName,
+  metrics,
+  campaigns,
+  aiAnalysis
+}) {
   if (!process.env.DATABASE_URL) return;
 
   const { date, hour } = getBrazilDateParts();
@@ -289,7 +324,7 @@ async function saveAutomaticDaily8amSnapshotIfNeeded({ fbAccountId, fbUserId, ac
     dateRange: `AUTO_DAILY_08_${date}`,
     metrics: {
       ...metrics,
-      activeCampaigns: campaigns.filter(c => c.status === "ACTIVE").length,
+      activeCampaigns: campaigns.filter((c) => c.status === "ACTIVE").length,
       totalCampaigns: campaigns.length
     },
     campaigns,
@@ -300,7 +335,11 @@ async function saveAutomaticDaily8amSnapshotIfNeeded({ fbAccountId, fbUserId, ac
 /* AUTH */
 app.get("/auth/facebook", (req, res) => {
   const scopes = ["ads_read", "ads_management", "business_management", "public_profile"].join(",");
-  res.redirect(`https://www.facebook.com/v19.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${scopes}`);
+  res.redirect(
+    `https://www.facebook.com/v19.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(
+      REDIRECT_URI
+    )}&scope=${scopes}`
+  );
 });
 
 app.get("/auth/facebook/callback", async (req, res) => {
@@ -342,9 +381,7 @@ app.get("/auth/facebook/callback", async (req, res) => {
 });
 
 app.get("/api/me", (req, res) => {
-  res.json(req.session.user
-    ? { authenticated: true, user: req.session.user }
-    : { authenticated: false });
+  res.json(req.session.user ? { authenticated: true, user: req.session.user } : { authenticated: false });
 });
 
 app.get("/auth/logout", (req, res) => {
@@ -360,7 +397,7 @@ app.get("/api/debug/env", (req, res) => {
   });
 });
 
-/* CORE DATA */
+/* CORE */
 app.get("/api/adaccounts", auth, async (req, res) => {
   try {
     const r = await axios.get("https://graph.facebook.com/v19.0/me/adaccounts", {
@@ -371,30 +408,6 @@ app.get("/api/adaccounts", auth, async (req, res) => {
       }
     });
     res.json(r.data);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/adaccounts/:id/balance", auth, async (req, res) => {
-  try {
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}`, {
-      params: {
-        fields: "name,balance,amount_spent,spend_cap,funding_source_details,account_status",
-        access_token: req.session.accessToken
-      }
-    });
-
-    const data = r.data;
-    const funding = data.funding_source_details || {};
-    data.is_prepaid = funding.type === "PREPAID" || (data.balance && parseInt(data.balance) < 0);
-    data.readable_balance = data.balance ? Math.abs(parseFloat(data.balance) / 100) : 0;
-
-    if (data.is_prepaid && data.readable_balance < 100) {
-      await sendLowBalanceAlert(data.name, data.readable_balance);
-    }
-
-    res.json(data);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -421,15 +434,31 @@ app.get("/api/adaccounts/:id/insights", auth, async (req, res) => {
 
     const params = {
       fields: [
-        "campaign_id", "campaign_name", "adset_id", "adset_name", "ad_id", "ad_name",
-        "impressions", "clicks", "spend", "cpc", "cpm", "ctr",
-        "reach", "frequency",
-        "actions", "action_values",
-        "video_p25_watched_actions", "video_p50_watched_actions",
-        "video_p75_watched_actions", "video_p100_watched_actions",
+        "campaign_id",
+        "campaign_name",
+        "adset_id",
+        "adset_name",
+        "ad_id",
+        "ad_name",
+        "impressions",
+        "clicks",
+        "spend",
+        "cpc",
+        "cpm",
+        "ctr",
+        "reach",
+        "frequency",
+        "actions",
+        "action_values",
+        "video_p25_watched_actions",
+        "video_p50_watched_actions",
+        "video_p75_watched_actions",
+        "video_p100_watched_actions",
         "video_avg_time_watched_actions",
-        "unique_clicks", "unique_ctr",
-        "cost_per_action_type", "cost_per_unique_click"
+        "unique_clicks",
+        "unique_ctr",
+        "cost_per_action_type",
+        "cost_per_unique_click"
       ].join(","),
       level: "ad",
       access_token: req.session.accessToken,
@@ -549,126 +578,6 @@ app.get("/api/adaccounts/:id/breakdown/:type", auth, async (req, res) => {
   }
 });
 
-app.get("/api/campaigns/:id/funnel", auth, async (req, res) => {
-  try {
-    const { date_preset, since, until } = req.query;
-    const timeParam = since && until
-      ? `time_range({"since":"${since}","until":"${until}"})`
-      : `date_preset(${date_preset || "last_30d"})`;
-
-    const insightsFields = "impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values";
-
-    const adsets = await axios.get(`https://graph.facebook.com/v19.0/${req.params.id}/adsets`, {
-      params: {
-        fields: `id,name,status,targeting,insights.${timeParam}{${insightsFields}}`,
-        access_token: req.session.accessToken,
-        limit: 100
-      }
-    });
-
-    const adsetData = adsets.data.data || [];
-    const enrichedAdsets = await Promise.all(
-      adsetData.map(async adset => {
-        try {
-          const ads = await axios.get(`https://graph.facebook.com/v19.0/${adset.id}/ads`, {
-            params: {
-              fields: `id,name,status,creative{thumbnail_url,image_url,body,title},insights.${timeParam}{${insightsFields}}`,
-              access_token: req.session.accessToken,
-              limit: 100
-            }
-          });
-          return { ...adset, ads: ads.data.data || [] };
-        } catch {
-          return { ...adset, ads: [] };
-        }
-      })
-    );
-
-    res.json({ adsets: enrichedAdsets });
-  } catch (e) {
-    console.error("Erro funnel:", e.response?.data || e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/trend/:id", auth, async (req, res) => {
-  try {
-    if (!process.env.DATABASE_URL) return res.json({ trend: [] });
-    const trend = await db.getAccountTrend(req.params.id);
-    res.json({ trend });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/* NOTES */
-app.post("/api/notes", auth, async (req, res) => {
-  try {
-    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Banco não configurado." });
-    const { fbAccountId, fbCampaignId, campaignName, note, type } = req.body;
-    const saved = await db.saveNote({
-      fbUserId: req.session.user.id,
-      fbAccountId,
-      fbCampaignId,
-      campaignName,
-      note,
-      type
-    });
-    res.json(saved);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/notes/:accountId", auth, async (req, res) => {
-  try {
-    if (!process.env.DATABASE_URL) return res.json([]);
-    const notes = await db.getNotes(req.params.accountId, req.session.user.id);
-    res.json(notes);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.delete("/api/notes/:id", auth, async (req, res) => {
-  try {
-    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Banco não configurado." });
-    await db.deleteNote(req.params.id, req.session.user.id);
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/* ALERTS */
-app.post("/api/alerts", auth, async (req, res) => {
-  try {
-    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Banco não configurado." });
-    const { fbAccountId, accountName, email, threshold, currency } = req.body;
-    const alert = await db.upsertBudgetAlert({
-      fbUserId: req.session.user.id,
-      fbAccountId,
-      accountName,
-      email,
-      threshold,
-      currency
-    });
-    res.json(alert);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/alerts/:accountId", auth, async (req, res) => {
-  try {
-    if (!process.env.DATABASE_URL) return res.json(null);
-    const alert = await db.getBudgetAlert(req.session.user.id, req.params.accountId);
-    res.json(alert);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
 app.get("/api/history/:accountId", auth, async (req, res) => {
   try {
     if (!process.env.DATABASE_URL) return res.json([]);
@@ -682,14 +591,7 @@ app.get("/api/history/:accountId", auth, async (req, res) => {
 /* ANALYZE */
 app.post("/api/analyze", auth, async (req, res) => {
   try {
-    const {
-      accountData,
-      campaigns,
-      insights,
-      dateRange,
-      niche = "Geral",
-      previousInsights
-    } = req.body;
+    const { accountData, campaigns, insights, dateRange, niche = "Geral", previousInsights } = req.body;
 
     if (!accountData || !campaigns || !insights) {
       return res.status(400).json({ error: "accountData, campaigns e insights são obrigatórios." });
@@ -698,10 +600,21 @@ app.post("/api/analyze", auth, async (req, res) => {
     const metrics = getMetrics(insights?.data);
     const prevMetrics = previousInsights ? getMetrics(previousInsights?.data) : null;
 
-    const enriched = (campaigns || []).map(c => {
+    const enriched = (campaigns || []).map((c) => {
       const m = metrics.byId[c.id] || {
-        sp: 0, cl: 0, impr: 0, reach: 0, pur: 0, lds: 0, msg: 0,
-        sess: 0, rev: 0, addCart: 0, initCheck: 0, calls: 0, videoViews: 0
+        sp: 0,
+        cl: 0,
+        impr: 0,
+        reach: 0,
+        pur: 0,
+        lds: 0,
+        msg: 0,
+        sess: 0,
+        rev: 0,
+        addCart: 0,
+        initCheck: 0,
+        calls: 0,
+        videoViews: 0
       };
 
       const ctr = m.impr > 0 ? (m.cl / m.impr) * 100 : 0;
@@ -766,6 +679,7 @@ app.post("/api/analyze", auth, async (req, res) => {
         videoViews: m.videoViews,
         roas,
         connectRate,
+        landing_page_views: m.sess,
         diagnostico,
         status_performance: statusPerformance,
         escala_sugestao: escala,
@@ -777,60 +691,7 @@ app.post("/api/analyze", auth, async (req, res) => {
     });
 
     const decision = decisionEngine.analyzeAccount(enriched);
-    
-    // Detecção de Furos no Funil Pro
-    const funnelLeak = {
-      creative_to_lp: metrics.connectRate < 0.7 ? "ALTO DESPERDÍCIO: Muitos cliques não carregam a página (Página Lenta ou Pixel)" : "CONEXÃO OK",
-      lp_to_checkout: (metrics.totalPurchases / (metrics.totalClicks * 0.8)) < 0.02 ? "BAIXA CONVERSÃO: Página não convence ou Oferta fraca" : "CONVERSÃO OK",
-      checkout_to_purchase: "CHECKOUT OK (Simulado)"
-    };
-
-    // Auditoria de Landing Page Realista
-    const lpMetrics = {
-      lcp_ms: metrics.connectRate > 0.8 ? 1800 : metrics.connectRate > 0.6 ? 2800 : 4500,
-      cls: metrics.connectRate > 0.7 ? 0.05 : 0.15,
-      ttfb_ms: metrics.connectRate > 0.7 ? 400 : 850,
-      page_size_mb: 3.2,
-      dom_content_loaded_ms: metrics.connectRate > 0.7 ? 2100 : 3800,
-      cta_above_fold: metrics.avgCtr > 1.5,
-      form_present: true,
-      form_fields: 4,
-      phone_number: true,
-      chat_widget: metrics.totalMessages > 0,
-      cta_clarity: metrics.avgCtr > 1.0 ? "high" : "medium",
-      trust_badges: true,
-      testimonials: true,
-      reviews_schema: true,
-      company_info: true,
-      guarantee: true,
-      viewport_meta: true,
-      horizontal_scroll: false,
-      font_readable: true,
-      h1_count: 1,
-      meta_description: "Landing Page Otimizada",
-      schema_types: ["Product", "Review"]
-    };
-    const lpAudit = await landingPageAudit.runLandingPageAudit(lpMetrics);
-
-    // Injetar Inteligência V2 Profunda
     const aiAnalysis = runAnalysisEngine(accountData, decision.campaigns, metrics, prevMetrics, niche);
-    aiAnalysis.audit_v2 = {
-      score: decision.averageScore,
-      grade: decision.accountGrade,
-      total_waste: decision.totalWaste,
-      funnel_leak: funnelLeak,
-      critical_alerts: decision.campaigns
-        .flatMap(c => c.auditAlerts || [])
-        .filter(a => a.severity === 'high')
-        .slice(0, 8)
-    };
-    aiAnalysis.lp_audit = lpAudit;
-    aiAnalysis.scale_pro = {
-      total_potential: decision.campaigns.reduce((acc, c) => acc + (c.scalePotential || 0), 0),
-      recommendations: decision.campaigns
-        .filter(c => c.decision.action === 'ESCALAR')
-        .map(c => ({ name: c.name, rec: c.decision.reason }))
-    };
 
     if (process.env.DATABASE_URL) {
       try {
@@ -841,7 +702,7 @@ app.post("/api/analyze", auth, async (req, res) => {
           dateRange,
           metrics: {
             ...metrics,
-            activeCampaigns: decision.campaigns.filter(c => c.status === "ACTIVE").length,
+            activeCampaigns: decision.campaigns.filter((c) => c.status === "ACTIVE").length,
             totalCampaigns: decision.campaigns.length
           },
           campaigns: decision.campaigns,
@@ -965,14 +826,14 @@ function runAnalysisEngine(accountData, campaigns, metrics, prevMetrics, niche =
     }
   }
 
-  const criticalCamps = campaigns.filter(c => c.status_performance === "Crítico");
+  const criticalCamps = campaigns.filter((c) => c.status_performance === "Crítico");
   if (criticalCamps.length > 0) {
     score -= criticalCamps.length * 5;
     otimizacoes.push({
       prioridade: 1,
       titulo: `${criticalCamps.length} campanha(s) crítica(s)`,
       categoria: "Campanhas",
-      descricao: criticalCamps.map(c => c.name).join(", "),
+      descricao: criticalCamps.map((c) => c.name).join(", "),
       acao: "Pausar ou revisar imediatamente."
     });
   }
@@ -992,131 +853,6 @@ function runAnalysisEngine(accountData, campaigns, metrics, prevMetrics, niche =
   };
 }
 
-function generateCampaignAnalysis(campaign, adsets) {
-  let s = `### 🔍 Análise da campanha: ${campaign.name}\n\n`;
-  s += `**Status:** ${campaign.status}\n\n`;
-  s += `**Diagnóstico:** ${campaign.diagnostico || "Sem diagnóstico"}\n\n`;
-  s += `**Métricas:**\n`;
-  s += `- Gasto: R$ ${(campaign.spend || 0).toFixed(2)}\n`;
-  s += `- Impressões: ${Number(campaign.impressions || 0).toLocaleString("pt-BR")}\n`;
-  s += `- Alcance: ${Number(campaign.reach || 0).toLocaleString("pt-BR")}\n`;
-  s += `- CTR: ${(campaign.ctr || 0).toFixed(2)}%\n`;
-  s += `- Connect Rate: ${(campaign.connectRate || 0).toFixed(2)}%\n`;
-  s += `- ROAS: ${(campaign.roas || 0).toFixed(2)}x\n`;
-  s += `- Frequência: ${(campaign.frequency || 0).toFixed(2)}\n`;
-  s += `- Compras: ${campaign.purchases || 0}\n`;
-  s += `- Mensagens: ${campaign.messages || 0}\n\n`;
-  s += `**Ação recomendada:** ${campaign.escala_sugestao || "Monitorar"}\n\n`;
-
-  if (Array.isArray(adsets) && adsets.length > 0) {
-    s += `### Adsets\n`;
-    adsets.slice(0, 5).forEach(a => {
-      const ins = a.insights?.data?.[0];
-      s += `- ${a.name}: Gasto R$ ${parseFloat(ins?.spend || 0).toFixed(2)}, CTR ${parseFloat(ins?.ctr || 0).toFixed(2)}%\n`;
-    });
-  }
-
-  return s;
-}
-
-function generateInternalStrategy(data) {
-  const { metrics, analysis } = data;
-  let s = `### 🧠 Plano de Guerra\n\n`;
-  s += `**Score de saúde:** ${analysis?.resumo_geral?.score_saude || 0}\n\n`;
-  s += `- Investimento: R$ ${(metrics?.totalSpend || 0).toFixed(2)}\n`;
-  s += `- ROAS: ${(metrics?.roas || 0).toFixed(2)}x\n`;
-  s += `- Connect Rate: ${(metrics?.connectRate || 0).toFixed(1)}%\n`;
-  s += `- CTR: ${(metrics?.avgCtr || 0).toFixed(2)}%\n\n`;
-  s += `**Prioridade:** atacar desperdício, criativo fraco e gargalo de página antes de escalar.`;
-  return s;
-}
-
-app.post("/api/gpt-copilot", auth, async (req, res) => {
-  const { data } = req.body;
-
-  if (!process.env.OPENAI_API_KEY || !openai) {
-    return res.json({ strategy: generateInternalStrategy(data) });
-  }
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "Você é um estrategista sênior de Meta Ads. Seja direto, orientado por números e decisões."
-        },
-        {
-          role: "user",
-          content: `Analise os dados abaixo e gere um plano de guerra claro:\n\n${JSON.stringify(data, null, 2)}`
-        }
-      ],
-      max_tokens: 1400
-    });
-
-    res.json({ strategy: completion.choices[0].message.content });
-  } catch (e) {
-    console.error("Erro OpenAI:", e.message);
-    res.json({ strategy: generateInternalStrategy(data) });
-  }
-});
-
-app.post("/api/gpt-campaign", auth, async (req, res) => {
-  const { campaign, adsets, metrics } = req.body;
-
-  if (!process.env.OPENAI_API_KEY || !openai) {
-    return res.json({ analysis: generateCampaignAnalysis(campaign, adsets, metrics) });
-  }
-
-  try {
-    const prompt = `
-Analise esta campanha de tráfego pago.
-
-Dados:
-- Nome: ${campaign.name}
-- Gasto: ${campaign.spend}
-- Impressões: ${campaign.impressions}
-- Alcance: ${campaign.reach}
-- CTR: ${campaign.ctr}
-- ROAS: ${campaign.roas}
-- Frequência: ${campaign.frequency}
-- Connect Rate: ${campaign.connectRate}
-- Compras: ${campaign.purchases}
-- Mensagens: ${campaign.messages}
-- Leads: ${campaign.leads}
-
-Responda como um gestor de tráfego experiente.
-
-Formato obrigatório:
-1. Diagnóstico direto
-2. Problema principal
-3. Ação recomendada objetiva
-4. Se deve pausar, manter ou escalar
-5. O que testar primeiro
-`.trim();
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "Você é um especialista em Meta Ads. Analise campanha, funil, criativo e segmentação."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_tokens: 1100
-    });
-
-    res.json({ analysis: completion.choices[0].message.content });
-  } catch (e) {
-    console.error("Erro OpenAI campaign:", e.message);
-    res.json({ analysis: generateCampaignAnalysis(campaign, adsets, metrics) });
-  }
-});
-
 app.get("/dashboard", (req, res) => {
   if (!req.session.user) return res.redirect("/");
   res.sendFile(path.resolve(__dirname, "public", "dashboard.html"));
@@ -1131,179 +867,8 @@ app.get("*", (req, res, next) => {
   res.sendFile(path.resolve(__dirname, "public", "index.html"));
 });
 
-// ============================================================================
-// V2 ENDPOINTS - Auditoria, Benchmarking, Landing Page
-// ============================================================================
-
-app.get("/api/audit-summary/:accountId", auth, async (req, res) => {
-  try {
-    const { accountId } = req.params;
-    const campaigns = await db.query(
-      `SELECT id, name, status, spend, impressions, clicks, reach, frequency, roas, purchases, messages, leads, ctr, cvr, cpc FROM campaigns WHERE account_id = $1 LIMIT 50`,
-      [accountId]
-    );
-    if (!campaigns.rows.length) return res.json({ status: "success", audit: { campaigns: [], summary: {} } });
-    const auditResults = decisionEngineV2.analyzeAccount(campaigns.rows);
-    res.json({ status: "success", audit: auditResults, timestamp: new Date().toISOString() });
-  } catch (e) {
-    console.error("Audit error:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/campaign-audit/:campaignId", auth, async (req, res) => {
-  try {
-    const { campaignId } = req.params;
-    const result = await db.query(
-      `SELECT id, name, status, spend, impressions, clicks, reach, frequency, roas, purchases, messages, leads, ctr, cvr, cpc FROM campaigns WHERE id = $1`,
-      [campaignId]
-    );
-    if (!result.rows.length) return res.status(404).json({ error: "Campaign not found" });
-    const auditResults = decisionEngineV2.analyzeCampaign(result.rows[0]);
-    res.json({ status: "success", campaign_id: campaignId, audit: auditResults, timestamp: new Date().toISOString() });
-  } catch (e) {
-    console.error("Campaign audit error:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/audit-checks", auth, (req, res) => {
-  try {
-    const checks = Object.values(decisionEngineV2.auditChecks).map(check => ({
-      id: check.id, name: check.name, category: check.category, severity: check.severity, description: check.description || ""
-    }));
-    res.json({ status: "success", total_checks: checks.length, checks: checks.sort((a, b) => a.category.localeCompare(b.category)) });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/benchmarks", auth, (req, res) => {
-  try {
-    const niches = Object.keys(benchmarksV2.benchmarks);
-    res.json({ status: "success", niches, count: niches.length });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/benchmarks/:niche", auth, (req, res) => {
-  try {
-    const { niche } = req.params;
-    const benchmark = benchmarksV2.getBenchmark(niche);
-    res.json({ status: "success", niche, benchmark, timestamp: new Date().toISOString() });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.post("/api/compare-to-benchmark", auth, (req, res) => {
-  try {
-    const { niche, metrics } = req.body;
-    if (!niche || !metrics) return res.status(400).json({ error: "niche and metrics required" });
-    const comparison = benchmarksV2.compareToBenchmark(niche, metrics);
-    const recommendations = benchmarksV2.getRecommendationsByBenchmark(niche, metrics);
-    res.json({ status: "success", comparison, recommendations, timestamp: new Date().toISOString() });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.post("/api/benchmark-recommendations", auth, (req, res) => {
-  try {
-    const { niche, metrics } = req.body;
-    if (!niche || !metrics) return res.status(400).json({ error: "niche and metrics required" });
-    const recommendations = benchmarksV2.getRecommendationsByBenchmark(niche, metrics);
-    res.json({ status: "success", niche, recommendations, timestamp: new Date().toISOString() });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.post("/api/audit-landing-page", auth, async (req, res) => {
-  try {
-    const { url, campaignId } = req.body;
-    if (!url) return res.status(400).json({ error: "url required" });
-    const pageMetrics = { lcp_ms: 2100, cls: 0.05, ttfb_ms: 450, dom_content_loaded_ms: 1800, page_size_mb: 2.5, cta_above_fold: true, form_present: true, form_fields: 4, phone_number: true, chat_widget: false, viewport_meta: true, horizontal_scroll: false, font_readable: true, testimonials: true, trust_badges: true, reviews_schema: true, company_info: true, guarantee: false, cta_clarity: "high", h1_count: 1, meta_description: "Example", schema_types: ["Organization"] };
-    const auditResults = await landingPageAudit.runLandingPageAudit(pageMetrics);
-    res.json({ status: "success", url, audit: auditResults, timestamp: new Date().toISOString() });
-  } catch (e) {
-    console.error("Landing page audit error:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/landing-page-checks", auth, (req, res) => {
-  try {
-    const checks = Object.values(landingPageAudit.landingPageChecks).map(check => ({
-      id: check.id, name: check.name, category: check.category, severity: check.severity, description: check.description
-    }));
-    res.json({ status: "success", total_checks: checks.length, checks: checks.sort((a, b) => a.category.localeCompare(b.category)) });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.post("/api/full-analysis", auth, async (req, res) => {
-  try {
-    const { campaignId, landingPageUrl, niche } = req.body;
-    if (!campaignId) return res.status(400).json({ error: "campaignId required" });
-    const campaignResult = await db.query(
-      `SELECT id, name, status, spend, impressions, clicks, reach, frequency, roas, purchases, messages, leads, ctr, cvr, cpc FROM campaigns WHERE id = $1`,
-      [campaignId]
-    );
-    if (!campaignResult.rows.length) return res.status(404).json({ error: "Campaign not found" });
-    const campaign = campaignResult.rows[0];
-    const campaignAudit = decisionEngineV2.analyzeCampaign(campaign);
-    let benchmarkComparison = null;
-    if (niche) {
-      benchmarkComparison = benchmarksV2.compareToBenchmark(niche, { roas: campaign.roas, ctr: campaign.ctr, cvr: campaign.cvr, cpc: campaign.cpc, frequency: campaign.frequency });
-    }
-    let landingPageResults = null;
-    if (landingPageUrl) {
-      const pageMetrics = { lcp_ms: 2100, cls: 0.05, cta_above_fold: true, form_present: true, form_fields: 4 };
-      landingPageResults = await landingPageAudit.runLandingPageAudit(pageMetrics);
-    }
-    res.json({ status: "success", campaign_audit: campaignAudit, benchmark_comparison: benchmarkComparison, landing_page_audit: landingPageResults, timestamp: new Date().toISOString() });
-  } catch (e) {
-    console.error("Full analysis error:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.post("/api/export-report", auth, (req, res) => {
-  try {
-    const { state } = req.body;
-    if (!state || !state.analysis) return res.status(400).json({ error: "Analysis data required" });
-    
-    const a = state.analysis;
-    const audit = a.audit_v2 || {};
-    const lp = a.lp_audit || {};
-    
-    let md = `# Relatório de Auditoria Meta Ads - V2 Profunda\n\n`;
-    md += `## Resumo da Conta\n`;
-    md += `* **Audit Score:** ${audit.score}/100 (Nota: ${audit.grade})\n`;
-    md += `* **Desperdício Estimado:** R$ ${audit.total_waste?.toFixed(2)}\n`;
-    md += `* **Potencial de Escala:** +${a.scale_pro?.total_potential || 0}%\n\n`;
-    
-    md += `## Auditoria de Landing Page\n`;
-    md += `* **LP Score:** ${lp.overall_score}/100\n`;
-    md += `* **Impacto na Conversão:** ${lp.impact_on_conversion?.message}\n\n`;
-    
-    md += `## Alertas Críticos\n`;
-    (audit.critical_alerts || []).forEach(alert => {
-      md += `* [${alert.category}] ${alert.message}\n`;
-    });
-    
-    res.json({ status: "success", markdown: md });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
   console.log(`✅ Servidor rodando na porta ${PORT}`);
   if (process.env.DATABASE_URL) await db.initDB();
 });
-/* ROUTES */
