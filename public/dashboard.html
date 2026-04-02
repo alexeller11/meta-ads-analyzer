@@ -2,127 +2,156 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meta Ads Analyzer</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/styles.css">
 </head>
-
 <body>
+  <div class="container">
+    <header class="topbar">
+      <div>
+        <h1>Meta Ads Analyzer</h1>
+        <p class="sub">Painel interno da agência</p>
+      </div>
+      <div class="top-actions">
+        <span id="userName" class="user-pill">Carregando usuário...</span>
+        <a class="logout" href="/auth/logout">Sair</a>
+      </div>
+    </header>
 
-<div id="globalError" class="hidden error"></div>
-<div id="globalOk" class="hidden success"></div>
+    <div id="globalError" class="alert alert-error hidden"></div>
+    <div id="globalOk" class="alert alert-success hidden"></div>
 
-<header>
-  <h1>Meta Ads Analyzer</h1>
-</header>
+    <section class="controls card">
+      <div class="field">
+        <label for="accountSel">Conta</label>
+        <select id="accountSel">
+          <option value="">Carregando contas...</option>
+        </select>
+      </div>
 
-<section class="controls">
-  <select id="accountSel"></select>
+      <div class="field">
+        <label for="dateSel">Período</label>
+        <select id="dateSel">
+          <option value="last_7d">Últimos 7 dias</option>
+          <option value="last_30d" selected>Últimos 30 dias</option>
+          <option value="last_90d">Últimos 90 dias</option>
+        </select>
+      </div>
 
-  <select id="dateSel">
-    <option value="last_7d">Últimos 7 dias</option>
-    <option value="last_30d" selected>Últimos 30 dias</option>
-  </select>
+      <div class="field action-field">
+        <label>&nbsp;</label>
+        <button id="runBtn">Rodar análise</button>
+      </div>
+    </section>
 
-  <button id="runBtn">Rodar Análise</button>
-</section>
+    <section class="card">
+      <h2>Visão Geral</h2>
+      <div class="grid metrics-grid">
+        <div class="metric"><span>Investimento</span><strong id="mSpend">R$ 0,00</strong></div>
+        <div class="metric"><span>Receita</span><strong id="mRevenue">R$ 0,00</strong></div>
+        <div class="metric"><span>ROAS</span><strong id="mRoas">0.00x</strong></div>
+        <div class="metric"><span>Custo por venda</span><strong id="mCostPerPurchase">R$ 0,00</strong></div>
 
-<!-- =================== VISÃO GERAL =================== -->
-<section>
-  <h2>Visão Geral</h2>
-  <div class="grid">
-    <div>Investimento: <span id="mSpend"></span></div>
-    <div>Receita: <span id="mRevenue"></span></div>
-    <div>ROAS: <span id="mRoas"></span></div>
-    <div>Custo/Venda: <span id="mCostPerPurchase"></span></div>
+        <div class="metric"><span>Impressões</span><strong id="mImpressions">0</strong></div>
+        <div class="metric"><span>Alcance</span><strong id="mReach">0</strong></div>
+        <div class="metric"><span>Frequência</span><strong id="mFrequency">0.00</strong></div>
+        <div class="metric"><span>CPM</span><strong id="mCpm">R$ 0,00</strong></div>
 
-    <div>Impressões: <span id="mImpressions"></span></div>
-    <div>Alcance: <span id="mReach"></span></div>
-    <div>Frequência: <span id="mFrequency"></span></div>
-    <div>CPM: <span id="mCpm"></span></div>
+        <div class="metric"><span>CTR</span><strong id="mCtr">0.00%</strong></div>
+        <div class="metric"><span>CPC</span><strong id="mCpc">R$ 0,00</strong></div>
+        <div class="metric"><span>Connect Rate</span><strong id="mConnectRate">0.00%</strong></div>
+        <div class="metric"><span>Mensagens</span><strong id="mMessages">0</strong></div>
+        <div class="metric"><span>Compras</span><strong id="mPurchases">0</strong></div>
+      </div>
+    </section>
 
-    <div>CTR: <span id="mCtr"></span></div>
-    <div>CPC: <span id="mCpc"></span></div>
-    <div>Connect Rate: <span id="mConnectRate"></span></div>
-    <div>Mensagens: <span id="mMessages"></span></div>
-    <div>Compras: <span id="mPurchases"></span></div>
+    <section class="card">
+      <h2>Campanhas</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Status</th>
+              <th>Gasto</th>
+              <th>Mensagens</th>
+              <th>Compras</th>
+              <th>Receita</th>
+              <th>ROAS</th>
+              <th>CTR</th>
+              <th>Connect</th>
+            </tr>
+          </thead>
+          <tbody id="campaignBody">
+            <tr><td colspan="9" class="empty">Rode uma análise para visualizar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Breakdown</h2>
+        <div class="inline-controls">
+          <select id="breakdownType">
+            <option value="platform">Plataforma</option>
+            <option value="device">Dispositivo</option>
+            <option value="gender">Sexo</option>
+            <option value="age">Idade</option>
+          </select>
+          <button id="breakdownBtn" type="button">Carregar</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Segmento</th>
+              <th>Gasto</th>
+              <th>Mensagens</th>
+              <th>Compras</th>
+              <th>Receita</th>
+              <th>ROAS</th>
+              <th>CTR</th>
+              <th>CPM</th>
+            </tr>
+          </thead>
+          <tbody id="breakdownBody">
+            <tr><td colspan="8" class="empty">Selecione uma conta e clique em carregar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Métricas Diárias</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Investimento</th>
+              <th>Mensagens</th>
+              <th>Compras</th>
+              <th>Receita</th>
+              <th>ROAS</th>
+              <th>CTR</th>
+              <th>CPC</th>
+              <th>CPM</th>
+              <th>Freq</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr><td colspan="11" class="empty">Rode uma análise para popular o histórico.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
-</section>
 
-<!-- =================== CAMPANHAS =================== -->
-<section>
-  <h2>Campanhas</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Nome</th>
-        <th>Status</th>
-        <th>Gasto</th>
-        <th>Mensagens</th>
-        <th>Compras</th>
-        <th>Receita</th>
-        <th>ROAS</th>
-        <th>CTR</th>
-        <th>Connect</th>
-      </tr>
-    </thead>
-    <tbody id="campaignBody"></tbody>
-  </table>
-</section>
-
-<!-- =================== BREAKDOWN =================== -->
-<section>
-  <h2>Breakdown</h2>
-
-  <select id="breakdownType">
-    <option value="platform">Plataforma</option>
-    <option value="device">Dispositivo</option>
-    <option value="gender">Sexo</option>
-    <option value="age">Idade</option>
-  </select>
-
-  <button onclick="loadBreakdown()">Carregar</button>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Segmento</th>
-        <th>Gasto</th>
-        <th>Mensagens</th>
-        <th>Compras</th>
-        <th>Receita</th>
-        <th>ROAS</th>
-        <th>CTR</th>
-        <th>CPM</th>
-      </tr>
-    </thead>
-    <tbody id="breakdownBody"></tbody>
-  </table>
-</section>
-
-<!-- =================== HISTÓRICO =================== -->
-<section>
-  <h2>Métricas Diárias</h2>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Data</th>
-        <th>Investimento</th>
-        <th>Mensagens</th>
-        <th>Compras</th>
-        <th>Receita</th>
-        <th>ROAS</th>
-        <th>CTR</th>
-        <th>CPC</th>
-        <th>CPM</th>
-        <th>Freq</th>
-        <th>Score</th>
-      </tr>
-    </thead>
-    <tbody id="historyBody"></tbody>
-  </table>
-</section>
-
-<script src="scripts/dashboard.js"></script>
+  <script src="/scripts/dashboard.js"></script>
 </body>
 </html>
