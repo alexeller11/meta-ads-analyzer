@@ -1,3 +1,5 @@
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 const express = require("express");
 const session = require("express-session");
@@ -12,13 +14,16 @@ const decisionEngine = require("./decision-engine-v2");
 const app = express();
 
 app.set("trust proxy", 1);
+app.use(helmet());
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+app.use("/api", limiter);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "meta-analyzer-ultra-v9",
+    secret: process.env.SESSION_SECRET || (() => { if (process.env.NODE_ENV === "production") throw new Error("SESSION_SECRET não configurado em produção"); return "dev-only-insecure-secret"; })(),
     resave: false,
     saveUninitialized: false,
     cookie: {
