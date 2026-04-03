@@ -14,7 +14,19 @@ const decisionEngine = require("./decision-engine-v2");
 const app = express();
 
 app.set("trust proxy", 1);
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        "script-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
+        "img-src": ["'self'", "data:", "https:", "http:"],
+        "connect-src": ["'self'", "https:", "http:"],
+      },
+    },
+  })
+);
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
 app.use("/api", limiter);
 app.use(express.json({ limit: "50mb" }));
