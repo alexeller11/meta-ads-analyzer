@@ -3,253 +3,807 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meta Ads Analyzer</title>
-
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-
+  <title>Meta Ads Analyzer — Inteligência de Agência</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', sans-serif;
+    :root {
+      --ink: #07090f;
+      --ink2: #0e1118;
+      --surface: #13171f;
+      --border: rgba(255,255,255,0.07);
+      --lime: #c8fb57;
+      --lime-dim: rgba(200,251,87,0.1);
+      --lime-glow: rgba(200,251,87,0.3);
+      --text: #edf0f7;
+      --muted: #6b7590;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--ink);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
     }
 
-    body {
-      background: #0b1220;
-      color: #fff;
+    /* NOISE TEXTURE */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* GRID */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(200,251,87,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,251,87,0.018) 1px, transparent 1px);
+      background-size: 64px 64px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* GLOW ORBS */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 { width: 600px; height: 600px; background: rgba(200,251,87,0.06); top: -200px; right: -100px; }
+    .orb-2 { width: 500px; height: 500px; background: rgba(99,102,241,0.05); bottom: 0; left: -150px; }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+      padding: 0 48px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(7,9,15,0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .nav-logo-mark {
+      width: 32px; height: 32px;
+      background: var(--lime);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .nav-logo-mark svg { width: 18px; height: 18px; }
+
+    .nav-logo-text {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 16px;
+      color: var(--text);
+    }
+    .nav-logo-text em { font-style: normal; color: var(--lime); }
+
+    .nav-cta {
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .btn-nav {
+      height: 38px; padding: 0 20px;
+      background: var(--lime);
+      color: var(--ink);
+      border: none;
+      border-radius: 10px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn-nav:hover { background: #d5ff6a; transform: translateY(-1px); box-shadow: 0 8px 24px var(--lime-glow); }
+
+    /* HERO */
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 40px 20px;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 60px;
+      justify-content: center;
+      padding: 100px 24px 80px;
+      text-align: center;
     }
 
-    .logo {
-      font-size: 22px;
-      font-weight: 900;
-    }
-
-    .logo span {
-      color: #3b82f6;
-    }
-
-    .hero {
-      display: grid;
-      grid-template-columns: 1.2fr 1fr;
-      gap: 40px;
-      align-items: center;
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--lime-dim);
+      border: 1px solid rgba(200,251,87,0.2);
+      color: var(--lime);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 32px;
+      animation: fadeInUp 0.6s ease both;
     }
 
     .hero h1 {
-      font-size: 48px;
-      line-height: 1.1;
-      margin-bottom: 20px;
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(42px, 7vw, 88px);
+      font-weight: 800;
+      letter-spacing: -3px;
+      line-height: 1.0;
+      max-width: 900px;
+      margin-bottom: 28px;
+      animation: fadeInUp 0.6s 0.1s ease both;
     }
 
-    .hero h1 span {
-      color: #3b82f6;
+    .hero h1 em {
+      font-style: normal;
+      color: var(--lime);
     }
 
     .hero p {
-      color: #94a3b8;
-      font-size: 16px;
-      line-height: 1.6;
-      margin-bottom: 30px;
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.7;
+      margin-bottom: 48px;
+      animation: fadeInUp 0.6s 0.2s ease both;
     }
 
-    .btn {
-      padding: 14px 24px;
-      border-radius: 10px;
+    .hero-cta {
+      display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+      margin-bottom: 80px;
+      animation: fadeInUp 0.6s 0.3s ease both;
+    }
+
+    .btn-hero {
+      height: 52px; padding: 0 28px;
+      background: var(--lime);
+      color: var(--ink);
       border: none;
-      font-weight: 700;
+      border-radius: 14px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 15px;
       cursor: pointer;
-      font-size: 14px;
-      transition: 0.2s;
+      text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: all 0.15s;
+    }
+    .btn-hero:hover { background: #d5ff6a; transform: translateY(-2px); box-shadow: 0 16px 40px var(--lime-glow); }
+
+    .btn-ghost {
+      height: 52px; padding: 0 28px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      font-size: 15px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: all 0.15s;
+    }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.04); }
+
+    /* STATS ROW */
+    .stats-row {
+      display: flex; gap: 0; flex-wrap: wrap;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      overflow: hidden;
+      max-width: 760px;
+      width: 100%;
+      animation: fadeInUp 0.6s 0.4s ease both;
     }
 
-    .btn-primary {
-      background: #3b82f6;
-      color: #fff;
+    .stat {
+      flex: 1;
+      padding: 24px 28px;
+      border-right: 1px solid var(--border);
+      text-align: left;
+      min-width: 140px;
+    }
+    .stat:last-child { border-right: none; }
+
+    .stat-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--lime);
+      margin-bottom: 4px;
     }
 
-    .btn-primary:hover {
-      background: #2563eb;
+    .stat-label { font-size: 12px; color: var(--muted); }
+
+    /* DASHBOARD PREVIEW */
+    .preview-section {
+      position: relative; z-index: 1;
+      padding: 0 24px 100px;
+      display: flex;
+      justify-content: center;
     }
 
-    .card {
-      background: #111827;
-      padding: 24px;
-      border-radius: 16px;
-      border: 1px solid #1f2937;
+    .preview-wrap {
+      width: 100%;
+      max-width: 1100px;
+      position: relative;
     }
 
-    .metrics {
+    .preview-glow {
+      position: absolute;
+      bottom: -60px; left: 50%;
+      transform: translateX(-50%);
+      width: 800px; height: 200px;
+      background: var(--lime);
+      filter: blur(100px);
+      opacity: 0.08;
+    }
+
+    .preview-frame {
+      width: 100%;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--ink2);
+      overflow: hidden;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+    }
+
+    .preview-topbar {
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .preview-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .pd-r { background: #ff6058; }
+    .pd-y { background: #ffbd2e; }
+    .pd-g { background: #28c940; }
+
+    .preview-url {
+      flex: 1; text-align: center;
+      font-size: 12px; color: var(--muted);
+    }
+
+    .preview-body {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
+      grid-template-columns: 200px 1fr;
+      height: 480px;
     }
 
-    .metric {
-      background: #0f172a;
-      padding: 16px;
-      border-radius: 12px;
+    .preview-sidebar {
+      background: rgba(255,255,255,0.015);
+      border-right: 1px solid var(--border);
+      padding: 16px 12px;
     }
 
-    .metric small {
-      color: #64748b;
-      font-size: 12px;
+    .preview-nav-item {
+      height: 32px; border-radius: 8px;
+      margin-bottom: 4px;
+      background: rgba(255,255,255,0.04);
     }
 
-    .metric strong {
-      display: block;
-      font-size: 22px;
-      margin-top: 6px;
+    .preview-nav-item.active { background: rgba(200,251,87,0.12); }
+
+    .preview-main {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: hidden;
     }
 
-    .features {
-      margin-top: 80px;
+    .preview-metrics {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
+      gap: 10px;
     }
 
-    .feature {
-      background: #111827;
-      padding: 20px;
-      border-radius: 14px;
-      border: 1px solid #1f2937;
+    .preview-metric {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
     }
 
-    .feature h3 {
-      font-size: 16px;
+    .pm-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+    .pm-value { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; }
+    .pm-value.lime { color: var(--lime); }
+
+    .preview-table {
+      flex: 1;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .preview-row {
+      height: 36px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 12px;
+    }
+    .preview-row:last-child { border-bottom: none; }
+
+    .pr-col { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); }
+    .pr-badge { height: 18px; border-radius: 999px; background: rgba(200,251,87,0.15); }
+    .pr-badge.danger { background: rgba(248,113,113,0.15); }
+    .pr-badge.success { background: rgba(74,222,128,0.15); }
+
+    /* FEATURES */
+    .features-section {
+      position: relative; z-index: 1;
+      padding: 80px 24px;
+    }
+
+    .section-label {
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--lime);
+      font-family: 'Syne', sans-serif;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(28px, 4vw, 48px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      margin-bottom: 16px;
+      max-width: 600px;
+    }
+
+    .section-sub { font-size: 16px; color: var(--muted); max-width: 520px; line-height: 1.7; margin-bottom: 60px; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      transition: border-color 0.2s, transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, var(--lime), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feature-card:hover { border-color: rgba(200,251,87,0.2); transform: translateY(-3px); }
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-icon {
+      width: 42px; height: 42px;
+      background: var(--lime-dim);
+      border: 1px solid rgba(200,251,87,0.2);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 18px;
+      font-size: 18px;
+    }
+
+    .feature-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
       margin-bottom: 10px;
     }
 
-    .feature p {
-      font-size: 14px;
-      color: #94a3b8;
-      line-height: 1.6;
+    .feature-desc { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+    .features-section .container {
+      max-width: 1100px;
+      margin: 0 auto;
     }
 
-    .footer {
-      margin-top: auto;
-      padding: 20px;
-      text-align: center;
-      color: #64748b;
-      font-size: 12px;
+    /* METRICS SHOWCASE */
+    .metrics-section {
+      position: relative; z-index: 1;
+      padding: 80px 24px;
     }
 
+    .metrics-section .container { max-width: 1100px; margin: 0 auto; }
+
+    .metrics-showcase {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 48px;
+    }
+
+    .metric-showcase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+    }
+
+    .metric-showcase-card.featured {
+      background: var(--lime-dim);
+      border-color: rgba(200,251,87,0.25);
+      grid-column: span 2;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: center;
+    }
+
+    .ms-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 64px;
+      font-weight: 800;
+      letter-spacing: -3px;
+      color: var(--lime);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .ms-label {
+      font-size: 14px; color: var(--muted); line-height: 1.6;
+    }
+
+    .ms-bar-wrap { margin-top: 20px; }
+    .ms-bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .ms-bar { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin-bottom: 10px; }
+    .ms-bar-fill { height: 100%; border-radius: 3px; background: var(--lime); }
+
+    .ms-right p { font-size: 15px; color: var(--muted); line-height: 1.8; }
+
+    /* FOOTER */
+    footer {
+      position: relative; z-index: 1;
+      padding: 40px 48px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    footer p { font-size: 13px; color: var(--muted); }
+
+    /* ANIMATIONS */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* RESPONSIVE */
     @media (max-width: 900px) {
-      .hero {
-        grid-template-columns: 1fr;
-      }
-
-      .features {
-        grid-template-columns: 1fr;
-      }
+      .hero h1 { letter-spacing: -2px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .metrics-showcase { grid-template-columns: 1fr; }
+      .metric-showcase-card.featured { grid-column: 1; grid-template-columns: 1fr; }
+      nav { padding: 0 24px; }
+      .preview-body { grid-template-columns: 1fr; }
+      .preview-sidebar { display: none; }
+      .stats-row { flex-direction: column; }
+      .stat { border-right: none; border-bottom: 1px solid var(--border); }
+      .stat:last-child { border-bottom: none; }
+      footer { padding: 32px 24px; flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
-
 <body>
 
-  <div class="container">
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
 
-    <div class="header">
-      <div class="logo">Meta<span>Analyzer</span></div>
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-mark">
+      <svg viewBox="0 0 18 18" fill="none">
+        <rect x="1" y="1" width="7" height="7" rx="2" fill="#07090f"/>
+        <rect x="10" y="1" width="7" height="7" rx="2" fill="#07090f"/>
+        <rect x="1" y="10" width="7" height="7" rx="2" fill="#07090f"/>
+        <rect x="10" y="10" width="3.5" height="3.5" rx="1" fill="#07090f"/>
+        <rect x="14.5" y="14" width="2.5" height="3" rx="1" fill="#07090f"/>
+      </svg>
     </div>
+    <span class="nav-logo-text">Meta<em>Analyzer</em></span>
+  </a>
+  <div class="nav-cta">
+    <a href="/auth/facebook" class="btn-nav">
+      Entrar com Facebook →
+    </a>
+  </div>
+</nav>
 
-    <div class="hero">
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-tag">
+    ✦ Plataforma de análise para agências Meta Ads
+  </div>
 
-      <div>
-        <h1>
-          Pare de olhar só números.<br>
-          <span>Comece a tomar decisões.</span>
-        </h1>
+  <h1>
+    Pare de <em>adivinhar</em>.<br>
+    Comece a escalar.
+  </h1>
 
-        <p>
-          Analise campanhas do Meta com profundidade, entenda o que está funcionando,
-          identifique gargalos e saiba exatamente o que otimizar, pausar ou escalar.
-        </p>
+  <p>
+    Analise campanhas do Meta com profundidade de agência.
+    Identifique gargalos, tome decisões com dados e escale o que funciona — tudo em um painel.
+  </p>
 
-        <a href="/auth/facebook">
-          <button class="btn btn-primary">
-            Entrar com Facebook
-          </button>
-        </a>
+  <div class="hero-cta">
+    <a href="/auth/facebook" class="btn-hero">
+      Conectar conta Meta →
+    </a>
+    <a href="#features" class="btn-ghost">
+      Ver funcionalidades
+    </a>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-value">46+</div>
+      <div class="stat-label">Checks de auditoria</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">100%</div>
+      <div class="stat-label">Baseado em dados reais</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">IA</div>
+      <div class="stat-label">Decisões automatizadas</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">∞</div>
+      <div class="stat-label">Contas conectadas</div>
+    </div>
+  </div>
+</section>
+
+<!-- PREVIEW -->
+<section class="preview-section">
+  <div class="preview-wrap">
+    <div class="preview-glow"></div>
+    <div class="preview-frame">
+      <div class="preview-topbar">
+        <div class="preview-dot pd-r"></div>
+        <div class="preview-dot pd-y"></div>
+        <div class="preview-dot pd-g"></div>
+        <div class="preview-url">metaanalyzer.app/dashboard</div>
       </div>
-
-      <div class="card">
-
-        <div class="metrics">
-
-          <div class="metric">
-            <small>ROAS</small>
-            <strong>2.84x</strong>
-          </div>
-
-          <div class="metric">
-            <small>CTR</small>
-            <strong>3.2%</strong>
-          </div>
-
-          <div class="metric">
-            <small>Connect Rate</small>
-            <strong>72%</strong>
-          </div>
-
-          <div class="metric">
-            <small>Custo por venda</small>
-            <strong>R$ 38</strong>
-          </div>
-
+      <div class="preview-body">
+        <div class="preview-sidebar">
+          <div class="preview-nav-item active" style="margin-bottom:8px;width:70%;margin-left:4px"></div>
+          <div class="preview-nav-item" style="margin-bottom:6px"></div>
+          <div class="preview-nav-item" style="margin-bottom:6px"></div>
+          <div class="preview-nav-item" style="margin-bottom:6px"></div>
+          <div class="preview-nav-item" style="margin-bottom:20px"></div>
+          <div style="height:1px;background:rgba(255,255,255,0.05);margin-bottom:12px"></div>
+          <div class="preview-nav-item" style="margin-bottom:6px"></div>
+          <div class="preview-nav-item" style="margin-bottom:6px"></div>
+          <div class="preview-nav-item" style="margin-bottom:6px"></div>
         </div>
-
+        <div class="preview-main">
+          <div class="preview-metrics">
+            <div class="preview-metric">
+              <div class="pm-label">Investimento</div>
+              <div class="pm-value lime">R$ 48.2k</div>
+            </div>
+            <div class="preview-metric">
+              <div class="pm-label">Receita</div>
+              <div class="pm-value">R$ 124k</div>
+            </div>
+            <div class="preview-metric">
+              <div class="pm-label">ROAS</div>
+              <div class="pm-value lime">2.58x</div>
+            </div>
+            <div class="preview-metric">
+              <div class="pm-label">CTR</div>
+              <div class="pm-value">3.24%</div>
+            </div>
+          </div>
+          <div class="preview-table">
+            <div class="preview-row">
+              <div class="pr-col" style="width:160px;flex-shrink:0"></div>
+              <div class="pr-badge" style="width:60px"></div>
+              <div class="pr-badge success" style="width:70px"></div>
+              <div class="pr-col" style="width:60px"></div>
+              <div class="pr-col" style="width:50px"></div>
+            </div>
+            <div class="preview-row">
+              <div class="pr-col" style="width:140px;flex-shrink:0"></div>
+              <div class="pr-badge" style="width:55px;opacity:0.6"></div>
+              <div class="pr-badge danger" style="width:70px"></div>
+              <div class="pr-col" style="width:60px"></div>
+              <div class="pr-col" style="width:50px"></div>
+            </div>
+            <div class="preview-row">
+              <div class="pr-col" style="width:180px;flex-shrink:0"></div>
+              <div class="pr-badge success" style="width:65px"></div>
+              <div class="pr-badge success" style="width:70px"></div>
+              <div class="pr-col" style="width:60px"></div>
+              <div class="pr-col" style="width:50px"></div>
+            </div>
+            <div class="preview-row">
+              <div class="pr-col" style="width:120px;flex-shrink:0"></div>
+              <div class="pr-badge" style="width:55px;opacity:0.6"></div>
+              <div class="pr-badge" style="width:70px;opacity:0.5"></div>
+              <div class="pr-col" style="width:60px"></div>
+              <div class="pr-col" style="width:50px"></div>
+            </div>
+            <div class="preview-row">
+              <div class="pr-col" style="width:155px;flex-shrink:0"></div>
+              <div class="pr-badge success" style="width:60px"></div>
+              <div class="pr-badge success" style="width:70px"></div>
+              <div class="pr-col" style="width:60px"></div>
+              <div class="pr-col" style="width:50px"></div>
+            </div>
+            <div class="preview-row">
+              <div class="pr-col" style="width:130px;flex-shrink:0"></div>
+              <div class="pr-badge" style="width:55px;opacity:0.6"></div>
+              <div class="pr-badge danger" style="width:65px"></div>
+              <div class="pr-col" style="width:60px"></div>
+              <div class="pr-col" style="width:50px"></div>
+            </div>
+            <div class="preview-row">
+              <div class="pr-col" style="width:165px;flex-shrink:0"></div>
+              <div class="pr-badge success" style="width:65px"></div>
+              <div class="pr-badge success" style="width:70px"></div>
+              <div class="pr-col" style="width:60px"></div>
+              <div class="pr-col" style="width:50px"></div>
+            </div>
+          </div>
+        </div>
       </div>
-
     </div>
+  </div>
+</section>
 
-    <div class="features">
+<!-- FEATURES -->
+<section id="features" class="features-section">
+  <div class="container">
+    <div class="section-label">Funcionalidades</div>
+    <div class="section-title">Tudo que uma agência precisa</div>
+    <div class="section-sub">Análise profunda, decisões baseadas em dados, recomendações acionáveis — sem achismo.</div>
 
-      <div class="feature">
-        <h3>Visão Geral</h3>
-        <p>Entenda rapidamente o desempenho da conta e os principais indicadores.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Visão Geral Completa</div>
+        <div class="feature-desc">ROAS, CTR, Connect Rate, Frequência, CPM — todas as métricas do período em um painel consolidado com score de saúde da conta.</div>
       </div>
-
-      <div class="feature">
-        <h3>Campanhas</h3>
-        <p>Analise cada campanha e identifique onde está o problema ou a oportunidade.</p>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Central de Decisão</div>
+        <div class="feature-desc">Cada campanha analisada automaticamente: escalar, pausar, renovar criativo ou ajustar funil. Com motivo e desperdício estimado.</div>
       </div>
-
-      <div class="feature">
-        <h3>Criativos</h3>
-        <p>Descubra quais anúncios estão performando melhor e onde ajustar.</p>
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <div class="feature-title">Insights IA Prioritários</div>
+        <div class="feature-desc">Motor de análise que cruza benchmarks do nicho com seus dados reais e gera otimizações ranqueadas por prioridade e impacto.</div>
       </div>
-
-      <div class="feature">
-        <h3>Breakdown</h3>
-        <p>Veja dados por plataforma, idade, sexo, dispositivo e localização.</p>
+      <div class="feature-card">
+        <div class="feature-icon">🖼️</div>
+        <div class="feature-title">Criativos Campeões</div>
+        <div class="feature-desc">Ordene criativos por ROAS, mensagens ou compras. Visualize thumbnails e identifique o que está performando de verdade.</div>
       </div>
-
+      <div class="feature-card">
+        <div class="feature-icon">📉</div>
+        <div class="feature-title">Breakdown Detalhado</div>
+        <div class="feature-desc">Performance por plataforma, dispositivo, gênero, idade, posicionamento e região — com gráficos e tabelas comparativas.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💬</div>
+        <div class="feature-title">Chat IA Contextual</div>
+        <div class="feature-desc">Pergunte diretamente ao sistema: "qual campanha devo pausar?", "onde está o gargalo?", "o que escalar agora?". Respostas com os dados da análise.</div>
+      </div>
     </div>
-
   </div>
+</section>
 
-  <div class="footer">
-    Meta Ads Analyzer — Uso interno de agência
+<!-- METRICS SHOWCASE -->
+<section class="metrics-section">
+  <div class="container">
+    <div class="section-label">Por que funciona</div>
+    <div class="section-title">Dados que geram decisões</div>
+
+    <div class="metrics-showcase">
+      <div class="metric-showcase-card featured">
+        <div>
+          <div class="ms-num">2.5x</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px">ROAS médio das contas analisadas</div>
+          <div class="ms-bar-wrap">
+            <div class="ms-bar-label"><span>Sua conta</span><span>2.8x</span></div>
+            <div class="ms-bar"><div class="ms-bar-fill" style="width:70%"></div></div>
+            <div class="ms-bar-label"><span>Benchmark do nicho</span><span>2.5x</span></div>
+            <div class="ms-bar"><div class="ms-bar-fill" style="width:62.5%;background:rgba(200,251,87,0.5)"></div></div>
+            <div class="ms-bar-label"><span>Média geral</span><span>2.0x</span></div>
+            <div class="ms-bar"><div class="ms-bar-fill" style="width:50%;background:rgba(200,251,87,0.25)"></div></div>
+          </div>
+        </div>
+        <div class="ms-right">
+          <p>Comparamos suas métricas com benchmarks reais do seu nicho. Você sabe exatamente onde está acima, onde está abaixo — e o que fazer em cada caso.</p>
+        </div>
+      </div>
+
+      <div class="metric-showcase-card">
+        <div class="ms-num" style="font-size:48px">46+</div>
+        <div class="ms-label">Checks automáticos por análise, incluindo hook rate, connect rate, frequência, ROAS por campanha e muito mais.</div>
+      </div>
+
+      <div class="metric-showcase-card">
+        <div class="ms-num" style="font-size:48px">100%</div>
+        <div class="ms-label">Baseado nos seus dados reais do Meta Graph API. Sem amostras, sem estimativas — dados de verdade.</div>
+      </div>
+    </div>
   </div>
+</section>
+
+<!-- CTA FINAL -->
+<section style="position:relative;z-index:1;padding:80px 24px;text-align:center">
+  <div style="max-width:600px;margin:0 auto">
+    <div class="section-label" style="text-align:center;margin-bottom:24px">Comece agora</div>
+    <h2 style="font-family:'Syne',sans-serif;font-size:42px;font-weight:800;letter-spacing:-1.5px;margin-bottom:16px">Conecte sua conta e veja o que está acontecendo de verdade</h2>
+    <p style="font-size:16px;color:var(--muted);margin-bottom:40px;line-height:1.7">Sem configuração demorada. Conecte via Facebook, selecione a conta e rode a primeira análise em menos de 2 minutos.</p>
+    <a href="/auth/facebook" class="btn-hero" style="display:inline-flex">
+      Entrar com Facebook →
+    </a>
+  </div>
+</section>
+
+<footer>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="nav-logo-mark" style="width:28px;height:28px;border-radius:8px">
+      <svg viewBox="0 0 18 18" fill="none" width="16" height="16">
+        <rect x="1" y="1" width="7" height="7" rx="2" fill="#07090f"/>
+        <rect x="10" y="1" width="7" height="7" rx="2" fill="#07090f"/>
+        <rect x="1" y="10" width="7" height="7" rx="2" fill="#07090f"/>
+        <rect x="10" y="10" width="3.5" height="3.5" rx="1" fill="#07090f"/>
+      </svg>
+    </div>
+    <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px">Meta<em style="font-style:normal;color:var(--lime)">Analyzer</em></span>
+  </div>
+  <p>Uso interno de agência — não afiliado ao Meta Platforms Inc.</p>
+</footer>
 
 </body>
 </html>
