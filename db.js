@@ -1,17 +1,32 @@
 const { Pool } = require('pg');
 
+// Valida se DATABASE_URL tem formato mínimo de connection string postgres
+function isValidDatabaseUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  return /^postgres(ql)?:\/\/.+/i.test(url.trim());
+}
+
 let pool;
-if (process.env.DATABASE_URL) {
+let dbEnabled = false;
+
+if (isValidDatabaseUrl(process.env.DATABASE_URL)) {
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 5000,
   });
 
   pool.on('error', (err) => {
-    console.error('Unexpected error on idle client', err);
+    console.error('⚠️ Erro inesperado no pool do banco:', err.message);
   });
+
+  dbEnabled = true;
 } else {
-  console.log('⚠️ DATABASE_URL não configurada. Funcionalidades de histórico estarão desativadas.');
+  if (process.env.DATABASE_URL) {
+    console.warn('⚠️ DATABASE_URL inválida (não parece uma connection string postgres). Histórico desativado.');
+  } else {
+    console.log('⚠️ DATABASE_URL não configurada. Funcionalidades de histórico estarão desativadas.');
+  }
   pool = {
     query: async () => ({ rows: [] }),
     on: () => {}
@@ -198,17 +213,22 @@ async function runMigrations() {
 }
 
 async function initDB() {
+  if (!dbEnabled) {
+    console.log('ℹ️ DB desativado — initDB ignorado.');
+    return;
+  }
   try {
     await pool.query(SCHEMA);
     await runMigrations();
     console.log('✅ Database schema ready');
   } catch (err) {
-    console.error('❌ DB init error:', err.message);
-    throw err;
+    // Loga mas NÃO derruba o processo — app roda sem DB
+    console.error('❌ DB init error (app continuará sem histórico):', err.message);
   }
 }
 
 async function saveRun({ fbAccountId, fbUserId, accountName, dateRange, metrics, campaigns, aiAnalysis }) {
+  if (!dbEnabled) return null;
   const { rows } = await pool.query(`
     INSERT INTO analysis_runs (
       fb_account_id, fb_user_id, account_name, date_range,
@@ -259,11 +279,32 @@ module.exports = {
   initDB,
   saveRun,
   query: (text, params) => pool.query(text, params),
-  getRunHistory: async (acc, limit = 60) => (await pool.query(`SELECT * FROM analysis_runs WHERE fb_account_id = $1 ORDER BY created_at DESC LIMIT $2`, [acc, limit])).rows,
-  getDailyRunHistory: async (acc, limit = 90) => (await pool.query(`SELECT * FROM analysis_runs WHERE fb_account_id = $1 AND date_range LIKE 'AUTO_DAILY%' ORDER BY created_at DESC LIMIT $2`, [acc, limit])).rows,
-  saveNote: async (n) => (await pool.query(`INSERT INTO campaign_notes (fb_user_id, fb_account_id, fb_campaign_id, campaign_name, note, type) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [n.fbUserId, n.fbAccountId, n.fbCampaignId, n.campaignName, n.note, n.type])).rows[0],
-  getNotes: async (acc, user) => (await pool.query(`SELECT * FROM campaign_notes WHERE fb_account_id = $1 AND fb_user_id = $2 ORDER BY created_at DESC`, [acc, user])).rows,
-  deleteNote: async (id, user) => pool.query(`DELETE FROM campaign_notes WHERE id = $1 AND fb_user_id = $2`, [id, user]),
-  upsertBudgetAlert: async (a) => (await pool.query(`INSERT INTO budget_alerts (fb_user_id, fb_account_id, account_name, alert_email, threshold_amount, currency) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (fb_user_id, fb_account_id) DO UPDATE SET alert_email=EXCLUDED.alert_email, threshold_amount=EXCLUDED.threshold_amount, currency=EXCLUDED.currency, active=TRUE RETURNING *`, [a.fbUserId, a.fbAccountId, a.accountName, a.email, a.threshold, a.currency])).rows[0],
-  getBudgetAlert: async (user, acc) => (await pool.query(`SELECT * FROM budget_alerts WHERE fb_user_id = $1 AND fb_account_id = $2`, [user, acc])).rows[0]
+  getRunHistory: async (acc, limit = 60) => {
+    if (!dbEnabled) return [];
+    return (await pool.query(`SELECT * FROM analysis_runs WHERE fb_account_id = $1 ORDER BY created_at DESC LIMIT $2`, [acc, limit])).rows;
+  },
+  getDailyRunHistory: async (acc, limit = 90) => {
+    if (!dbEnabled) return [];
+    return (await pool.query(`SELECT * FROM analysis_runs WHERE fb_account_id = $1 AND date_range LIKE 'AUTO_DAILY%' ORDER BY created_at DESC LIMIT $2`, [acc, limit])).rows;
+  },
+  saveNote: async (n) => {
+    if (!dbEnabled) return null;
+    return (await pool.query(`INSERT INTO campaign_notes (fb_user_id, fb_account_id, fb_campaign_id, campaign_name, note, type) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [n.fbUserId, n.fbAccountId, n.fbCampaignId, n.campaignName, n.note, n.type])).rows[0];
+  },
+  getNotes: async (acc, user) => {
+    if (!dbEnabled) return [];
+    return (await pool.query(`SELECT * FROM campaign_notes WHERE fb_account_id = $1 AND fb_user_id = $2 ORDER BY created_at DESC`, [acc, user])).rows;
+  },
+  deleteNote: async (id, user) => {
+    if (!dbEnabled) return;
+    return pool.query(`DELETE FROM campaign_notes WHERE id = $1 AND fb_user_id = $2`, [id, user]);
+  },
+  upsertBudgetAlert: async (a) => {
+    if (!dbEnabled) return null;
+    return (await pool.query(`INSERT INTO budget_alerts (fb_user_id, fb_account_id, account_name, alert_email, threshold_amount, currency) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (fb_user_id, fb_account_id) DO UPDATE SET alert_email=EXCLUDED.alert_email, threshold_amount=EXCLUDED.threshold_amount, currency=EXCLUDED.currency, active=TRUE RETURNING *`, [a.fbUserId, a.fbAccountId, a.accountName, a.email, a.threshold, a.currency])).rows[0];
+  },
+  getBudgetAlert: async (user, acc) => {
+    if (!dbEnabled) return null;
+    return (await pool.query(`SELECT * FROM budget_alerts WHERE fb_user_id = $1 AND fb_account_id = $2`, [user, acc])).rows[0];
+  }
 };
