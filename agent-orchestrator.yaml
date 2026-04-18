@@ -1,0 +1,33 @@
+# Agent Orchestrator — meta-ads-analyzer
+# https://github.com/ComposioHQ/agent-orchestrator
+
+port: 3000
+
+defaults:
+  runtime: tmux
+  agent: claude-code
+  workspace: worktree
+  notifiers: [desktop]
+
+projects:
+  meta-ads-analyzer:
+    repo: alexeller11/meta-ads-analyzer
+    path: ~/meta-ads-analyzer
+    defaultBranch: main
+    sessionPrefix: meta
+
+reactions:
+  ci-failed:
+    auto: true
+    action: send-to-agent
+    retries: 2
+  changes-requested:
+    auto: true
+    action: send-to-agent
+    escalateAfter: 30m
+  approved-and-green:
+    auto: false
+    action: notify
+
+power:
+  preventIdleSleep: true
