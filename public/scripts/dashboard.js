@@ -42,26 +42,27 @@ function showError(message) {
   const box = document.getElementById("globalError");
   if (!box) return;
   box.textContent = message;
-  box.classList.remove("hidden");
+  box.classList.add("show");
 }
 
 function hideError() {
   const box = document.getElementById("globalError");
   if (!box) return;
-  box.classList.add("hidden");
+  box.classList.remove("show");
 }
 
 function showOk(message) {
   const box = document.getElementById("globalOk");
   if (!box) return;
   box.textContent = message;
-  box.classList.remove("hidden");
+  box.classList.add("show");
+  setTimeout(() => box.classList.remove("show"), 5000);
 }
 
 function hideOk() {
   const box = document.getElementById("globalOk");
   if (!box) return;
-  box.classList.add("hidden");
+  box.classList.remove("show");
 }
 
 function getActionValue(arr, typeList) {
@@ -85,16 +86,22 @@ function getDateQuery() {
 }
 
 async function loadSession() {
-  const me = await api("/api/me");
-  if (!me.authenticated) {
+  try {
+    const me = await api("/api/me");
+    if (!me.authenticated) {
+      window.location.href = "/";
+      return false;
+    }
+
+    state.me = me.user;
+    const userName = document.getElementById("userName");
+    if (userName) userName.textContent = me.user?.name || "Usuário";
+    return true;
+  } catch (e) {
+    console.error("Erro de sessão:", e);
     window.location.href = "/";
     return false;
   }
-
-  state.me = me.user;
-  const userName = document.getElementById("userName");
-  if (userName) userName.textContent = me.user?.name || "Usuário";
-  return true;
 }
 
 async function loadAccounts() {
@@ -129,6 +136,24 @@ async function loadAccounts() {
   showOk(`${accounts.length} conta(s) carregada(s) com sucesso.`);
 }
 
+function updateScoreRing(score) {
+  const circle = document.getElementById("scoreCircle");
+  const num = document.getElementById("scoreNum");
+  if (!circle || !num) return;
+
+  const val = Math.max(0, Math.min(100, Number(score || 0)));
+  num.textContent = Math.round(val);
+
+  // Perímetro do círculo r=42 é 2 * PI * 42 = 263.89
+  const offset = 264 - (val / 100) * 264;
+  circle.style.strokeDashoffset = offset;
+
+  // Cor baseada no score
+  if (val >= 80) circle.style.stroke = "var(--success)";
+  else if (val >= 50) circle.style.stroke = "var(--warning)";
+  else circle.style.stroke = "var(--danger)";
+}
+
 function renderOverview() {
   const m = state.metrics;
   if (!m) return;
@@ -146,6 +171,23 @@ function renderOverview() {
   document.getElementById("mConnectRate").textContent = brPct(m.connectRate);
   document.getElementById("mMessages").textContent = brNum(m.totalMessages);
   document.getElementById("mPurchases").textContent = brNum(m.totalPurchases);
+
+  // Score e Saúde
+  const score = state.historyRows?.[0]?.health_score || 0;
+  updateScoreRing(score);
+
+  const hTitle = document.getElementById("healthTitle");
+  const hDesc = document.getElementById("healthDesc");
+  if (score >= 80) {
+    hTitle.textContent = "Excelente Performance";
+    hDesc.textContent = "Sua conta apresenta métricas sólidas. Continue escalando as campanhas vencedoras.";
+  } else if (score >= 50) {
+    hTitle.textContent = "Atenção Necessária";
+    hDesc.textContent = "Existem oportunidades de otimização em algumas campanhas. Verifique a Central de Decisão.";
+  } else {
+    hTitle.textContent = "Performance Crítica";
+    hDesc.textContent = "Métricas abaixo do esperado. Recomendamos revisar criativos e públicos imediatamente.";
+  }
 }
 
 function renderCampaigns() {
@@ -153,7 +195,7 @@ function renderCampaigns() {
   if (!body) return;
 
   if (!state.campaigns.length) {
-    body.innerHTML = `<tr><td colspan="9" class="empty">Nenhuma campanha para exibir.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="9" class="empty-state">Nenhuma campanha para exibir.</td></tr>`;
     return;
   }
 
@@ -161,8 +203,8 @@ function renderCampaigns() {
     .map(
       (c) => `
       <tr>
-        <td>${c.name || "-"}</td>
-        <td>${c.lifecycleStatus || c.status || "-"}</td>
+        <td class="td-name">${c.name || "-"}</td>
+        <td><span class="badge ${c.status === 'ACTIVE' ? 'badge-success' : 'badge-muted'}">${c.status || "-"}</span></td>
         <td>${brMoney(c.spend)}</td>
         <td>${brNum(c.messages)}</td>
         <td>${brNum(c.purchases)}</td>
@@ -181,35 +223,45 @@ function renderDecision() {
   if (!body) return;
 
   if (!state.campaigns.length) {
-    body.innerHTML = `<tr><td colspan="7" class="empty">Nenhuma decisão para exibir.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7" class="empty-state">Nenhuma decisão para exibir.</td></tr>`;
     return;
   }
 
   body.innerHTML = state.campaigns
     .map(
-      (c) => `
-      <tr>
-        <td>${c.name || "-"}</td>
-        <td>${c.lifecycleStatus || c.status || "-"}</td>
-        <td>${c.decision?.action || "MANTER"}</td>
-        <td>${c.decision?.reason || "-"}</td>
-        <td>${brMoney(c.spend)}</td>
-        <td>${Number(c.roas || 0).toFixed(2)}x</td>
-        <td>${brPct(c.connectRate)}</td>
-      </tr>
-    `
+      (c) => {
+        const action = c.decision?.action || "MANTER";
+        let badgeClass = "badge-muted";
+        if (action === "ESCALAR") badgeClass = "badge-success";
+        if (action === "PAUSAR") badgeClass = "badge-danger";
+        if (action === "REVISAR") badgeClass = "badge-purple";
+
+        return `
+        <tr>
+          <td class="td-name">${c.name || "-"}</td>
+          <td><span class="badge ${c.status === 'ACTIVE' ? 'badge-success' : 'badge-muted'}">${c.status || "-"}</span></td>
+          <td><span class="badge ${badgeClass}">${action}</span></td>
+          <td style="white-space: normal; min-width: 200px; font-size: 12px;">${c.decision?.reason || "-"}</td>
+          <td>${brMoney(c.spend)}</td>
+          <td>${Number(c.roas || 0).toFixed(2)}x</td>
+          <td>${brPct(c.connectRate)}</td>
+        </tr>
+      `;
+      }
     )
     .join("");
 }
 
 async function loadBreakdown() {
   hideError();
-  hideOk();
-
   if (!state.selectedAccountId) {
-    showError("Selecione uma conta antes de carregar breakdown.");
+    showError("Selecione uma conta antes.");
     return;
   }
+
+  const btn = document.getElementById("breakdownBtn");
+  btn.disabled = true;
+  btn.textContent = "...";
 
   try {
     const type = document.getElementById("breakdownType").value;
@@ -217,8 +269,10 @@ async function loadBreakdown() {
     state.breakdownRows = Array.isArray(res?.data) ? res.data : [];
     renderBreakdown();
   } catch (error) {
-    console.error(error);
-    showError(`Erro ao carregar breakdown: ${error.message}`);
+    showError(`Erro: ${error.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Carregar Breakdown";
   }
 }
 
@@ -227,43 +281,19 @@ function renderBreakdown() {
   if (!body) return;
 
   if (!state.breakdownRows.length) {
-    body.innerHTML = `<tr><td colspan="8" class="empty">Nenhum dado de breakdown encontrado.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="8" class="empty-state">Nenhum dado encontrado.</td></tr>`;
     return;
   }
 
   body.innerHTML = state.breakdownRows
     .map((row) => {
       const spend = Number(row.spend || 0);
-
-      const revenue = getActionValue(row.action_values, [
-        "offsite_conversion.fb_pixel_purchase",
-        "purchase",
-        "omni_purchase"
-      ]);
-
-      const purchases = getActionValue(row.actions, [
-        "offsite_conversion.fb_pixel_purchase",
-        "purchase",
-        "omni_purchase"
-      ]);
-
-      const messages = getActionValue(row.actions, [
-        "onsite_conversion.messaging_conversation_started_7d",
-        "onsite_conversion.messaging_first_reply",
-        "onsite_conversion.total_messaging_connection"
-      ]);
-
+      const revenue = getActionValue(row.action_values, ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase"]);
+      const purchases = getActionValue(row.actions, ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase"]);
+      const messages = getActionValue(row.actions, ["onsite_conversion.messaging_conversation_started_7d", "onsite_conversion.messaging_first_reply", "onsite_conversion.total_messaging_connection"]);
       const roas = spend > 0 ? revenue / spend : 0;
 
-      const label =
-        row.publisher_platform ||
-        row.device_platform ||
-        row.gender ||
-        row.age ||
-        row.region ||
-        row.city ||
-        row.platform_position ||
-        "N/A";
+      const label = row.publisher_platform || row.device_platform || row.gender || row.age || row.region || row.city || "N/A";
 
       return `
         <tr>
@@ -292,7 +322,7 @@ function renderHistory() {
   if (!body) return;
 
   if (!state.historyRows.length) {
-    body.innerHTML = `<tr><td colspan="15" class="empty">Sem histórico salvo ainda.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="11" class="empty-state">Sem histórico salvo.</td></tr>`;
     return;
   }
 
@@ -306,15 +336,11 @@ function renderHistory() {
         <td>${Number(r.roas || 0).toFixed(2)}x</td>
         <td>${brMoney(r.cost_per_purchase)}</td>
         <td>${brNum(r.total_impressions)}</td>
-        <td>${brNum(r.total_reach)}</td>
-        <td>${Number(r.avg_frequency || 0).toFixed(2)}</td>
-        <td>${brMoney(r.avg_cpm)}</td>
         <td>${brPct(r.avg_ctr)}</td>
-        <td>${brMoney(r.avg_cpc)}</td>
         <td>${brPct(r.connect_rate)}</td>
         <td>${brNum(r.total_messages)}</td>
         <td>${brNum(r.total_purchases)}</td>
-        <td>${brNum(r.health_score)}</td>
+        <td><span class="badge ${r.health_score >= 80 ? 'badge-success' : (r.health_score >= 50 ? 'badge-lime' : 'badge-danger')}">${r.health_score}</span></td>
       </tr>
     `
     )
@@ -323,49 +349,35 @@ function renderHistory() {
 
 async function loadCreatives() {
   hideError();
-
   if (!state.selectedAccountId) {
-    showError("Selecione uma conta antes de carregar criativos.");
+    showError("Selecione uma conta.");
     return;
   }
+
+  const btn = document.getElementById("creativeBtn");
+  btn.disabled = true;
+  btn.textContent = "...";
 
   try {
     const res = await api(`/api/adaccounts/${state.selectedAccountId}/creatives?${getDateQuery()}`);
     state.creatives = Array.isArray(res?.data) ? res.data : [];
     renderCreatives();
   } catch (error) {
-    console.error(error);
-    showError(`Erro ao carregar criativos: ${error.message}`);
+    showError(`Erro: ${error.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Carregar Criativos";
   }
 }
 
 function creativeMetrics(item) {
   const ins = item?.insights?.data?.[0] || {};
   const spend = Number(ins.spend || 0);
-  const revenue = getActionValue(ins.action_values, [
-    "offsite_conversion.fb_pixel_purchase",
-    "purchase",
-    "omni_purchase"
-  ]);
-  const purchases = getActionValue(ins.actions, [
-    "offsite_conversion.fb_pixel_purchase",
-    "purchase",
-    "omni_purchase"
-  ]);
-  const messages = getActionValue(ins.actions, [
-    "onsite_conversion.messaging_conversation_started_7d",
-    "onsite_conversion.messaging_first_reply",
-    "onsite_conversion.total_messaging_connection"
-  ]);
+  const revenue = getActionValue(ins.action_values, ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase"]);
+  const purchases = getActionValue(ins.actions, ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase"]);
+  const messages = getActionValue(ins.actions, ["onsite_conversion.messaging_conversation_started_7d", "onsite_conversion.messaging_first_reply", "onsite_conversion.total_messaging_connection"]);
   const roas = spend > 0 ? revenue / spend : 0;
-  return {
-    spend,
-    revenue,
-    purchases,
-    messages,
-    roas,
-    ctr: Number(ins.ctr || 0)
-  };
+  return { spend, revenue, purchases, messages, roas, ctr: Number(ins.ctr || 0) };
 }
 
 function renderCreatives() {
@@ -373,7 +385,7 @@ function renderCreatives() {
   if (!grid) return;
 
   if (!state.creatives.length) {
-    grid.innerHTML = `<div class="empty-card">Nenhum criativo encontrado.</div>`;
+    grid.innerHTML = `<div class="empty-state">Nenhum criativo encontrado.</div>`;
     return;
   }
 
@@ -391,23 +403,19 @@ function renderCreatives() {
   grid.innerHTML = list
     .map((item, index) => {
       const m = creativeMetrics(item);
-      const image =
-        item?.creative?.image_url ||
-        item?.creative?.thumbnail_url ||
-        "";
+      const image = item?.creative?.image_url || item?.creative?.thumbnail_url || "";
 
       return `
         <div class="creative-card">
-          ${image ? `<img src="${image}" alt="Criativo">` : `<div class="creative-image-placeholder">Sem imagem</div>`}
-          <div class="creative-info">
-            <div class="creative-title">${item.name || "Criativo sem nome"}</div>
-            <div class="creative-line">Gasto: ${brMoney(m.spend)}</div>
-            <div class="creative-line">Receita: ${brMoney(m.revenue)}</div>
-            <div class="creative-line">ROAS: ${m.roas.toFixed(2)}x</div>
-            <div class="creative-line">CTR: ${brPct(m.ctr)}</div>
-            <div class="creative-line">Mensagens: ${brNum(m.messages)}</div>
-            <div class="creative-line">Compras: ${brNum(m.purchases)}</div>
-            ${sort === "champion" && index === 0 ? `<div class="creative-badge">Criativo campeão</div>` : ""}
+          ${image ? `<img class="creative-img" src="${image}" alt="Criativo">` : `<div class="creative-placeholder"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>`}
+          <div class="creative-body">
+            <div class="creative-name">${item.name || "Criativo sem nome"}</div>
+            <div class="creative-stat">Gasto <strong>${brMoney(m.spend)}</strong></div>
+            <div class="creative-stat">ROAS <strong>${m.roas.toFixed(2)}x</strong></div>
+            <div class="creative-stat">CTR <strong>${brPct(m.ctr)}</strong></div>
+            <div class="creative-stat">Mensagens <strong>${brNum(m.messages)}</strong></div>
+            <div class="creative-stat">Compras <strong>${brNum(m.purchases)}</strong></div>
+            ${sort === "champion" && index === 0 ? `<div class="creative-badge"><span class="badge badge-lime">Campeão</span></div>` : ""}
           </div>
         </div>
       `;
@@ -427,38 +435,47 @@ function renderTrend() {
   const rows = [...state.historyRows].reverse();
   if (!rows.length) return;
 
-  state.trendChart = new Chart(canvas, {
+  const ctx = canvas.getContext('2d');
+  state.trendChart = new Chart(ctx, {
     type: "line",
     data: {
       labels: rows.map((r) => new Date(r.created_at).toLocaleDateString("pt-BR")),
       datasets: [
         {
           label: "ROAS",
-          data: rows.map((r) => Number(r.roas || 0))
-        },
-        {
-          label: "Investimento",
-          data: rows.map((r) => Number(r.total_spend || 0))
+          data: rows.map((r) => Number(r.roas || 0)),
+          borderColor: '#c8fb57',
+          backgroundColor: 'rgba(200, 251, 87, 0.1)',
+          tension: 0.4,
+          fill: true
         },
         {
           label: "Score",
-          data: rows.map((r) => Number(r.health_score || 0))
+          data: rows.map((r) => Number(r.health_score || 0)),
+          borderColor: '#a78bfa',
+          tension: 0.4,
+          borderDash: [5, 5]
         }
       ]
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#7a8499', font: { family: 'DM Sans' } } }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7a8499' } },
+        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7a8499' } }
+      }
     }
   });
 }
 
 async function runAnalysis() {
   hideError();
-  hideOk();
-
   if (!state.selectedAccountId) {
-    showError("Selecione uma conta antes de analisar.");
+    showError("Selecione uma conta.");
     return;
   }
 
@@ -494,7 +511,6 @@ async function runAnalysis() {
 
     showOk("Análise concluída com sucesso.");
   } catch (error) {
-    console.error(error);
     showError(`Erro ao analisar: ${error.message}`);
   } finally {
     runBtn.disabled = false;
@@ -503,13 +519,17 @@ async function runAnalysis() {
 }
 
 function bindTabs() {
-  document.querySelectorAll(".tab-btn").forEach((btn) => {
+  document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.add("hidden"));
+      const tab = btn.dataset.tab;
+      if (!tab) return;
+
+      document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll("main.main > section").forEach((p) => p.classList.remove("active"));
 
       btn.classList.add("active");
-      document.getElementById(`tab-${btn.dataset.tab}`).classList.remove("hidden");
+      const panel = document.getElementById(`tab-${tab}`);
+      if (panel) panel.classList.add("active");
     });
   });
 }
@@ -520,7 +540,6 @@ async function init() {
     if (!ok) return;
 
     await loadAccounts();
-
     bindTabs();
 
     document.getElementById("runBtn").addEventListener("click", runAnalysis);
@@ -533,12 +552,9 @@ async function init() {
       document.getElementById("customDates").classList.toggle("hidden", !custom);
     });
   } catch (error) {
-    console.error(error);
-    showError(`Erro ao iniciar dashboard: ${error.message}`);
+    showError(`Erro ao iniciar: ${error.message}`);
     const sel = document.getElementById("accountSel");
-    if (sel) {
-      sel.innerHTML = `<option value="">Erro ao carregar contas</option>`;
-    }
+    if (sel) sel.innerHTML = `<option value="">Erro ao carregar contas</option>`;
   }
 }
 
