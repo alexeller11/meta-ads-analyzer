@@ -1,217 +1,1105 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meta Ads Analyzer</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meta Ads Analyzer — Agência</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap">
+  <link rel="stylesheet" href="/styles.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <style>
-    :root{
-      --bg:#0b1120; --bg2:#111827; --card:#172033; --card2:#1d2940;
-      --border:#2b3957; --text:#edf2f7; --muted:#94a3b8; --primary:#3b82f6;
-      --success:#10b981; --warning:#f59e0b; --danger:#ef4444; --purple:#8b5cf6;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,sans-serif}
-    .topbar{height:68px;display:flex;align-items:center;gap:10px;padding:0 18px;background:var(--bg2);border-bottom:1px solid var(--border)}
-    .logo{font-weight:900;font-size:20px}
-    .logo span{color:var(--primary)}
-    .app{display:flex;height:calc(100vh - 68px)}
-    .sidebar{width:240px;background:var(--bg2);border-right:1px solid var(--border);padding:16px;overflow:auto}
-    .main{flex:1;padding:20px;overflow:auto}
-    .nav-title{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:800;margin:14px 8px 8px}
-    .nav-btn{display:block;width:100%;text-align:left;background:none;border:0;color:var(--text);padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:700}
-    .nav-btn:hover,.nav-btn.active{background:rgba(59,130,246,.12);color:#fff}
-    .input,.btn,select,textarea{height:40px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);padding:0 12px;font-family:Inter,sans-serif}
-    textarea{height:auto;padding:12px;resize:vertical}
-    .btn{cursor:pointer;background:var(--primary);border:none;font-weight:700}
-    .btn.secondary{background:var(--card)}
-    .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-    .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px}
-    .label{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:800;margin-bottom:8px}
-    .value{font-size:28px;font-weight:900}
-    .sub{font-size:12px;color:var(--muted);margin-top:6px}
-    .section{margin-top:22px}
-    .section h2{font-size:18px;margin:0 0 14px}
-    .hidden{display:none}
-    .table-wrap{overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:16px}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px;white-space:nowrap}
-    th{font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left}
-    .badge{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800}
-    .success{background:rgba(16,185,129,.12);color:var(--success)}
-    .warning{background:rgba(245,158,11,.12);color:var(--warning)}
-    .danger{background:rgba(239,68,68,.12);color:var(--danger)}
-    .primary{background:rgba(59,130,246,.12);color:var(--primary)}
-    .purple{background:rgba(139,92,246,.12);color:var(--purple)}
-    .summary{display:flex;gap:20px;align-items:center}
-    .score{width:100px;height:100px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:8px solid rgba(59,130,246,.25);font-size:28px;font-weight:900;color:var(--primary)}
-    .filters{display:flex;gap:8px;flex-wrap:wrap}
-    .filter-btn{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:999px;padding:8px 12px;cursor:pointer;font-weight:700;font-size:12px}
-    .filter-btn.active{background:rgba(59,130,246,.15);border-color:var(--primary)}
-    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:20px;z-index:999}
-    .modal{width:min(900px,95vw);max-height:85vh;overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:24px}
-    .modal h3{margin-top:0}
-    .creative-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
-    .creative-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden}
-    .creative-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#0f172a}
-    .creative-info{padding:12px}
-    .empty{padding:30px;color:var(--muted);text-align:center}
-    .chart-box{height:320px}
-    .chat-shell{display:grid;grid-template-rows:1fr auto;gap:14px;min-height:62vh}
-    .chat-messages{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;overflow:auto;display:flex;flex-direction:column;gap:12px}
-    .chat-msg{max-width:min(860px,85%);padding:14px 16px;border-radius:14px;line-height:1.55;white-space:pre-wrap}
-    .chat-msg.user{align-self:flex-end;background:rgba(59,130,246,.14);border:1px solid rgba(59,130,246,.25)}
-    .chat-msg.assistant{align-self:flex-start;background:var(--card2);border:1px solid var(--border)}
-    .chat-compose{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
-    .chat-compose textarea{min-height:88px}
-    @media(max-width:1200px){.grid,.grid5{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:900px){.app{display:block;height:auto}.sidebar{width:auto;border-right:none;border-bottom:1px solid var(--border)}.grid,.grid5{grid-template-columns:1fr}.chat-compose{grid-template-columns:1fr}}
-  </style>
 </head>
 <body>
-  <div class="topbar">
-    <div class="logo">Meta<span>Analyzer</span></div>
-    <select id="accountSel" class="input" style="min-width:240px"></select>
-    <select id="nicheSel" class="input">
-      <option value="Geral">Geral</option>
-      <option value="E-commerce">E-commerce</option>
-      <option value="Infoprodutos">Infoprodutos</option>
-      <option value="Negócios Locais">Negócios Locais</option>
-      <option value="Serviços B2B">Serviços B2B</option>
-      <option value="Imobiliário">Imobiliário</option>
-    </select>
-    <select id="dateSel" class="input">
-      <option value="last_7d">Últimos 7 dias</option>
-      <option value="last_14d">Últimos 14 dias</option>
-      <option value="last_30d" selected>Últimos 30 dias</option>
-      <option value="this_month">Este mês</option>
-      <option value="last_month">Mês passado</option>
-      <option value="last_90d">Últimos 90 dias</option>
-      <option value="custom">Personalizado</option>
-    </select>
-    <input type="date" id="sinceDate" class="input hidden">
-    <input type="date" id="untilDate" class="input hidden">
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
-      <input type="checkbox" id="comparePeriod">
-      Comparar mesmo período anterior
-    </label>
-    <button class="btn" id="analyzeBtn">Analisar</button>
-    <div style="margin-left:auto" id="userName"></div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 20 20" fill="none">
+        <rect x="2" y="2" width="7" height="7" rx="2" fill="#0a0d14"/>
+        <rect x="11" y="2" width="7" height="7" rx="2" fill="#0a0d14"/>
+        <rect x="2" y="11" width="7" height="7" rx="2" fill="#0a0d14"/>
+        <rect x="11" y="11" width="7" height="3" rx="1.5" fill="#0a0d14"/>
+        <rect x="15" y="15" width="3" height="3" rx="1" fill="#0a0d14"/>
+      </svg>
+    </div>
+    <span class="logo-name">Meta<em>Analyzer</em></span>
   </div>
 
-  <div class="app">
-    <aside class="sidebar">
-      <div class="nav-title">Visão</div>
-      <button class="nav-btn active" data-tab="overview">Visão Geral</button>
-      <button class="nav-btn" data-tab="analysis">Insights IA</button>
-      <button class="nav-btn" data-tab="decision">Central de Decisão</button>
-      <button class="nav-btn" data-tab="campaigns">Campanhas</button>
+  <div class="topbar-sep"></div>
 
-      <div class="nav-title">Análise</div>
-      <button class="nav-btn" data-tab="creatives">Criativos</button>
-      <button class="nav-btn" data-tab="breakdown">Breakdown</button>
-      <button class="nav-btn" data-tab="trend">Tendência</button>
-      <button class="nav-btn" data-tab="daily">Métricas Diárias</button>
-      <button class="nav-btn" data-tab="chat">Chat IA</button>
+  <select id="accountSel" style="min-width:220px"></select>
 
-      <div class="nav-title">Ferramentas</div>
-      <button class="nav-btn" data-tab="notes">Notas</button>
-      <button class="nav-btn" data-tab="alerts">Alertas</button>
-    </aside>
+  <select id="nicheSel" style="min-width:140px">
+    <option value="Geral">Geral</option>
+    <option value="E-commerce">E-commerce</option>
+    <option value="Infoprodutos">Infoprodutos</option>
+    <option value="Negócios Locais">Negócios Locais</option>
+    <option value="Serviços B2B">Serviços B2B</option>
+    <option value="Imobiliário">Imobiliário</option>
+  </select>
 
-    <main class="main">
-      <section id="tab-overview"><div class="card"><div class="summary"><div class="score" id="healthScore">0</div><div><div class="label">Saúde da Conta</div><div class="value" id="healthLevel">Sem dados</div><div class="sub" id="healthSummary">Selecione uma conta e rode a análise.</div></div></div></div><div class="section"><h2>Investimento e Retorno</h2><div class="grid"><div class="card"><div class="label">Investimento</div><div class="value" id="mSpend">-</div><div class="sub">Gasto total</div></div><div class="card"><div class="label">Receita</div><div class="value" id="mRevenue">-</div><div class="sub">Receita rastreada</div></div><div class="card"><div class="label">ROAS</div><div class="value" id="mRoas">-</div><div class="sub">Retorno sobre gasto</div></div><div class="card"><div class="label">Custo por Venda</div><div class="value" id="mCostPur">-</div><div class="sub">CPA de compra</div></div></div></div><div class="section"><h2>Alcance e Entrega</h2><div class="grid"><div class="card"><div class="label">Impressões</div><div class="value" id="mImpr">-</div><div class="sub">Total</div></div><div class="card"><div class="label">Alcance</div><div class="value" id="mReach">-</div><div class="sub">Pessoas</div></div><div class="card"><div class="label">Frequência</div><div class="value" id="mFreq">-</div><div class="sub">Média</div></div><div class="card"><div class="label">CPM</div><div class="value" id="mCpm">-</div><div class="sub">Custo por mil</div></div></div></div><div class="section"><h2>Engajamento e Funil</h2><div class="grid5"><div class="card"><div class="label">CTR</div><div class="value" id="mCtr">-</div><div class="sub">Taxa de clique</div></div><div class="card"><div class="label">CPC</div><div class="value" id="mCpc">-</div><div class="sub">Custo por clique</div></div><div class="card"><div class="label">Connect Rate</div><div class="value" id="mConnect">-</div><div class="sub">LPV / cliques</div></div><div class="card"><div class="label">Mensagens</div><div class="value" id="mMsg">-</div><div class="sub">Total</div></div><div class="card"><div class="label">Compras</div><div class="value" id="mPur">-</div><div class="sub">Total</div></div></div></div><div class="section"><h2>Comparação com mesmo período anterior</h2><div class="table-wrap"><table><thead><tr><th>Métrica</th><th>Atual</th><th>Anterior</th><th>Variação</th></tr></thead><tbody id="comparisonBody"></tbody></table></div></div></section>
+  <select id="dateSel" style="min-width:160px">
+    <option value="last_7d">Últimos 7 dias</option>
+    <option value="last_14d">Últimos 14 dias</option>
+    <option value="last_30d" selected>Últimos 30 dias</option>
+    <option value="this_month">Este mês</option>
+    <option value="last_month">Mês passado</option>
+    <option value="last_90d">Últimos 90 dias</option>
+    <option value="custom">Personalizado</option>
+  </select>
 
-      <section id="tab-analysis" class="hidden"><div class="toolbar" style="margin-bottom:16px"><button class="btn" id="gptCopilotBtn">Plano de Guerra IA</button></div><div id="analysisList"></div></section>
+  <input type="date" id="sinceDate" class="hidden">
+  <input type="date" id="untilDate" class="hidden">
 
-      <section id="tab-decision" class="hidden"><div class="toolbar" style="margin-bottom:16px"><div class="filters" id="decisionFilters"><button class="filter-btn active" data-value="TODAS">Todas</button><button class="filter-btn" data-value="ATIVA">Ativa</button><button class="filter-btn" data-value="PAUSADA">Pausada</button><button class="filter-btn" data-value="CONCLUIDA">Concluído</button><button class="filter-btn" data-value="RODANDO">Rodando</button></div></div><div class="grid"><div class="card"><div class="label">Escalar</div><div class="value" id="dEscalar">0</div></div><div class="card"><div class="label">Pausar</div><div class="value" id="dPausar">0</div></div><div class="card"><div class="label">Renovar Criativo</div><div class="value" id="dRenovar">0</div></div><div class="card"><div class="label">Desperdício Estimado</div><div class="value" id="dWaste">0</div></div></div><div class="section"><div class="table-wrap"><table><thead><tr><th>Campanha</th><th>Status</th><th>Ação</th><th>Score</th><th>Gasto</th><th>ROAS</th><th>CTR</th><th>Connect Rate</th><th>Desperdício</th><th>Motivo</th></tr></thead><tbody id="decisionBody"></tbody></table></div></div></section>
+  <label class="check-wrap">
+    <input type="checkbox" id="comparePeriod">
+    Comparar período
+  </label>
 
-      <section id="tab-campaigns" class="hidden"><div class="toolbar" style="margin-bottom:16px"><div class="filters" id="campaignFilters"><button class="filter-btn active" data-value="TODAS">Todas</button><button class="filter-btn" data-value="ATIVA">Ativas</button><button class="filter-btn" data-value="PAUSADA">Pausadas</button><button class="filter-btn" data-value="CONCLUIDA">Concluídas</button><button class="filter-btn" data-value="RODANDO">Rodando</button></div></div><div class="table-wrap"><table><thead><tr><th>Campanha</th><th>Status</th><th>Gasto</th><th>Impressão</th><th>Alcance</th><th>CTR</th><th>Connect Rate</th><th>ROAS</th><th>Mensagens</th><th>Compras</th><th>Custo/Venda</th><th>IA</th></tr></thead><tbody id="campaignBody"></tbody></table></div></section>
+  <button class="btn-analyze" id="analyzeBtn">
+    ↗ Analisar conta
+  </button>
 
-      <section id="tab-creatives" class="hidden"><div class="toolbar" style="margin-bottom:16px"><div class="filters" id="creativeFilters"><button class="filter-btn active" data-value="CAMPEAO">Criativo campeão</button><button class="filter-btn" data-value="MENSAGENS">Mais mensagens</button><button class="filter-btn" data-value="COMPRAS">Mais compras</button></div></div><div id="creativesGrid" class="creative-grid"></div></section>
-
-      <section id="tab-breakdown" class="hidden"><div class="toolbar" style="margin-bottom:16px"><select id="breakdownType" class="input"><option value="platform">Plataforma</option><option value="position">Posicionamento</option><option value="gender">Sexo</option><option value="age">Idade</option><option value="region">Região</option><option value="city">Cidade</option><option value="device">Dispositivo</option></select><button class="btn" id="loadBreakdownBtn">Carregar breakdown</button></div><div class="card chart-box"><canvas id="breakdownChart"></canvas></div><div class="section"><div class="table-wrap"><table><thead><tr><th>Segmento</th><th>Gasto</th><th>Impressão</th><th>Alcance</th><th>CTR</th><th>CPC</th></tr></thead><tbody id="breakdownBody"></tbody></table></div></div></section>
-
-      <section id="tab-trend" class="hidden"><div class="card chart-box"><canvas id="trendChart"></canvas></div><div id="trendEmpty" class="empty hidden">Nenhum histórico disponível ainda.</div></section>
-
-      <section id="tab-daily" class="hidden"><div class="table-wrap"><table><thead><tr><th>Data</th><th>Gasto</th><th>Impressões</th><th>Alcance</th><th>CTR</th><th>CPC</th><th>CPM</th><th>ROAS</th><th>Score</th></tr></thead><tbody id="dailyBody"></tbody></table></div></section>
-
-      <section id="tab-chat" class="hidden">
-        <div class="card" style="margin-bottom:14px">
-          <div class="label">Chat IA contextual</div>
-          <div class="sub">Faça perguntas sobre a conta, campanhas, criativos, desperdício, escala e gargalos. O contexto usa a análise atual carregada.</div>
-        </div>
-        <div class="chat-shell">
-          <div class="chat-messages" id="chatMessages">
-            <div class="chat-msg assistant">Posso te ajudar a interpretar a conta, comparar campanhas, encontrar gargalos de funil e sugerir próximos passos. Rode uma análise e me pergunte, por exemplo: “qual campanha devo pausar hoje?”</div>
-          </div>
-          <div class="chat-compose">
-            <textarea id="chatInput" placeholder="Ex.: quais campanhas eu devo escalar hoje e por quê?"></textarea>
-            <button class="btn" id="sendChatBtn">Enviar</button>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-notes" class="hidden"><div class="card"><div class="label">Nova nota</div><textarea id="noteInput" style="width:100%;min-height:100px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:12px"></textarea><div class="toolbar" style="margin-top:12px"><select id="noteType" class="input"><option value="geral">Geral</option><option value="criativo">Criativo</option><option value="publico">Público</option><option value="orcamento">Orçamento</option><option value="resultado">Resultado</option></select><button class="btn" id="saveNoteBtn">Salvar nota</button></div></div><div id="notesList" class="section"></div></section>
-
-      <section id="tab-alerts" class="hidden"><div class="card"><div class="label">Alerta de saldo</div><div class="toolbar"><input type="email" id="alertEmail" class="input" placeholder="Email"><input type="number" id="alertThreshold" class="input" placeholder="Limite em R$" value="100"><button class="btn" id="saveAlertBtn">Salvar alerta</button></div><div id="alertStatus" class="section"></div></div></section>
-    </main>
+  <div class="topbar-right">
+    <span id="userName"></span>
   </div>
+</div>
 
-  <div class="modal-bg" id="modalBg"><div class="modal"><div class="toolbar" style="justify-content:space-between;margin-bottom:14px"><h3 id="modalTitle">Análise IA</h3><button class="btn secondary" id="closeModalBtn">Fechar</button></div><div id="modalContent"></div></div></div>
+<!-- APP -->
+<div class="app">
 
-  <script>
-    const state = {
-      me:null, accounts:[], selectedAccountId:null, selectedAccount:null, campaigns:[], insights:null, previousInsights:null, analysis:null, metrics:null, comparison:null, creatives:[], breakdownData:[], charts:{}, chatHistory:[]
-    };
-    const money = v => `R$ ${Number(v || 0).toLocaleString("pt-BR",{minimumFractionDigits:2})}`;
-    const pct = v => `${Number(v || 0).toFixed(2)}%`;
-    const num = v => Number(v || 0).toLocaleString("pt-BR");
-    function getDateParams(){ const dateSel=document.getElementById("dateSel").value; if(dateSel==="custom"){ return { since:document.getElementById("sinceDate").value, until:document.getElementById("untilDate").value }; } return { date_preset:dateSel }; }
-    function toQuery(obj){ const params=new URLSearchParams(); Object.entries(obj).forEach(([k,v])=>{ if(v) params.append(k,v); }); return params.toString(); }
-    async function init(){ const me=await fetch("/api/me").then(r=>r.json()); if(!me.authenticated){ location.href="/"; return; } state.me=me.user; document.getElementById("userName").textContent=me.user.name; document.getElementById("dateSel").addEventListener("change",()=>{ const isCustom=document.getElementById("dateSel").value==="custom"; document.getElementById("sinceDate").classList.toggle("hidden",!isCustom); document.getElementById("untilDate").classList.toggle("hidden",!isCustom); }); document.querySelectorAll(".nav-btn").forEach(btn=>btn.addEventListener("click",()=>switchTab(btn.dataset.tab))); document.getElementById("analyzeBtn").addEventListener("click",runAnalysis); document.getElementById("gptCopilotBtn").addEventListener("click",openGptCopilot); document.getElementById("loadBreakdownBtn").addEventListener("click",loadBreakdown); document.getElementById("saveNoteBtn").addEventListener("click",saveNote); document.getElementById("saveAlertBtn").addEventListener("click",saveAlert); document.getElementById("closeModalBtn").addEventListener("click",closeModal); document.getElementById("sendChatBtn").addEventListener("click",sendChatMessage); document.getElementById("chatInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }); bindFilterGroup("decisionFilters",renderDecisionCenter); bindFilterGroup("campaignFilters",renderCampaigns); bindFilterGroup("creativeFilters",renderCreatives); await loadAccounts(); }
-    function bindFilterGroup(id, callback){ const container=document.getElementById(id); container?.querySelectorAll(".filter-btn").forEach(btn=>btn.addEventListener("click",()=>{ container.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); callback(); })); }
-    function getActiveFilter(groupId){ return document.querySelector(`#${groupId} .filter-btn.active`)?.dataset.value || "TODAS"; }
-    function switchTab(tab){ document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab)); document.querySelectorAll("main > section").forEach(sec=>sec.classList.add("hidden")); document.getElementById(`tab-${tab}`).classList.remove("hidden"); if(tab==="trend") loadTrend(); if(tab==="daily") loadDailyMetrics(); if(tab==="notes") loadNotes(); if(tab==="alerts") loadAlerts(); }
-    async function loadAccounts(){ const res=await fetch("/api/adaccounts").then(r=>r.json()); state.accounts=res.data||[]; const sel=document.getElementById("accountSel"); sel.innerHTML=`<option value="">Selecione a conta</option>`+state.accounts.map(a=>`<option value="${a.account_id}">${a.name}</option>`).join(""); sel.addEventListener("change", async()=>{ state.selectedAccountId=sel.value; state.selectedAccount=state.accounts.find(a=>a.account_id===sel.value)||null; if(!state.selectedAccountId) return; const campaignsRes=await fetch(`/api/adaccounts/${state.selectedAccountId}/campaigns`).then(r=>r.json()); state.campaigns=campaignsRes.data||[]; }); }
-    async function runAnalysis(){ if(!state.selectedAccountId){ alert("Selecione uma conta."); return; } const q=getDateParams(); const query=toQuery(q); const [insightsRes,creativesRes]=await Promise.all([ fetch(`/api/adaccounts/${state.selectedAccountId}/insights?${query}`).then(r=>r.json()), fetch(`/api/adaccounts/${state.selectedAccountId}/creatives?${query}`).then(r=>r.json()) ]); state.insights=insightsRes; state.creatives=creativesRes.data||[]; let previousInsights=null; let comparison=null; if(document.getElementById("comparePeriod").checked && q.since && q.until){ comparison=await fetch(`/api/adaccounts/${state.selectedAccountId}/comparison?${query}`).then(r=>r.json()); if(comparison?.previous){ previousInsights={ data:[] }; } } const analyzeRes=await fetch("/api/analyze", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ accountData:state.selectedAccount, campaigns:state.campaigns, insights:state.insights, previousInsights, creatives:state.creatives, dateRange:JSON.stringify(q), niche:document.getElementById("nicheSel").value }) }).then(r=>r.json()); state.analysis=analyzeRes.analysis; state.metrics=analyzeRes.metrics; state.comparison=comparison; state.chatHistory=[]; resetChat(); renderOverview(); renderAnalysis(); renderDecisionCenter(); renderCampaigns(); renderCreatives(); switchTab("overview"); }
-    function renderOverview(){ const a=state.analysis, m=state.metrics; if(!a||!m) return; document.getElementById("healthScore").textContent=a.resumo_geral.score_saude||0; document.getElementById("healthLevel").textContent=a.resumo_geral.nivel_saude||"Sem dados"; document.getElementById("healthSummary").textContent=a.resumo_geral.resumo_historico||""; document.getElementById("mSpend").textContent=money(m.totalSpend); document.getElementById("mRevenue").textContent=money(m.totalRev); document.getElementById("mRoas").textContent=`${Number(m.roas||0).toFixed(2)}x`; document.getElementById("mCostPur").textContent=money(m.costPerPurchase); document.getElementById("mImpr").textContent=num(m.totalImpressions); document.getElementById("mReach").textContent=num(m.totalReach); document.getElementById("mFreq").textContent=Number(m.avgFrequency||0).toFixed(2); document.getElementById("mCpm").textContent=money(m.avgCpm); document.getElementById("mCtr").textContent=pct(m.avgCtr); document.getElementById("mCpc").textContent=money(m.avgCpc); document.getElementById("mConnect").textContent=pct(m.connectRate); document.getElementById("mMsg").textContent=num(m.totalMessages); document.getElementById("mPur").textContent=num(m.totalPurchases); renderComparisonTable(); }
-    function renderComparisonTable(){ const body=document.getElementById("comparisonBody"); if(!state.comparison?.current || !state.comparison?.previous){ body.innerHTML=`<tr><td colspan="4">Ative a opção de comparação e use período personalizado.</td></tr>`; return; } const current=state.comparison.current, previous=state.comparison.previous, comp=state.comparison.comparison; const rows=[["Investimento",money(current.totalSpend),money(previous.totalSpend),pct(comp.spendChange)],["ROAS",`${current.roas.toFixed(2)}x`,`${previous.roas.toFixed(2)}x`,pct(comp.roasChange)],["CTR",pct(current.avgCtr),pct(previous.avgCtr),pct(comp.ctrChange)],["Compras",num(current.totalPurchases),num(previous.totalPurchases),pct(comp.purchasesChange)],["Connect Rate",pct(current.connectRate),pct(previous.connectRate),pct(comp.connectRateChange)]]; body.innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join(""); }
-    function renderAnalysis(){ const list=document.getElementById("analysisList"); const items=state.analysis?.otimizacoes_prioritarias||[]; if(!items.length){ list.innerHTML=`<div class="card">Nenhuma otimização crítica encontrada.</div>`; return; } list.innerHTML=items.map(i=>`<div class="card" style="margin-bottom:12px"><div class="toolbar" style="justify-content:space-between"><div><div class="label">${i.categoria}</div><div style="font-size:18px;font-weight:800">${i.titulo}</div></div><span class="badge ${i.prioridade===1?"danger":i.prioridade===2?"warning":"primary"}">P${i.prioridade}</span></div><div class="sub" style="margin-top:10px">${i.descricao}</div><div style="margin-top:12px;font-weight:700">${i.acao}</div></div>`).join(""); }
-    function filterByLifecycle(list, filterValue){ if(filterValue==="TODAS") return list; return list.filter(c=>c.lifecycleStatus===filterValue); }
-    function renderDecisionCenter(){ const center=state.analysis?.central_decisao; if(!center) return; document.getElementById("dEscalar").textContent=center.summary.ESCALAR||0; document.getElementById("dPausar").textContent=center.summary.PAUSAR||0; document.getElementById("dRenovar").textContent=center.summary.RENOVAR_CRIATIVO||0; document.getElementById("dWaste").textContent=money(center.summary.estimatedWaste); const filter=getActiveFilter("decisionFilters"); const campaigns=filterByLifecycle(center.campaigns,filter); document.getElementById("decisionBody").innerHTML=campaigns.map(c=>`<tr><td>${c.name}</td><td><span class="badge primary">${c.lifecycleStatus||"-"}</span></td><td><span class="badge ${badgeForAction(c.decision?.action)}">${prettyAction(c.decision?.action)}</span></td><td>${c.decision?.score||0}</td><td>${money(c.spend)}</td><td>${Number(c.roas||0).toFixed(2)}x</td><td>${pct(c.ctr)}</td><td>${pct(c.connectRate)}</td><td>${money(c.decision?.estimatedWaste||0)}</td><td>${c.decision?.reason||"-"}</td></tr>`).join("") || `<tr><td colspan="10">Nenhuma campanha encontrada.</td></tr>`; }
-    function prettyAction(a){ return ({ ESCALAR:"Escalar", PAUSAR:"Pausar", MANTER_E_OTIMIZAR:"Manter e otimizar", RENOVAR_CRIATIVO:"Renovar criativo", OTIMIZAR_FUNIL:"Otimizar funil", TESTAR_NOVA_VARIACAO:"Testar nova variação", SEM_DADOS:"Sem dados" })[a] || a || "-"; }
-    function badgeForAction(a){ if(a==="ESCALAR") return "success"; if(a==="PAUSAR") return "danger"; if(a==="RENOVAR_CRIATIVO" || a==="OTIMIZAR_FUNIL") return "warning"; return "primary"; }
-    function renderCampaigns(){ const filter=getActiveFilter("campaignFilters"); const campaigns=filterByLifecycle(state.analysis?.campanhas_analise||[],filter); document.getElementById("campaignBody").innerHTML=campaigns.map(c=>`<tr><td>${c.name}</td><td><span class="badge primary">${c.lifecycleStatus||"-"}</span></td><td>${money(c.spend)}</td><td>${num(c.impressions)}</td><td>${num(c.reach)}</td><td>${pct(c.ctr)}</td><td>${pct(c.connectRate)}</td><td>${Number(c.roas||0).toFixed(2)}x</td><td>${num(c.messages)}</td><td>${num(c.purchases)}</td><td>${money(c.costPerPur)}</td><td><button class="btn" style="height:34px" onclick="analyzeCampaign('${c.id}')">IA</button></td></tr>`).join("") || `<tr><td colspan="12">Nenhuma campanha encontrada.</td></tr>`; }
-    function renderCreatives(){ const grid=document.getElementById("creativesGrid"); let list=[...(state.creatives||[])]; const filter=getActiveFilter("creativeFilters"); const getPurchases=ins=>{ const actions=ins?.actions||[]; const found=actions.find(a=>String(a.action_type||"").includes("purchase")); return Number(found?.value||0); }; const getMessages=ins=>{ const actions=ins?.actions||[]; const found=actions.find(a=>String(a.action_type||"").includes("message")); return Number(found?.value||0); }; const getRoas=ins=>{ const spend=Number(ins?.spend||0); const vals=ins?.action_values||[]; const found=vals.find(a=>String(a.action_type||"").includes("purchase")); const rev=Number(found?.value||0); return spend>0 ? rev/spend : 0; }; if(filter==="CAMPEAO"){ list.sort((a,b)=>getRoas(b.insights?.data?.[0])-getRoas(a.insights?.data?.[0])); } else if(filter==="MENSAGENS"){ list.sort((a,b)=>getMessages(b.insights?.data?.[0])-getMessages(a.insights?.data?.[0])); } else if(filter==="COMPRAS"){ list.sort((a,b)=>getPurchases(b.insights?.data?.[0])-getPurchases(a.insights?.data?.[0])); } grid.innerHTML=list.map((cr,i)=>{ const ins=cr.insights?.data?.[0]||{}; const img=cr.creative?.image_url||cr.creative?.thumbnail_url||""; const purchases=getPurchases(ins); const messages=getMessages(ins); const roas=getRoas(ins); return `<div class="creative-card">${img?`<img src="${img}" alt="">`:`<div style="aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:#0f172a">Sem imagem</div>`}<div class="creative-info"><div style="font-weight:800;margin-bottom:8px">${cr.name}</div><div class="sub">Gasto: ${money(ins.spend)}</div><div class="sub">ROAS: ${roas.toFixed(2)}x</div><div class="sub">CTR: ${pct(ins.ctr)}</div><div class="sub">Mensagens: ${num(messages)}</div><div class="sub">Compras: ${num(purchases)}</div>${i===0 && filter==="CAMPEAO" ? `<div style="margin-top:10px"><span class="badge warning">Criativo campeão</span></div>` : ""}</div></div>`; }).join("") || `<div class="empty">Nenhum criativo encontrado.</div>`; }
-    async function loadBreakdown(){ if(!state.selectedAccountId) return; const type=document.getElementById("breakdownType").value; const q=toQuery(getDateParams()); const res=await fetch(`/api/adaccounts/${state.selectedAccountId}/breakdown/${type}?${q}`).then(r=>r.json()); const data=res.data||[]; state.breakdownData=data; const getLabel=d=>d.city||d.region||d.age||d.gender||d.publisher_platform||d.platform_position||d.device_platform||"N/A"; document.getElementById("breakdownBody").innerHTML=data.map(d=>`<tr><td>${getLabel(d)}</td><td>${money(d.spend)}</td><td>${num(d.impressions)}</td><td>${num(d.reach)}</td><td>${pct(d.ctr)}</td><td>${money(d.cpc)}</td></tr>`).join("") || `<tr><td colspan="6">Sem dados.</td></tr>`; if(state.charts.breakdown) state.charts.breakdown.destroy(); state.charts.breakdown=new Chart(document.getElementById("breakdownChart"),{ type:"bar", data:{ labels:data.map(getLabel), datasets:[{ label:"Gasto", data:data.map(d=>Number(d.spend||0)) }] }, options:{ responsive:true, maintainAspectRatio:false } }); }
-    async function loadTrend(){ if(!state.selectedAccountId) return; const res=await fetch(`/api/trend/${state.selectedAccountId}`).then(r=>r.json()); const trend=res.trend||[]; document.getElementById("trendEmpty").classList.toggle("hidden",trend.length>0); if(state.charts.trend) state.charts.trend.destroy(); if(!trend.length) return; state.charts.trend=new Chart(document.getElementById("trendChart"),{ type:"line", data:{ labels:trend.map(t=>new Date(t.date).toLocaleDateString("pt-BR")), datasets:[{ label:"Saúde", data:trend.map(t=>Number(t.avg_health||0)) },{ label:"Gasto", data:trend.map(t=>Number(t.total_spend||0)) },{ label:"ROAS", data:trend.map(t=>Number(t.avg_roas||0)) }] }, options:{ responsive:true, maintainAspectRatio:false } }); }
-    async function loadDailyMetrics(){ if(!state.selectedAccountId) return; const rows=await fetch(`/api/daily-metrics/${state.selectedAccountId}`).then(r=>r.json()); document.getElementById("dailyBody").innerHTML=rows.map(r=>`<tr><td>${new Date(r.date).toLocaleDateString("pt-BR")}</td><td>${money(r.spend)}</td><td>${num(r.impressions)}</td><td>${num(r.reach)}</td><td>${pct(r.ctr)}</td><td>${money(r.cpc)}</td><td>${money(r.cpm)}</td><td>${Number(r.roas||0).toFixed(2)}x</td><td>${num(r.healthScore)}</td></tr>`).join("") || `<tr><td colspan="9">Sem histórico salvo ainda.</td></tr>`; }
-    async function analyzeCampaign(id){ const campaign=(state.analysis?.campanhas_analise||[]).find(c=>c.id===id); if(!campaign) return; openModal("Análise IA da campanha","Carregando..."); const q=toQuery(getDateParams()); const funnel=await fetch(`/api/campaigns/${id}/funnel?${q}`).then(r=>r.json()); const response=await fetch("/api/gpt-campaign",{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ campaign, adsets:funnel.adsets||[], metrics:state.metrics }) }).then(r=>r.json()); document.getElementById("modalContent").innerHTML=`<pre style="white-space:pre-wrap;font-family:Inter,sans-serif">${response.analysis||"Sem análise."}</pre>`; }
-    async function openGptCopilot(){ openModal("Plano de Guerra IA","Carregando..."); const response=await fetch("/api/gpt-copilot",{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ data:{ metrics:state.metrics, analysis:state.analysis, campaigns:state.analysis?.campanhas_analise||[], niche:document.getElementById("nicheSel").value } }) }).then(r=>r.json()); document.getElementById("modalContent").innerHTML=`<pre style="white-space:pre-wrap;font-family:Inter,sans-serif">${response.strategy||"Sem análise."}</pre>`; }
-    function openModal(title,content){ document.getElementById("modalTitle").textContent=title; document.getElementById("modalContent").textContent=content||""; document.getElementById("modalBg").style.display="flex"; }
-    function closeModal(){ document.getElementById("modalBg").style.display="none"; }
-    async function loadNotes(){ if(!state.selectedAccountId) return; const notes=await fetch(`/api/notes/${state.selectedAccountId}`).then(r=>r.json()); document.getElementById("notesList").innerHTML=notes.map(n=>`<div class="card" style="margin-bottom:10px"><div class="toolbar" style="justify-content:space-between"><span class="badge primary">${n.type}</span><span class="sub">${new Date(n.created_at).toLocaleDateString("pt-BR")}</span></div><div style="margin-top:10px">${n.note}</div></div>`).join("") || `<div class="empty">Nenhuma nota.</div>`; }
-    async function saveNote(){ if(!state.selectedAccountId) return; const note=document.getElementById("noteInput").value.trim(); if(!note) return; await fetch("/api/notes",{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ fbAccountId:state.selectedAccountId, note, type:document.getElementById("noteType").value }) }); document.getElementById("noteInput").value=""; loadNotes(); }
-    async function loadAlerts(){ if(!state.selectedAccountId) return; const alert=await fetch(`/api/alerts/${state.selectedAccountId}`).then(r=>r.json()); document.getElementById("alertStatus").innerHTML=alert ? `<div class="card"><div class="label">Alerta ativo</div><div>${alert.alert_email} | Limite ${money(alert.threshold_amount)}</div></div>` : `<div class="empty">Nenhum alerta configurado.</div>`; }
-    async function saveAlert(){ if(!state.selectedAccountId) return; await fetch("/api/alerts",{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ fbAccountId:state.selectedAccountId, accountName:state.selectedAccount?.name||"", email:document.getElementById("alertEmail").value, threshold:document.getElementById("alertThreshold").value, currency:state.selectedAccount?.currency||"BRL" }) }); loadAlerts(); }
-    function appendChatMessage(role, text){ const box=document.getElementById("chatMessages"); const el=document.createElement("div"); el.className=`chat-msg ${role}`; el.textContent=text; box.appendChild(el); box.scrollTop=box.scrollHeight; }
-    function resetChat(){ const box=document.getElementById("chatMessages"); box.innerHTML=''; appendChatMessage('assistant','Posso te ajudar a interpretar a conta, comparar campanhas, encontrar gargalos de funil e sugerir próximos passos. Rode uma análise e me pergunte, por exemplo: “qual campanha devo pausar hoje?”'); }
-    function buildLocalChatAnswer(question){ if(!state.analysis || !state.metrics){ return 'Rode uma análise primeiro para eu responder com contexto da conta.'; } const campaigns=state.analysis?.campanhas_analise||[]; const center=state.analysis?.central_decisao?.campaigns||[]; const lower=String(question||'').toLowerCase(); const topScale=center.filter(c=>c.decision?.action==='ESCALAR').sort((a,b)=>(b.roas||0)-(a.roas||0)).slice(0,3); const topPause=center.filter(c=>c.decision?.action==='PAUSAR').sort((a,b)=>(b.decision?.estimatedWaste||0)-(a.decision?.estimatedWaste||0)).slice(0,3); const topCreative=center.filter(c=>c.decision?.action==='RENOVAR_CRIATIVO').slice(0,3); if(lower.includes('pausar')){ if(!topPause.length) return 'No momento a análise não marcou campanhas prioritárias para pausar.'; return 'Campanhas mais candidatas a pausar agora:\n\n' + topPause.map((c,i)=>`${i+1}. ${c.name} — desperdício estimado ${money(c.decision?.estimatedWaste||0)}, ROAS ${Number(c.roas||0).toFixed(2)}x, motivo: ${c.decision?.reason||'sem motivo informado'}`).join('\n'); }
-      if(lower.includes('escalar')){ if(!topScale.length) return 'No momento a análise não marcou campanhas prontas para escalar.'; return 'Campanhas com maior potencial de escala:\n\n' + topScale.map((c,i)=>`${i+1}. ${c.name} — score ${c.decision?.score||0}, ROAS ${Number(c.roas||0).toFixed(2)}x, CTR ${pct(c.ctr)}, connect rate ${pct(c.connectRate)}.`).join('\n'); }
-      if(lower.includes('criativo') || lower.includes('creative')){ if(!topCreative.length) return 'A análise não apontou necessidade urgente de renovação criativa.'; return 'Campanhas com sinal de fadiga ou necessidade de renovar criativo:\n\n' + topCreative.map((c,i)=>`${i+1}. ${c.name} — motivo: ${c.decision?.reason||'sem detalhe'}, frequência/entrega e performance sugerem nova variação.`).join('\n'); }
-      if(lower.includes('resumo') || lower.includes('conta') || lower.includes('geral')){ return `Resumo da conta:\n\nSaúde: ${state.analysis?.resumo_geral?.nivel_saude||'-'} (${state.analysis?.resumo_geral?.score_saude||0}/100)\nInvestimento: ${money(state.metrics?.totalSpend)}\nReceita: ${money(state.metrics?.totalRev)}\nROAS: ${Number(state.metrics?.roas||0).toFixed(2)}x\nCTR: ${pct(state.metrics?.avgCtr)}\nConnect rate: ${pct(state.metrics?.connectRate)}\nMensagens: ${num(state.metrics?.totalMessages)}\nCompras: ${num(state.metrics?.totalPurchases)}`; }
-      const best = [...campaigns].sort((a,b)=>(b.roas||0)-(a.roas||0))[0];
-      const worst = [...campaigns].sort((a,b)=>(a.roas||0)-(b.roas||0))[0];
-      return `Leitura rápida:\n\n- Melhor ROAS atual: ${best?.name||'-'} com ${Number(best?.roas||0).toFixed(2)}x.\n- Pior ROAS atual: ${worst?.name||'-'} com ${Number(worst?.roas||0).toFixed(2)}x.\n- Ações para escalar: ${state.analysis?.central_decisao?.summary?.ESCALAR||0}.\n- Ações para pausar: ${state.analysis?.central_decisao?.summary?.PAUSAR||0}.\n- Desperdício estimado: ${money(state.analysis?.central_decisao?.summary?.estimatedWaste||0)}.\n\nSe quiser, me pergunte especificamente sobre pausar, escalar, criativos, funil ou comparação entre campanhas.`;
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="nav-section">Visão</div>
+    <button class="nav-btn active" data-tab="overview">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M1 3a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H2a1 1 0 01-1-1V3zm9 0a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1V3zm0 7a1 1 0 011-1h2a1 1 0 011 1v3a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3zM1 11a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H2a1 1 0 01-1-1v-2z"/></svg>
+      Visão Geral
+    </button>
+    <button class="nav-btn" data-tab="analysis">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zM0 8a8 8 0 1116 0A8 8 0 010 8zm8-3a1 1 0 011 1v2h2a1 1 0 110 2H8a1 1 0 01-1-1V6a1 1 0 011-1z"/></svg>
+      Insights IA
+    </button>
+    <button class="nav-btn" data-tab="decision">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 01-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 01.872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 012.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 012.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 01.872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 01-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 01-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 110-5.86 2.929 2.929 0 010 5.858z"/></svg>
+      Central de Decisão
+    </button>
+
+    <div class="nav-section">Dados</div>
+    <button class="nav-btn" data-tab="campaigns">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M0 2.5A.5.5 0 01.5 2H2a.5.5 0 010 1h-.5v10.5A1.5 1.5 0 003 15h10a1.5 1.5 0 001.5-1.5V3H14a.5.5 0 010-1h.5a.5.5 0 01.5.5V14a2.5 2.5 0 01-2.5 2.5H3A2.5 2.5 0 01.5 14V3H.5A.5.5 0 010 2.5zM3 1a2 2 0 012-2h6a2 2 0 012 2v1H3V1zm1 1h8V1a1 1 0 00-1-1H5a1 1 0 00-1 1v1z"/></svg>
+      Campanhas
+    </button>
+    <button class="nav-btn" data-tab="creatives">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M.002 3a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2h-12a2 2 0 01-2-2V3zm1 9v1a1 1 0 001 1h12a1 1 0 001-1V9.5l-3.777-1.947a.5.5 0 00-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 00-.63.062L1.002 12zm5-6.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z"/></svg>
+      Criativos
+    </button>
+    <button class="nav-btn" data-tab="breakdown">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2zm-2-1a1 1 0 00-1 1v12a1 1 0 001 1h2a1 1 0 001-1V2a1 1 0 00-1-1h-2zM6 7a1 1 0 00-1 1v7a1 1 0 001 1h2a1 1 0 001-1V8a1 1 0 00-1-1H6zm-5 4a1 1 0 00-1 1v3a1 1 0 001 1h2a1 1 0 001-1v-3a1 1 0 00-1-1H1z"/></svg>
+      Breakdown
+    </button>
+    <button class="nav-btn" data-tab="trend">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M0 0h1v15h15v1H0V0zm14.817 3.113a.5.5 0 01.07.704l-4.5 5.5a.5.5 0 01-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 01-.808-.588l4-5.5a.5.5 0 01.758-.06l2.609 2.61 4.15-5.073a.5.5 0 01.704-.07z"/></svg>
+      Tendências
+    </button>
+    <button class="nav-btn" data-tab="daily">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M11 6.5a.5.5 0 01.5-.5h1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-1a.5.5 0 01-.5-.5v-1zm-3 0a.5.5 0 01.5-.5h1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-1a.5.5 0 01-.5-.5v-1zm-5 3a.5.5 0 01.5-.5h1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-1a.5.5 0 01-.5-.5v-1zm3 0a.5.5 0 01.5-.5h1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-1a.5.5 0 01-.5-.5v-1zM3.5 0a.5.5 0 01.5.5V1h8V.5a.5.5 0 011 0V1h1a2 2 0 012 2v11a2 2 0 01-2 2H2a2 2 0 01-2-2V3a2 2 0 012-2h1V.5a.5.5 0 01.5-.5zM1 4v10a1 1 0 001 1h12a1 1 0 001-1V4H1z"/></svg>
+      Métricas Diárias
+    </button>
+
+    <div class="nav-section">Ferramentas</div>
+    <button class="nav-btn" data-tab="chat">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2.678 11.894a1 1 0 01.287.801 10.97 10.97 0 01-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 01.71-.074A8.06 8.06 0 008 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 01-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 00.244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 01-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/></svg>
+      Chat IA
+    </button>
+    <button class="nav-btn" data-tab="notes">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2a2 2 0 012-2h8a2 2 0 012 2v13.5a.5.5 0 01-.777.416L8 13.101l-5.223 2.815A.5.5 0 012 15.5V2zm2-1a1 1 0 00-1 1v12.566l4.723-2.482a.5.5 0 01.554 0L13 14.566V2a1 1 0 00-1-1H4z"/></svg>
+      Notas
+    </button>
+    <button class="nav-btn" data-tab="alerts">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 16a2 2 0 002-2H6a2 2 0 002 2zm.995-14.901a1 1 0 10-1.99 0A5.002 5.002 0 003 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/></svg>
+      Alertas
+    </button>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- GLOBAL ALERTS -->
+    <div id="globalError" class="global-alert error"></div>
+    <div id="globalOk" class="global-alert ok"></div>
+
+    <!-- ── OVERVIEW ── -->
+    <section id="tab-overview" class="active">
+      <div class="card health-card mb-6">
+        <div class="score-ring" id="scoreRingWrap">
+          <svg viewBox="0 0 100 100">
+            <circle class="ring-bg" cx="50" cy="50" r="42"/>
+            <circle class="ring-fill" id="ringFill" cx="50" cy="50" r="42"
+              stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+          </svg>
+          <div class="score-text">
+            <span class="score-num" id="healthScore">0</span>
+            <span class="score-label">Score</span>
+          </div>
+        </div>
+        <div class="health-info">
+          <h2 id="healthLevel">Aguardando análise</h2>
+          <p id="healthSummary">Selecione uma conta de anúncios, configure o período e clique em Analisar para começar.</p>
+        </div>
+      </div>
+
+      <div class="sec-header mb-4">
+        <span class="sec-title">Investimento & Retorno</span>
+      </div>
+      <div class="metrics-row cols-4 mb-6">
+        <div class="metric-card highlight">
+          <div class="metric-label">Investimento Total</div>
+          <div class="metric-value" id="mSpend">—</div>
+          <div class="metric-sub">Gasto no período</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Receita Rastreada</div>
+          <div class="metric-value" id="mRevenue">—</div>
+          <div class="metric-sub">Via pixel</div>
+        </div>
+        <div class="metric-card highlight">
+          <div class="metric-label">ROAS</div>
+          <div class="metric-value" id="mRoas">—</div>
+          <div class="metric-sub">Retorno sobre gasto</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Custo por Venda</div>
+          <div class="metric-value" id="mCostPur">—</div>
+          <div class="metric-sub">CPA de compra</div>
+        </div>
+      </div>
+
+      <div class="sec-header mb-4">
+        <span class="sec-title">Alcance & Entrega</span>
+      </div>
+      <div class="metrics-row cols-4 mb-6">
+        <div class="metric-card">
+          <div class="metric-label">Impressões</div>
+          <div class="metric-value" id="mImpr">—</div>
+          <div class="metric-sub">Total</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Alcance</div>
+          <div class="metric-value" id="mReach">—</div>
+          <div class="metric-sub">Pessoas únicas</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Frequência</div>
+          <div class="metric-value" id="mFreq">—</div>
+          <div class="metric-sub">Média de exposições</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">CPM</div>
+          <div class="metric-value" id="mCpm">—</div>
+          <div class="metric-sub">Custo por mil</div>
+        </div>
+      </div>
+
+      <div class="sec-header mb-4">
+        <span class="sec-title">Engajamento & Funil</span>
+      </div>
+      <div class="metrics-row cols-5 mb-6">
+        <div class="metric-card">
+          <div class="metric-label">CTR Médio</div>
+          <div class="metric-value" id="mCtr">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">CPC Médio</div>
+          <div class="metric-value" id="mCpc">—</div>
+        </div>
+        <div class="metric-card highlight">
+          <div class="metric-label">Connect Rate</div>
+          <div class="metric-value" id="mConnect">—</div>
+          <div class="metric-sub">LPV / Cliques</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Mensagens</div>
+          <div class="metric-value" id="mMsg">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Compras</div>
+          <div class="metric-value" id="mPur">—</div>
+        </div>
+      </div>
+
+      <div class="sec-header mb-4">
+        <span class="sec-title">Comparação de Período</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Métrica</th>
+              <th>Atual</th>
+              <th>Anterior</th>
+              <th>Variação</th>
+            </tr>
+          </thead>
+          <tbody id="comparisonBody">
+            <tr><td colspan="4" class="empty-state">Ative "Comparar período" e rode a análise.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── INSIGHTS IA ── -->
+    <section id="tab-analysis">
+      <div class="sec-header mb-6">
+        <span class="sec-title">Otimizações Prioritárias</span>
+        <button class="btn-secondary" id="gptCopilotBtn">⚡ Plano de Guerra IA</button>
+      </div>
+      <div class="insights-list" id="analysisList">
+        <div class="empty-state">Rode uma análise para ver os insights.</div>
+      </div>
+    </section>
+
+    <!-- ── DECISION ── -->
+    <section id="tab-decision">
+      <div class="decision-summary mb-6">
+        <div class="decision-kpi">
+          <div class="decision-kpi-label">Escalar</div>
+          <div class="decision-kpi-value kpi-scale" id="dEscalar">0</div>
+        </div>
+        <div class="decision-kpi">
+          <div class="decision-kpi-label">Pausar</div>
+          <div class="decision-kpi-value kpi-pause" id="dPausar">0</div>
+        </div>
+        <div class="decision-kpi">
+          <div class="decision-kpi-label">Renovar Criativo</div>
+          <div class="decision-kpi-value kpi-renew" id="dRenovar">0</div>
+        </div>
+        <div class="decision-kpi">
+          <div class="decision-kpi-label">Desperdício Est.</div>
+          <div class="decision-kpi-value kpi-waste" id="dWaste">R$ 0</div>
+        </div>
+      </div>
+
+      <div class="sec-header mb-4">
+        <div class="pill-group" id="decisionFilters">
+          <button class="pill active" data-value="TODAS">Todas</button>
+          <button class="pill" data-value="ATIVA">Ativas</button>
+          <button class="pill" data-value="RODANDO">Rodando</button>
+          <button class="pill" data-value="PAUSADA">Pausadas</button>
+          <button class="pill" data-value="CONCLUIDA">Concluídas</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Campanha</th>
+              <th>Status</th>
+              <th>Ação Recomendada</th>
+              <th>Score</th>
+              <th>Gasto</th>
+              <th>ROAS</th>
+              <th>CTR</th>
+              <th>Connect Rate</th>
+              <th>Desperdício</th>
+              <th>Motivo</th>
+            </tr>
+          </thead>
+          <tbody id="decisionBody">
+            <tr><td colspan="10"><div class="empty-state">Rode uma análise para visualizar as decisões.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── CAMPAIGNS ── -->
+    <section id="tab-campaigns">
+      <div class="sec-header mb-4">
+        <span class="sec-title">Campanhas</span>
+        <div class="pill-group" id="campaignFilters">
+          <button class="pill active" data-value="TODAS">Todas</button>
+          <button class="pill" data-value="ATIVA">Ativas</button>
+          <button class="pill" data-value="RODANDO">Rodando</button>
+          <button class="pill" data-value="PAUSADA">Pausadas</button>
+          <button class="pill" data-value="CONCLUIDA">Concluídas</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Campanha</th>
+              <th>Status</th>
+              <th>Gasto</th>
+              <th>Impressões</th>
+              <th>Alcance</th>
+              <th>CTR</th>
+              <th>Connect Rate</th>
+              <th>ROAS</th>
+              <th>Mensagens</th>
+              <th>Compras</th>
+              <th>Custo/Venda</th>
+              <th>IA</th>
+            </tr>
+          </thead>
+          <tbody id="campaignBody">
+            <tr><td colspan="12"><div class="empty-state">Rode uma análise para visualizar.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── CREATIVES ── -->
+    <section id="tab-creatives">
+      <div class="sec-header mb-6">
+        <span class="sec-title">Criativos</span>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="pill-group" id="creativeFilters">
+            <button class="pill active" data-value="CAMPEAO">Maior ROAS</button>
+            <button class="pill" data-value="MENSAGENS">Mais Mensagens</button>
+            <button class="pill" data-value="COMPRAS">Mais Compras</button>
+          </div>
+        </div>
+      </div>
+      <div id="creativesGrid" class="creatives-grid">
+        <div class="empty-state">Selecione uma conta e rode a análise.</div>
+      </div>
+    </section>
+
+    <!-- ── BREAKDOWN ── -->
+    <section id="tab-breakdown">
+      <div class="sec-header mb-6">
+        <span class="sec-title">Breakdown de Performance</span>
+        <div style="display:flex;gap:10px;align-items:center">
+          <select class="select-inline" id="breakdownType">
+            <option value="platform">Plataforma</option>
+            <option value="position">Posicionamento</option>
+            <option value="gender">Sexo</option>
+            <option value="age">Idade</option>
+            <option value="region">Região</option>
+            <option value="city">Cidade</option>
+            <option value="device">Dispositivo</option>
+          </select>
+          <button class="btn-secondary" id="loadBreakdownBtn">Carregar</button>
+        </div>
+      </div>
+      <div class="card mb-6">
+        <div class="chart-box"><canvas id="breakdownChart"></canvas></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Segmento</th>
+              <th>Gasto</th>
+              <th>Impressões</th>
+              <th>Alcance</th>
+              <th>CTR</th>
+              <th>CPC</th>
+            </tr>
+          </thead>
+          <tbody id="breakdownBody">
+            <tr><td colspan="6"><div class="empty-state">Selecione um tipo e clique em Carregar.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── TREND ── -->
+    <section id="tab-trend">
+      <div class="sec-header mb-6">
+        <span class="sec-title">Tendências Históricas</span>
+      </div>
+      <div class="card">
+        <div class="chart-box"><canvas id="trendChart"></canvas></div>
+        <div id="trendEmpty" class="trend-placeholder hidden">Nenhum histórico disponível. Rode análises ao longo do tempo para visualizar tendências.</div>
+      </div>
+    </section>
+
+    <!-- ── DAILY ── -->
+    <section id="tab-daily">
+      <div class="sec-header mb-6">
+        <span class="sec-title">Métricas Diárias</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Investimento</th>
+              <th>Receita</th>
+              <th>ROAS</th>
+              <th>Custo/Venda</th>
+              <th>Impressões</th>
+              <th>Alcance</th>
+              <th>Freq.</th>
+              <th>CPM</th>
+              <th>CTR</th>
+              <th>CPC</th>
+              <th>Connect</th>
+              <th>Mensagens</th>
+              <th>Compras</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody id="dailyBody">
+            <tr><td colspan="15"><div class="empty-state">Sem histórico salvo ainda.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── CHAT ── -->
+    <section id="tab-chat">
+      <div class="sec-header mb-4">
+        <span class="sec-title">Chat IA Contextual</span>
+      </div>
+      <div class="card mb-4" style="padding:14px 18px;background:var(--lime-dim);border-color:rgba(200,251,87,0.2)">
+        <p style="font-size:12px;color:var(--lime)">💡 Faça perguntas sobre a conta, campanhas, gargalos, decisões de escala. O contexto usa a análise atual.</p>
+      </div>
+      <div class="chat-wrap">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-msg assistant">Pronto para analisar sua conta. Rode uma análise e me pergunte sobre escala, pausas, criativos, gargalos de funil ou qualquer dúvida estratégica.</div>
+        </div>
+        <div class="chat-compose">
+          <textarea id="chatInput" placeholder="Ex: qual campanha devo escalar agora? Por quê?"></textarea>
+          <button class="btn-primary" id="sendChatBtn" style="align-self:flex-end;height:42px;white-space:nowrap">Enviar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── NOTES ── -->
+    <section id="tab-notes">
+      <div class="sec-header mb-6">
+        <span class="sec-title">Notas</span>
+      </div>
+      <div class="card mb-6">
+        <div class="form-group">
+          <label class="form-label">Nota</label>
+          <textarea class="form-textarea" id="noteInput" placeholder="Adicione uma observação sobre campanhas, criativos, públicos..."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <select class="form-select" id="noteType" style="width:auto">
+            <option value="geral">Geral</option>
+            <option value="criativo">Criativo</option>
+            <option value="publico">Público</option>
+            <option value="orcamento">Orçamento</option>
+            <option value="resultado">Resultado</option>
+          </select>
+          <button class="btn-primary" id="saveNoteBtn">Salvar nota</button>
+        </div>
+      </div>
+      <div id="notesList"></div>
+    </section>
+
+    <!-- ── ALERTS ── -->
+    <section id="tab-alerts">
+      <div class="sec-header mb-6">
+        <span class="sec-title">Alertas de Saldo</span>
+      </div>
+      <div class="card" style="max-width:520px">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">E-mail de alerta</label>
+            <input class="form-input" type="email" id="alertEmail" placeholder="seu@email.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Limite (R$)</label>
+            <input class="form-input" type="number" id="alertThreshold" value="100" placeholder="100">
+          </div>
+        </div>
+        <button class="btn-primary" id="saveAlertBtn">Salvar alerta</button>
+        <div id="alertStatus" class="mt-4"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Análise IA</span>
+      <button class="modal-close" id="closeModalBtn">✕</button>
+    </div>
+    <div class="modal-content" id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ──────────────────────────────────────────────────────────
+const state = {
+  accounts: [], selectedAccountId: null, selectedAccount: null,
+  campaigns: [], insights: null, analysis: null, metrics: null,
+  comparison: null, creatives: [], chatHistory: []
+};
+
+// ─── UTILS ──────────────────────────────────────────────────────────
+const money = v => `R$ ${Number(v || 0).toLocaleString("pt-BR", {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+const pct   = v => `${Number(v || 0).toFixed(2)}%`;
+const num   = v => Number(v || 0).toLocaleString("pt-BR");
+const x2    = v => `${Number(v || 0).toFixed(2)}x`;
+
+function getDateParams() {
+  const ds = document.getElementById("dateSel").value;
+  if (ds === "custom") return { since: document.getElementById("sinceDate").value, until: document.getElementById("untilDate").value };
+  return { date_preset: ds };
+}
+function toQuery(obj) {
+  const p = new URLSearchParams();
+  Object.entries(obj).forEach(([k,v]) => { if(v) p.append(k,v); });
+  return p.toString();
+}
+
+function showError(msg) { const b = document.getElementById("globalError"); b.textContent = "✕  " + msg; b.className = "global-alert error show"; setTimeout(()=>hideAlert(b), 6000); }
+function showOk(msg)    { const b = document.getElementById("globalOk"); b.textContent = "✓  " + msg; b.className = "global-alert ok show"; setTimeout(()=>hideAlert(b), 4000); }
+function hideAlert(el)  { el.className = "global-alert " + (el.classList.contains("error") ? "error" : "ok"); }
+
+// ─── RING ANIMATION ─────────────────────────────────────────────────
+function setScoreRing(score) {
+  const circ = 263.9;
+  const offset = circ - (score / 100) * circ;
+  const fill = document.getElementById("ringFill");
+  if (!fill) return;
+  fill.style.strokeDashoffset = offset;
+  if (score >= 80) fill.style.stroke = "var(--lime)";
+  else if (score >= 50) fill.style.stroke = "var(--warning)";
+  else fill.style.stroke = "var(--danger)";
+}
+
+// ─── TABS ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll("main > section").forEach(s => s.classList.remove("active"));
+  const el = document.getElementById(`tab-${tab}`);
+  if (el) el.classList.add("active");
+  if (tab === "trend")  loadTrend();
+  if (tab === "daily")  loadDailyMetrics();
+  if (tab === "notes")  loadNotes();
+  if (tab === "alerts") loadAlerts();
+}
+
+// ─── FILTER GROUPS ──────────────────────────────────────────────────
+function bindFilters(groupId, cb) {
+  document.getElementById(groupId)?.querySelectorAll(".pill").forEach(b => {
+    b.addEventListener("click", () => {
+      document.getElementById(groupId).querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+      b.classList.add("active");
+      cb();
+    });
+  });
+}
+function getFilter(groupId) { return document.querySelector(`#${groupId} .pill.active`)?.dataset.value || "TODAS"; }
+
+// ─── INIT ────────────────────────────────────────────────────────────
+async function init() {
+  const me = await fetch("/api/me").then(r => r.json());
+  if (!me.authenticated) { location.href = "/"; return; }
+  document.getElementById("userName").textContent = me.user.name;
+
+  document.getElementById("dateSel").addEventListener("change", () => {
+    const isCustom = document.getElementById("dateSel").value === "custom";
+    document.getElementById("sinceDate").classList.toggle("hidden", !isCustom);
+    document.getElementById("untilDate").classList.toggle("hidden", !isCustom);
+  });
+
+  document.querySelectorAll(".nav-btn").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+  document.getElementById("analyzeBtn").addEventListener("click", runAnalysis);
+  document.getElementById("gptCopilotBtn").addEventListener("click", openGptCopilot);
+  document.getElementById("loadBreakdownBtn").addEventListener("click", loadBreakdown);
+  document.getElementById("saveNoteBtn").addEventListener("click", saveNote);
+  document.getElementById("saveAlertBtn").addEventListener("click", saveAlert);
+  document.getElementById("closeModalBtn").addEventListener("click", () => document.getElementById("modalBg").classList.remove("open"));
+  document.getElementById("sendChatBtn").addEventListener("click", sendChat);
+  document.getElementById("chatInput").addEventListener("keydown", e => { if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat();} });
+  document.getElementById("modalBg").addEventListener("click", e => { if(e.target===e.currentTarget) e.currentTarget.classList.remove("open"); });
+
+  bindFilters("decisionFilters", renderDecisionCenter);
+  bindFilters("campaignFilters", renderCampaigns);
+  bindFilters("creativeFilters", renderCreatives);
+
+  await loadAccounts();
+}
+
+// ─── ACCOUNTS ──────────────────────────────────────────────────────
+async function loadAccounts() {
+  const res = await fetch("/api/adaccounts").then(r => r.json()).catch(() => ({ data: [] }));
+  state.accounts = res.data || [];
+  const sel = document.getElementById("accountSel");
+  sel.innerHTML = `<option value="">Selecione a conta</option>` + state.accounts.map(a => `<option value="${a.account_id}">${a.name}</option>`).join("");
+  sel.addEventListener("change", () => {
+    state.selectedAccountId = sel.value;
+    state.selectedAccount = state.accounts.find(a => a.account_id === sel.value) || null;
+  });
+  if (state.accounts.length) { sel.value = state.accounts[0].account_id; sel.dispatchEvent(new Event("change")); }
+}
+
+// ─── ANALYZE ────────────────────────────────────────────────────────
+async function runAnalysis() {
+  if (!state.selectedAccountId) { showError("Selecione uma conta."); return; }
+  const btn = document.getElementById("analyzeBtn");
+  btn.textContent = "Analisando…"; btn.disabled = true;
+  try {
+    const q = getDateParams();
+    const query = toQuery(q);
+    const [insightsRes, creativesRes] = await Promise.all([
+      fetch(`/api/adaccounts/${state.selectedAccountId}/insights?${query}`).then(r => r.json()),
+      fetch(`/api/adaccounts/${state.selectedAccountId}/creatives?${query}`).then(r => r.json())
+    ]);
+    state.insights = insightsRes;
+    state.creatives = creativesRes.data || [];
+
+    let comparison = null;
+    if (document.getElementById("comparePeriod").checked) {
+      comparison = await fetch(`/api/adaccounts/${state.selectedAccountId}/comparison?${query}`).then(r => r.json()).catch(() => null);
     }
-    async function sendChatMessage(){ const input=document.getElementById('chatInput'); const text=input.value.trim(); if(!text) return; appendChatMessage('user', text); input.value=''; state.chatHistory.push({ role:'user', content:text }); appendChatMessage('assistant', buildLocalChatAnswer(text)); }
-    window.analyzeCampaign=analyzeCampaign; init();
-  </script>
+
+    const analyzeRes = await fetch("/api/analyze", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accountData: state.selectedAccount,
+        campaigns: (await fetch(`/api/adaccounts/${state.selectedAccountId}/campaigns`).then(r=>r.json()).then(r=>r.data||[])),
+        insights: state.insights,
+        dateRange: JSON.stringify(q),
+        niche: document.getElementById("nicheSel").value
+      })
+    }).then(r => r.json());
+
+    state.analysis = analyzeRes.analysis;
+    state.metrics = analyzeRes.metrics;
+    state.comparison = comparison;
+    state.chatHistory = [];
+    resetChat();
+
+    renderOverview();
+    renderAnalysis();
+    renderDecisionCenter();
+    renderCampaigns();
+    renderCreatives();
+    switchTab("overview");
+    showOk("Análise concluída!");
+  } catch(err) {
+    console.error(err);
+    showError("Erro ao analisar: " + err.message);
+  } finally {
+    btn.textContent = "↗ Analisar conta"; btn.disabled = false;
+  }
+}
+
+// ─── RENDER OVERVIEW ────────────────────────────────────────────────
+function renderOverview() {
+  const a = state.analysis, m = state.metrics;
+  if (!a || !m) return;
+  const score = a.resumo_geral?.score_saude || 0;
+  document.getElementById("healthScore").textContent = score;
+  document.getElementById("healthLevel").textContent = a.resumo_geral?.nivel_saude || "Sem dados";
+  document.getElementById("healthSummary").textContent = a.resumo_geral?.resumo_historico || "";
+  setScoreRing(score);
+
+  document.getElementById("mSpend").textContent = money(m.totalSpend);
+  document.getElementById("mRevenue").textContent = money(m.totalRev);
+  document.getElementById("mRoas").textContent = x2(m.roas);
+  document.getElementById("mCostPur").textContent = money(m.costPerPurchase);
+  document.getElementById("mImpr").textContent = num(m.totalImpressions);
+  document.getElementById("mReach").textContent = num(m.totalReach);
+  document.getElementById("mFreq").textContent = Number(m.avgFrequency||0).toFixed(2);
+  document.getElementById("mCpm").textContent = money(m.avgCpm);
+  document.getElementById("mCtr").textContent = pct(m.avgCtr);
+  document.getElementById("mCpc").textContent = money(m.avgCpc);
+  document.getElementById("mConnect").textContent = pct(m.connectRate);
+  document.getElementById("mMsg").textContent = num(m.totalMessages);
+  document.getElementById("mPur").textContent = num(m.totalPurchases);
+
+  renderComparisonTable();
+}
+
+function renderComparisonTable() {
+  const body = document.getElementById("comparisonBody");
+  const comp = state.comparison;
+  if (!comp?.current || !comp?.previous) {
+    body.innerHTML = `<tr><td colspan="4"><div class="empty-state">Ative "Comparar período" para ver a variação.</div></td></tr>`;
+    return;
+  }
+  const { current: c, previous: p, comparison: d } = comp;
+  const varRow = (label, cur, prev, chg) => {
+    const cls = chg == null ? "var-neutral" : chg >= 0 ? "var-up" : "var-down";
+    const arrow = chg == null ? "—" : (chg >= 0 ? "↑" : "↓") + ` ${Math.abs(chg).toFixed(1)}%`;
+    return `<tr><td>${label}</td><td>${cur}</td><td>${prev}</td><td class="${cls}">${arrow}</td></tr>`;
+  };
+  body.innerHTML = [
+    varRow("Investimento", money(c.totalSpend), money(p.totalSpend), d?.spendChange),
+    varRow("ROAS", x2(c.roas), x2(p.roas), d?.roasChange),
+    varRow("CTR", pct(c.avgCtr), pct(p.avgCtr), d?.ctrChange),
+    varRow("Compras", num(c.totalPurchases), num(p.totalPurchases), d?.purchasesChange),
+    varRow("Connect Rate", pct(c.connectRate), pct(p.connectRate), d?.connectRateChange)
+  ].join("");
+}
+
+// ─── RENDER ANALYSIS ────────────────────────────────────────────────
+function renderAnalysis() {
+  const list = document.getElementById("analysisList");
+  const items = state.analysis?.otimizacoes_prioritarias || [];
+  if (!items.length) { list.innerHTML = `<div class="empty-state">Nenhuma otimização crítica identificada. Conta em boa forma!</div>`; return; }
+  list.innerHTML = items.map(i => `
+    <div class="insight-item">
+      <div class="insight-priority priority-${i.prioridade}">P${i.prioridade}</div>
+      <div class="insight-body">
+        <div class="insight-tag">${i.categoria}</div>
+        <div class="insight-title">${i.titulo}</div>
+        <div class="insight-desc">${i.descricao}</div>
+        <div class="insight-action">→ ${i.acao}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+// ─── DECISION CENTER ────────────────────────────────────────────────
+function renderDecisionCenter() {
+  const center = state.analysis?.central_decisao;
+  const camps  = state.analysis?.campanhas_analise || [];
+  const s      = center?.summary || {};
+  document.getElementById("dEscalar").textContent = s.scaleCount || (camps.filter(c => c.decision?.action === "ESCALAR").length);
+  document.getElementById("dPausar").textContent  = s.pauseCount || (camps.filter(c => c.decision?.action === "PAUSAR").length);
+  document.getElementById("dRenovar").textContent = s.creativeCount || (camps.filter(c => c.decision?.action === "RENOVAR_CRIATIVO").length);
+  document.getElementById("dWaste").textContent   = money(s.estimatedWaste || camps.reduce((a,c)=>a+(c.decision?.waste||c.decision?.estimatedWaste||0),0));
+
+  const filter = getFilter("decisionFilters");
+  const filtered = filterByStatus(camps, filter);
+
+  document.getElementById("decisionBody").innerHTML = filtered.length ? filtered.map(c => {
+    const action = c.decision?.action || "MANTER_E_OTIMIZAR";
+    const score  = c.decision?.score || c.auditScore || c.score || 0;
+    const waste  = c.decision?.waste || c.decision?.estimatedWaste || 0;
+    return `<tr>
+      <td class="td-name" title="${c.name}">${c.name}</td>
+      <td>${statusBadge(c.lifecycleStatus)}</td>
+      <td>${actionBadge(action)}</td>
+      <td><span style="font-family:'Syne',sans-serif;font-weight:700">${score}</span></td>
+      <td>${money(c.spend)}</td>
+      <td>${x2(c.roas)}</td>
+      <td>${pct(c.ctr)}</td>
+      <td>${pct(c.connectRate)}</td>
+      <td>${money(waste)}</td>
+      <td style="max-width:200px;white-space:normal;font-size:12px;color:var(--muted)">${c.decision?.reason || c.decision?.scaleRecommendation || "—"}</td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="10"><div class="empty-state">Nenhuma campanha encontrada.</div></td></tr>`;
+}
+
+function filterByStatus(list, filter) {
+  if (filter === "TODAS") return list;
+  return list.filter(c => c.lifecycleStatus === filter);
+}
+
+function statusBadge(s) {
+  const map = { RODANDO:"badge-lime", ATIVA:"badge-cyan", PAUSADA:"badge-muted", CONCLUIDA:"badge-muted" };
+  return `<span class="badge ${map[s]||"badge-muted"}">${s||"—"}</span>`;
+}
+
+function actionBadge(a) {
+  const map = {
+    ESCALAR:"badge-success", PAUSAR:"badge-danger",
+    RENOVAR_CRIATIVO:"badge-warning", MANTER_E_OTIMIZAR:"badge-muted",
+    AJUSTAR_FUNIL:"badge-purple", OTIMIZAR_FUNIL:"badge-purple",
+    MANTER:"badge-muted", SEM_DADOS:"badge-muted"
+  };
+  const label = { ESCALAR:"↑ Escalar", PAUSAR:"⏸ Pausar", RENOVAR_CRIATIVO:"🎨 Renovar Criativo",
+    MANTER_E_OTIMIZAR:"Manter", AJUSTAR_FUNIL:"Funil", OTIMIZAR_FUNIL:"Funil",
+    MANTER:"Manter", SEM_DADOS:"Sem dados" };
+  return `<span class="badge ${map[a]||"badge-muted"}">${label[a]||a||"—"}</span>`;
+}
+
+// ─── CAMPAIGNS ──────────────────────────────────────────────────────
+function renderCampaigns() {
+  const filter = getFilter("campaignFilters");
+  const camps  = filterByStatus(state.analysis?.campanhas_analise || [], filter);
+  document.getElementById("campaignBody").innerHTML = camps.length ? camps.map(c => `
+    <tr>
+      <td class="td-name" title="${c.name}">${c.name}</td>
+      <td>${statusBadge(c.lifecycleStatus)}</td>
+      <td>${money(c.spend)}</td>
+      <td>${num(c.impressions)}</td>
+      <td>${num(c.reach)}</td>
+      <td>${pct(c.ctr)}</td>
+      <td>${pct(c.connectRate)}</td>
+      <td>${x2(c.roas)}</td>
+      <td>${num(c.messages)}</td>
+      <td>${num(c.purchases)}</td>
+      <td>${money(c.costPerPur)}</td>
+      <td><button class="btn-sm" onclick="analyzeCampaign('${c.id}')">IA →</button></td>
+    </tr>
+  `).join("") : `<tr><td colspan="12"><div class="empty-state">Nenhuma campanha encontrada.</div></td></tr>`;
+}
+
+// ─── CREATIVES ──────────────────────────────────────────────────────
+function renderCreatives() {
+  const grid = document.getElementById("creativesGrid");
+  let list = [...(state.creatives || [])];
+  const filter = getFilter("creativeFilters");
+
+  const getIns     = cr => cr?.insights?.data?.[0] || {};
+  const getActions = (ins, types) => { if(!ins?.actions) return 0; for(const t of types){ const f=ins.actions.find(a=>String(a.action_type||"").includes(t)); if(f&&Number(f.value)) return Number(f.value); } return 0; };
+  const getActVals = (ins, types) => { if(!ins?.action_values) return 0; for(const t of types){ const f=ins.action_values.find(a=>String(a.action_type||"").includes(t)); if(f&&Number(f.value)) return Number(f.value); } return 0; };
+
+  const getRoas = cr => { const ins=getIns(cr); const sp=Number(ins.spend||0); const rev=getActVals(ins,["purchase","omni_purchase"]); return sp>0?rev/sp:0; };
+  const getMsgs = cr => getActions(getIns(cr), ["messaging_conversation","messaging_first_reply","total_messaging"]);
+  const getPurs = cr => getActions(getIns(cr), ["fb_pixel_purchase","omni_purchase"]);
+
+  if (filter === "MENSAGENS") list.sort((a,b) => getMsgs(b)-getMsgs(a));
+  else if (filter === "COMPRAS") list.sort((a,b) => getPurs(b)-getPurs(a));
+  else list.sort((a,b) => getRoas(b)-getRoas(a));
+
+  if (!list.length) { grid.innerHTML = `<div class="empty-state">Nenhum criativo encontrado.</div>`; return; }
+
+  grid.innerHTML = list.map((cr, i) => {
+    const ins = getIns(cr);
+    const roas = getRoas(cr);
+    const msgs = getMsgs(cr);
+    const purs = getPurs(cr);
+    const img  = cr.creative?.image_url || cr.creative?.thumbnail_url || "";
+    return `
+      <div class="creative-card">
+        ${img ? `<img class="creative-img" src="${img}" alt="${cr.name}" loading="lazy">` :
+          `<div class="creative-placeholder"><svg width="40" height="40" viewBox="0 0 16 16" fill="white"><path d="M.002 3a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2h-12a2 2 0 01-2-2V3zm1 9v1a1 1 0 001 1h12a1 1 0 001-1V9.5l-3.777-1.947a.5.5 0 00-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 00-.63.062L1.002 12zm5-6.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z"/></svg></div>`}
+        <div class="creative-body">
+          <div class="creative-name" title="${cr.name}">${cr.name}</div>
+          <div class="creative-stat"><span>Gasto</span><strong>${money(ins.spend)}</strong></div>
+          <div class="creative-stat"><span>ROAS</span><strong>${roas.toFixed(2)}x</strong></div>
+          <div class="creative-stat"><span>CTR</span><strong>${pct(ins.ctr)}</strong></div>
+          <div class="creative-stat"><span>Mensagens</span><strong>${num(msgs)}</strong></div>
+          <div class="creative-stat"><span>Compras</span><strong>${num(purs)}</strong></div>
+          ${i===0?`<div class="creative-badge"><span class="badge badge-lime">🏆 Campeão</span></div>`:""}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// ─── BREAKDOWN ──────────────────────────────────────────────────────
+let breakdownChart = null;
+async function loadBreakdown() {
+  if (!state.selectedAccountId) { showError("Selecione uma conta."); return; }
+  const type  = document.getElementById("breakdownType").value;
+  const query = toQuery(getDateParams());
+  const res   = await fetch(`/api/adaccounts/${state.selectedAccountId}/breakdown/${type}?${query}`).then(r => r.json()).catch(() => ({data:[]}));
+  const data  = res.data || [];
+
+  const getLabel = d => d.city||d.region||d.age||d.gender||d.publisher_platform||d.platform_position||d.device_platform||"N/A";
+
+  document.getElementById("breakdownBody").innerHTML = data.length ? data.map(d => `
+    <tr>
+      <td>${getLabel(d)}</td>
+      <td>${money(d.spend)}</td>
+      <td>${num(d.impressions)}</td>
+      <td>${num(d.reach)}</td>
+      <td>${pct(d.ctr)}</td>
+      <td>${money(d.cpc)}</td>
+    </tr>
+  `).join("") : `<tr><td colspan="6"><div class="empty-state">Sem dados.</div></td></tr>`;
+
+  if (breakdownChart) { breakdownChart.destroy(); breakdownChart = null; }
+  if (!data.length) return;
+
+  const ctx = document.getElementById("breakdownChart").getContext("2d");
+  breakdownChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: data.map(getLabel),
+      datasets: [{
+        label: "Gasto (R$)",
+        data: data.map(d => Number(d.spend||0)),
+        backgroundColor: "rgba(200,251,87,0.6)",
+        borderColor: "rgba(200,251,87,0.9)",
+        borderWidth: 1,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#7a8499", font: { family: "DM Sans" } } } },
+      scales: {
+        x: { ticks: { color: "#7a8499", font: { family: "DM Sans", size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } },
+        y: { ticks: { color: "#7a8499", font: { family: "DM Sans", size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } }
+      }
+    }
+  });
+}
+
+// ─── TREND ──────────────────────────────────────────────────────────
+let trendChart = null;
+async function loadTrend() {
+  if (!state.selectedAccountId) return;
+  const res   = await fetch(`/api/trend/${state.selectedAccountId}`).then(r=>r.json()).catch(()=>({trend:[]}));
+  const trend = res.trend || [];
+  const empty = document.getElementById("trendEmpty");
+  const canvas = document.getElementById("trendChart");
+  if (!trend.length) { empty.classList.remove("hidden"); canvas.style.display="none"; return; }
+  empty.classList.add("hidden"); canvas.style.display="block";
+  if (trendChart) { trendChart.destroy(); trendChart = null; }
+
+  trendChart = new Chart(canvas.getContext("2d"), {
+    type: "line",
+    data: {
+      labels: trend.map(t => new Date(t.date).toLocaleDateString("pt-BR")),
+      datasets: [
+        { label: "Score Saúde", data: trend.map(t=>Number(t.avg_health||0)), borderColor: "rgba(200,251,87,0.8)", backgroundColor: "rgba(200,251,87,0.08)", tension: 0.4, pointRadius: 3 },
+        { label: "Gasto", data: trend.map(t=>Number(t.total_spend||0)), borderColor: "rgba(34,211,238,0.7)", backgroundColor: "rgba(34,211,238,0.05)", tension: 0.4, pointRadius: 3 },
+        { label: "ROAS", data: trend.map(t=>Number(t.avg_roas||0)), borderColor: "rgba(167,139,250,0.7)", backgroundColor: "rgba(167,139,250,0.05)", tension: 0.4, pointRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#7a8499", font: { family: "DM Sans", size: 12 } } } },
+      scales: {
+        x: { ticks: { color: "#7a8499", font: { family: "DM Sans", size: 11 } }, grid: { color: "rgba(255,255,255,0.04)" } },
+        y: { ticks: { color: "#7a8499", font: { family: "DM Sans", size: 11 } }, grid: { color: "rgba(255,255,255,0.04)" } }
+      }
+    }
+  });
+}
+
+// ─── DAILY METRICS ──────────────────────────────────────────────────
+async function loadDailyMetrics() {
+  if (!state.selectedAccountId) return;
+  const rows = await fetch(`/api/daily-metrics/${state.selectedAccountId}`).then(r=>r.json()).catch(()=>[]);
+  document.getElementById("dailyBody").innerHTML = Array.isArray(rows) && rows.length ? rows.map(r => `
+    <tr>
+      <td>${new Date(r.date).toLocaleDateString("pt-BR")}</td>
+      <td>${money(r.spend)}</td>
+      <td>${money(r.revenue||r.total_revenue||0)}</td>
+      <td>${x2(r.roas)}</td>
+      <td>${money(r.cost_per_purchase||0)}</td>
+      <td>${num(r.impressions||r.total_impressions)}</td>
+      <td>${num(r.reach||r.total_reach)}</td>
+      <td>${Number(r.frequency||r.avg_frequency||0).toFixed(2)}</td>
+      <td>${money(r.cpm||r.avg_cpm)}</td>
+      <td>${pct(r.ctr||r.avg_ctr)}</td>
+      <td>${money(r.cpc||r.avg_cpc)}</td>
+      <td>${pct(r.connect_rate||0)}</td>
+      <td>${num(r.messages||r.total_messages)}</td>
+      <td>${num(r.purchases||r.total_purchases)}</td>
+      <td><span style="font-family:'Syne',sans-serif;font-weight:700">${num(r.healthScore||r.health_score)}</span></td>
+    </tr>
+  `).join("") : `<tr><td colspan="15"><div class="empty-state">Sem histórico salvo ainda.</div></td></tr>`;
+}
+
+// ─── CAMPAIGN IA ────────────────────────────────────────────────────
+async function analyzeCampaign(id) {
+  const campaign = (state.analysis?.campanhas_analise||[]).find(c=>c.id===id);
+  if (!campaign) return;
+  openModal("Análise IA da campanha", "Carregando análise...");
+  const q = toQuery(getDateParams());
+  const funnel = await fetch(`/api/campaigns/${id}/funnel?${q}`).then(r=>r.json()).catch(()=>({adsets:[]}));
+  const response = await fetch("/api/gpt-campaign", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ campaign, adsets: funnel.adsets||[], metrics: state.metrics })
+  }).then(r=>r.json()).catch(()=>({analysis:"Erro ao gerar análise."}));
+  document.getElementById("modalContent").innerHTML = `<pre>${response.analysis||"Sem análise disponível."}</pre>`;
+}
+
+// ─── GPT COPILOT ────────────────────────────────────────────────────
+async function openGptCopilot() {
+  openModal("Plano de Guerra IA", "Gerando estratégia…");
+  const response = await fetch("/api/gpt-copilot", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ data:{ metrics:state.metrics, analysis:state.analysis, campaigns:state.analysis?.campanhas_analise||[], niche:document.getElementById("nicheSel").value } })
+  }).then(r=>r.json()).catch(()=>({strategy:"Erro ao gerar estratégia."}));
+  document.getElementById("modalContent").innerHTML = `<pre>${response.strategy||"Sem estratégia disponível."}</pre>`;
+}
+
+// ─── MODAL ──────────────────────────────────────────────────────────
+function openModal(title, content) {
+  document.getElementById("modalTitle").textContent = title;
+  document.getElementById("modalContent").innerHTML = content || "";
+  document.getElementById("modalBg").classList.add("open");
+}
+
+// ─── NOTES ──────────────────────────────────────────────────────────
+async function loadNotes() {
+  if (!state.selectedAccountId) return;
+  const notes = await fetch(`/api/notes/${state.selectedAccountId}`).then(r=>r.json()).catch(()=>[]);
+  const list  = document.getElementById("notesList");
+  list.innerHTML = Array.isArray(notes) && notes.length ? notes.map(n => `
+    <div class="note-card">
+      <div class="note-meta">
+        <span class="badge badge-lime">${n.type}</span>
+        <span style="font-size:11px;color:var(--muted)">${new Date(n.created_at).toLocaleDateString("pt-BR")}</span>
+      </div>
+      <div class="note-text">${n.note}</div>
+    </div>
+  `).join("") : `<div class="empty-state">Nenhuma nota salva.</div>`;
+}
+
+async function saveNote() {
+  if (!state.selectedAccountId) return;
+  const note = document.getElementById("noteInput").value.trim();
+  if (!note) return;
+  await fetch("/api/notes", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ fbAccountId:state.selectedAccountId, note, type:document.getElementById("noteType").value }) });
+  document.getElementById("noteInput").value = "";
+  showOk("Nota salva!"); loadNotes();
+}
+
+// ─── ALERTS ─────────────────────────────────────────────────────────
+async function loadAlerts() {
+  if (!state.selectedAccountId) return;
+  const alert = await fetch(`/api/alerts/${state.selectedAccountId}`).then(r=>r.json()).catch(()=>null);
+  const div = document.getElementById("alertStatus");
+  div.innerHTML = alert ? `<div class="note-card" style="margin-top:12px"><div class="note-meta"><span class="badge badge-lime">Ativo</span></div><div class="note-text">${alert.alert_email} — Limite: ${money(alert.threshold_amount)}</div></div>` : "";
+}
+
+async function saveAlert() {
+  if (!state.selectedAccountId) return;
+  await fetch("/api/alerts", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ fbAccountId:state.selectedAccountId, accountName:state.selectedAccount?.name||"", email:document.getElementById("alertEmail").value, threshold:document.getElementById("alertThreshold").value, currency:state.selectedAccount?.currency||"BRL" }) });
+  showOk("Alerta salvo!"); loadAlerts();
+}
+
+// ─── CHAT ────────────────────────────────────────────────────────────
+function appendMsg(role, text) {
+  const box = document.getElementById("chatMessages");
+  const el = document.createElement("div");
+  el.className = `chat-msg ${role}`;
+  el.textContent = text;
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+
+function resetChat() {
+  document.getElementById("chatMessages").innerHTML = "";
+  appendMsg("assistant", "Análise carregada! Pode me perguntar sobre escalas, pausas, gargalos de funil, criativos ou qualquer decisão estratégica.");
+}
+
+function buildLocalAnswer(question) {
+  if (!state.analysis || !state.metrics) return "Rode uma análise primeiro.";
+  const camps   = state.analysis?.campanhas_analise || [];
+  const lower   = String(question||"").toLowerCase();
+  const topScale = camps.filter(c => ["ESCALAR","ESCALAR"].includes(c.decision?.action) || (c.roas >= 2.5 && c.purchases >= 2)).sort((a,b)=>(b.roas||0)-(a.roas||0)).slice(0,3);
+  const topPause = camps.filter(c => c.decision?.action === "PAUSAR").sort((a,b)=>(b.decision?.waste||0)-(a.decision?.waste||0)).slice(0,3);
+  const topCreate= camps.filter(c => c.decision?.action === "RENOVAR_CRIATIVO").slice(0,3);
+
+  if (lower.includes("pausar")) return topPause.length ? "Campanhas para pausar:\n\n" + topPause.map((c,i)=>`${i+1}. ${c.name}\n   Desperdício: ${money(c.decision?.waste||0)} | ROAS: ${x2(c.roas)} | Motivo: ${c.decision?.reason||"sem dados"}`).join("\n\n") : "Nenhuma campanha marcada para pausar agora.";
+  if (lower.includes("escalar")) return topScale.length ? "Campanhas com potencial de escala:\n\n" + topScale.map((c,i)=>`${i+1}. ${c.name}\n   ROAS: ${x2(c.roas)} | CTR: ${pct(c.ctr)} | Connect Rate: ${pct(c.connectRate)}`).join("\n\n") : "Nenhuma campanha marcada para escalar agora.";
+  if (lower.includes("criativo")) return topCreate.length ? "Campanhas com fadiga criativa:\n\n" + topCreate.map((c,i)=>`${i+1}. ${c.name}\n   Motivo: ${c.decision?.reason||"fadiga detectada"}`).join("\n\n") : "Sem sinais de fadiga criativa detectados.";
+
+  const best  = [...camps].sort((a,b)=>(b.roas||0)-(a.roas||0))[0];
+  const worst = [...camps].sort((a,b)=>(a.roas||0)-(b.roas||0))[0];
+  return `Resumo da conta:\n\nScore de saúde: ${state.analysis?.resumo_geral?.score_saude||0}/100 (${state.analysis?.resumo_geral?.nivel_saude||"—"})\nInvestimento: ${money(state.metrics?.totalSpend)}\nReceita: ${money(state.metrics?.totalRev)}\nROAS: ${x2(state.metrics?.roas)}\nCTR: ${pct(state.metrics?.avgCtr)}\nConnect rate: ${pct(state.metrics?.connectRate)}\nMensagens: ${num(state.metrics?.totalMessages)}\nCompras: ${num(state.metrics?.totalPurchases)}\n\nMelhor campanha: ${best?.name||"—"} (${x2(best?.roas)})\nPior campanha: ${worst?.name||"—"} (${x2(worst?.roas)})\n\nMe pergunte especificamente sobre pausar, escalar ou criativos para mais detalhes.`;
+}
+
+async function sendChat() {
+  const input = document.getElementById("chatInput");
+  const text  = input.value.trim();
+  if (!text) return;
+  appendMsg("user", text);
+  input.value = "";
+  state.chatHistory.push({ role:"user", content:text });
+  const answer = buildLocalAnswer(text);
+  setTimeout(() => appendMsg("assistant", answer), 300);
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────
+window.analyzeCampaign = analyzeCampaign;
+init();
+</script>
 </body>
 </html>
