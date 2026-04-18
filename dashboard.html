@@ -24,7 +24,8 @@
     .nav-title{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:800;margin:14px 8px 8px}
     .nav-btn{display:block;width:100%;text-align:left;background:none;border:0;color:var(--text);padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:700}
     .nav-btn:hover,.nav-btn.active{background:rgba(59,130,246,.12);color:#fff}
-    .input,.btn,select{height:40px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);padding:0 12px;font-family:Inter,sans-serif}
+    .input,.btn,select,textarea{height:40px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);padding:0 12px;font-family:Inter,sans-serif}
+    textarea{height:auto;padding:12px;resize:vertical}
     .btn{cursor:pointer;background:var(--primary);border:none;font-weight:700}
     .btn.secondary{background:var(--card)}
     .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -61,8 +62,15 @@
     .creative-info{padding:12px}
     .empty{padding:30px;color:var(--muted);text-align:center}
     .chart-box{height:320px}
+    .chat-shell{display:grid;grid-template-rows:1fr auto;gap:14px;min-height:62vh}
+    .chat-messages{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+    .chat-msg{max-width:min(860px,85%);padding:14px 16px;border-radius:14px;line-height:1.55;white-space:pre-wrap}
+    .chat-msg.user{align-self:flex-end;background:rgba(59,130,246,.14);border:1px solid rgba(59,130,246,.25)}
+    .chat-msg.assistant{align-self:flex-start;background:var(--card2);border:1px solid var(--border)}
+    .chat-compose{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+    .chat-compose textarea{min-height:88px}
     @media(max-width:1200px){.grid,.grid5{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:900px){.app{display:block;height:auto}.sidebar{width:auto;border-right:none;border-bottom:1px solid var(--border)}.grid,.grid5{grid-template-columns:1fr}}
+    @media(max-width:900px){.app{display:block;height:auto}.sidebar{width:auto;border-right:none;border-bottom:1px solid var(--border)}.grid,.grid5{grid-template-columns:1fr}.chat-compose{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -109,6 +117,7 @@
       <button class="nav-btn" data-tab="breakdown">Breakdown</button>
       <button class="nav-btn" data-tab="trend">Tendência</button>
       <button class="nav-btn" data-tab="daily">Métricas Diárias</button>
+      <button class="nav-btn" data-tab="chat">Chat IA</button>
 
       <div class="nav-title">Ferramentas</div>
       <button class="nav-btn" data-tab="notes">Notas</button>
@@ -116,816 +125,93 @@
     </aside>
 
     <main class="main">
-      <section id="tab-overview">
-        <div class="card">
-          <div class="summary">
-            <div class="score" id="healthScore">0</div>
-            <div>
-              <div class="label">Saúde da Conta</div>
-              <div class="value" id="healthLevel">Sem dados</div>
-              <div class="sub" id="healthSummary">Selecione uma conta e rode a análise.</div>
-            </div>
-          </div>
-        </div>
+      <section id="tab-overview"><div class="card"><div class="summary"><div class="score" id="healthScore">0</div><div><div class="label">Saúde da Conta</div><div class="value" id="healthLevel">Sem dados</div><div class="sub" id="healthSummary">Selecione uma conta e rode a análise.</div></div></div></div><div class="section"><h2>Investimento e Retorno</h2><div class="grid"><div class="card"><div class="label">Investimento</div><div class="value" id="mSpend">-</div><div class="sub">Gasto total</div></div><div class="card"><div class="label">Receita</div><div class="value" id="mRevenue">-</div><div class="sub">Receita rastreada</div></div><div class="card"><div class="label">ROAS</div><div class="value" id="mRoas">-</div><div class="sub">Retorno sobre gasto</div></div><div class="card"><div class="label">Custo por Venda</div><div class="value" id="mCostPur">-</div><div class="sub">CPA de compra</div></div></div></div><div class="section"><h2>Alcance e Entrega</h2><div class="grid"><div class="card"><div class="label">Impressões</div><div class="value" id="mImpr">-</div><div class="sub">Total</div></div><div class="card"><div class="label">Alcance</div><div class="value" id="mReach">-</div><div class="sub">Pessoas</div></div><div class="card"><div class="label">Frequência</div><div class="value" id="mFreq">-</div><div class="sub">Média</div></div><div class="card"><div class="label">CPM</div><div class="value" id="mCpm">-</div><div class="sub">Custo por mil</div></div></div></div><div class="section"><h2>Engajamento e Funil</h2><div class="grid5"><div class="card"><div class="label">CTR</div><div class="value" id="mCtr">-</div><div class="sub">Taxa de clique</div></div><div class="card"><div class="label">CPC</div><div class="value" id="mCpc">-</div><div class="sub">Custo por clique</div></div><div class="card"><div class="label">Connect Rate</div><div class="value" id="mConnect">-</div><div class="sub">LPV / cliques</div></div><div class="card"><div class="label">Mensagens</div><div class="value" id="mMsg">-</div><div class="sub">Total</div></div><div class="card"><div class="label">Compras</div><div class="value" id="mPur">-</div><div class="sub">Total</div></div></div></div><div class="section"><h2>Comparação com mesmo período anterior</h2><div class="table-wrap"><table><thead><tr><th>Métrica</th><th>Atual</th><th>Anterior</th><th>Variação</th></tr></thead><tbody id="comparisonBody"></tbody></table></div></div></section>
 
-        <div class="section">
-          <h2>Investimento e Retorno</h2>
-          <div class="grid">
-            <div class="card"><div class="label">Investimento</div><div class="value" id="mSpend">-</div><div class="sub">Gasto total</div></div>
-            <div class="card"><div class="label">Receita</div><div class="value" id="mRevenue">-</div><div class="sub">Receita rastreada</div></div>
-            <div class="card"><div class="label">ROAS</div><div class="value" id="mRoas">-</div><div class="sub">Retorno sobre gasto</div></div>
-            <div class="card"><div class="label">Custo por Venda</div><div class="value" id="mCostPur">-</div><div class="sub">CPA de compra</div></div>
-          </div>
-        </div>
+      <section id="tab-analysis" class="hidden"><div class="toolbar" style="margin-bottom:16px"><button class="btn" id="gptCopilotBtn">Plano de Guerra IA</button></div><div id="analysisList"></div></section>
 
-        <div class="section">
-          <h2>Alcance e Entrega</h2>
-          <div class="grid">
-            <div class="card"><div class="label">Impressões</div><div class="value" id="mImpr">-</div><div class="sub">Total</div></div>
-            <div class="card"><div class="label">Alcance</div><div class="value" id="mReach">-</div><div class="sub">Pessoas</div></div>
-            <div class="card"><div class="label">Frequência</div><div class="value" id="mFreq">-</div><div class="sub">Média</div></div>
-            <div class="card"><div class="label">CPM</div><div class="value" id="mCpm">-</div><div class="sub">Custo por mil</div></div>
-          </div>
-        </div>
+      <section id="tab-decision" class="hidden"><div class="toolbar" style="margin-bottom:16px"><div class="filters" id="decisionFilters"><button class="filter-btn active" data-value="TODAS">Todas</button><button class="filter-btn" data-value="ATIVA">Ativa</button><button class="filter-btn" data-value="PAUSADA">Pausada</button><button class="filter-btn" data-value="CONCLUIDA">Concluído</button><button class="filter-btn" data-value="RODANDO">Rodando</button></div></div><div class="grid"><div class="card"><div class="label">Escalar</div><div class="value" id="dEscalar">0</div></div><div class="card"><div class="label">Pausar</div><div class="value" id="dPausar">0</div></div><div class="card"><div class="label">Renovar Criativo</div><div class="value" id="dRenovar">0</div></div><div class="card"><div class="label">Desperdício Estimado</div><div class="value" id="dWaste">0</div></div></div><div class="section"><div class="table-wrap"><table><thead><tr><th>Campanha</th><th>Status</th><th>Ação</th><th>Score</th><th>Gasto</th><th>ROAS</th><th>CTR</th><th>Connect Rate</th><th>Desperdício</th><th>Motivo</th></tr></thead><tbody id="decisionBody"></tbody></table></div></div></section>
 
-        <div class="section">
-          <h2>Engajamento e Funil</h2>
-          <div class="grid5">
-            <div class="card"><div class="label">CTR</div><div class="value" id="mCtr">-</div><div class="sub">Taxa de clique</div></div>
-            <div class="card"><div class="label">CPC</div><div class="value" id="mCpc">-</div><div class="sub">Custo por clique</div></div>
-            <div class="card"><div class="label">Connect Rate</div><div class="value" id="mConnect">-</div><div class="sub">LPV / cliques</div></div>
-            <div class="card"><div class="label">Mensagens</div><div class="value" id="mMsg">-</div><div class="sub">Total</div></div>
-            <div class="card"><div class="label">Compras</div><div class="value" id="mPur">-</div><div class="sub">Total</div></div>
-          </div>
-        </div>
+      <section id="tab-campaigns" class="hidden"><div class="toolbar" style="margin-bottom:16px"><div class="filters" id="campaignFilters"><button class="filter-btn active" data-value="TODAS">Todas</button><button class="filter-btn" data-value="ATIVA">Ativas</button><button class="filter-btn" data-value="PAUSADA">Pausadas</button><button class="filter-btn" data-value="CONCLUIDA">Concluídas</button><button class="filter-btn" data-value="RODANDO">Rodando</button></div></div><div class="table-wrap"><table><thead><tr><th>Campanha</th><th>Status</th><th>Gasto</th><th>Impressão</th><th>Alcance</th><th>CTR</th><th>Connect Rate</th><th>ROAS</th><th>Mensagens</th><th>Compras</th><th>Custo/Venda</th><th>IA</th></tr></thead><tbody id="campaignBody"></tbody></table></div></section>
 
-        <div class="section">
-          <h2>Comparação com mesmo período anterior</h2>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Métrica</th>
-                  <th>Atual</th>
-                  <th>Anterior</th>
-                  <th>Variação</th>
-                </tr>
-              </thead>
-              <tbody id="comparisonBody"></tbody>
-            </table>
+      <section id="tab-creatives" class="hidden"><div class="toolbar" style="margin-bottom:16px"><div class="filters" id="creativeFilters"><button class="filter-btn active" data-value="CAMPEAO">Criativo campeão</button><button class="filter-btn" data-value="MENSAGENS">Mais mensagens</button><button class="filter-btn" data-value="COMPRAS">Mais compras</button></div></div><div id="creativesGrid" class="creative-grid"></div></section>
+
+      <section id="tab-breakdown" class="hidden"><div class="toolbar" style="margin-bottom:16px"><select id="breakdownType" class="input"><option value="platform">Plataforma</option><option value="position">Posicionamento</option><option value="gender">Sexo</option><option value="age">Idade</option><option value="region">Região</option><option value="city">Cidade</option><option value="device">Dispositivo</option></select><button class="btn" id="loadBreakdownBtn">Carregar breakdown</button></div><div class="card chart-box"><canvas id="breakdownChart"></canvas></div><div class="section"><div class="table-wrap"><table><thead><tr><th>Segmento</th><th>Gasto</th><th>Impressão</th><th>Alcance</th><th>CTR</th><th>CPC</th></tr></thead><tbody id="breakdownBody"></tbody></table></div></div></section>
+
+      <section id="tab-trend" class="hidden"><div class="card chart-box"><canvas id="trendChart"></canvas></div><div id="trendEmpty" class="empty hidden">Nenhum histórico disponível ainda.</div></section>
+
+      <section id="tab-daily" class="hidden"><div class="table-wrap"><table><thead><tr><th>Data</th><th>Gasto</th><th>Impressões</th><th>Alcance</th><th>CTR</th><th>CPC</th><th>CPM</th><th>ROAS</th><th>Score</th></tr></thead><tbody id="dailyBody"></tbody></table></div></section>
+
+      <section id="tab-chat" class="hidden">
+        <div class="card" style="margin-bottom:14px">
+          <div class="label">Chat IA contextual</div>
+          <div class="sub">Faça perguntas sobre a conta, campanhas, criativos, desperdício, escala e gargalos. O contexto usa a análise atual carregada.</div>
+        </div>
+        <div class="chat-shell">
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-msg assistant">Posso te ajudar a interpretar a conta, comparar campanhas, encontrar gargalos de funil e sugerir próximos passos. Rode uma análise e me pergunte, por exemplo: “qual campanha devo pausar hoje?”</div>
+          </div>
+          <div class="chat-compose">
+            <textarea id="chatInput" placeholder="Ex.: quais campanhas eu devo escalar hoje e por quê?"></textarea>
+            <button class="btn" id="sendChatBtn">Enviar</button>
           </div>
         </div>
       </section>
 
-      <section id="tab-analysis" class="hidden">
-        <div class="toolbar" style="margin-bottom:16px">
-          <button class="btn" id="gptCopilotBtn">Plano de Guerra IA</button>
-        </div>
-        <div id="analysisList"></div>
-      </section>
+      <section id="tab-notes" class="hidden"><div class="card"><div class="label">Nova nota</div><textarea id="noteInput" style="width:100%;min-height:100px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:12px"></textarea><div class="toolbar" style="margin-top:12px"><select id="noteType" class="input"><option value="geral">Geral</option><option value="criativo">Criativo</option><option value="publico">Público</option><option value="orcamento">Orçamento</option><option value="resultado">Resultado</option></select><button class="btn" id="saveNoteBtn">Salvar nota</button></div></div><div id="notesList" class="section"></div></section>
 
-      <section id="tab-decision" class="hidden">
-        <div class="toolbar" style="margin-bottom:16px">
-          <div class="filters" id="decisionFilters">
-            <button class="filter-btn active" data-value="TODAS">Todas</button>
-            <button class="filter-btn" data-value="ATIVA">Ativa</button>
-            <button class="filter-btn" data-value="PAUSADA">Pausada</button>
-            <button class="filter-btn" data-value="CONCLUIDA">Concluído</button>
-            <button class="filter-btn" data-value="RODANDO">Rodando</button>
-          </div>
-        </div>
-        <div class="grid">
-          <div class="card"><div class="label">Escalar</div><div class="value" id="dEscalar">0</div></div>
-          <div class="card"><div class="label">Pausar</div><div class="value" id="dPausar">0</div></div>
-          <div class="card"><div class="label">Renovar Criativo</div><div class="value" id="dRenovar">0</div></div>
-          <div class="card"><div class="label">Desperdício Estimado</div><div class="value" id="dWaste">0</div></div>
-        </div>
-        <div class="section">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Campanha</th>
-                  <th>Status</th>
-                  <th>Ação</th>
-                  <th>Score</th>
-                  <th>Gasto</th>
-                  <th>ROAS</th>
-                  <th>CTR</th>
-                  <th>Connect Rate</th>
-                  <th>Desperdício</th>
-                  <th>Motivo</th>
-                </tr>
-              </thead>
-              <tbody id="decisionBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-campaigns" class="hidden">
-        <div class="toolbar" style="margin-bottom:16px">
-          <div class="filters" id="campaignFilters">
-            <button class="filter-btn active" data-value="TODAS">Todas</button>
-            <button class="filter-btn" data-value="ATIVA">Ativas</button>
-            <button class="filter-btn" data-value="PAUSADA">Pausadas</button>
-            <button class="filter-btn" data-value="CONCLUIDA">Concluídas</button>
-            <button class="filter-btn" data-value="RODANDO">Rodando</button>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Campanha</th>
-                <th>Status</th>
-                <th>Gasto</th>
-                <th>Impressão</th>
-                <th>Alcance</th>
-                <th>CTR</th>
-                <th>Connect Rate</th>
-                <th>ROAS</th>
-                <th>Mensagens</th>
-                <th>Compras</th>
-                <th>Custo/Venda</th>
-                <th>IA</th>
-              </tr>
-            </thead>
-            <tbody id="campaignBody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="tab-creatives" class="hidden">
-        <div class="toolbar" style="margin-bottom:16px">
-          <div class="filters" id="creativeFilters">
-            <button class="filter-btn active" data-value="CAMPEAO">Criativo campeão</button>
-            <button class="filter-btn" data-value="MENSAGENS">Mais mensagens</button>
-            <button class="filter-btn" data-value="COMPRAS">Mais compras</button>
-          </div>
-        </div>
-        <div id="creativesGrid" class="creative-grid"></div>
-      </section>
-
-      <section id="tab-breakdown" class="hidden">
-        <div class="toolbar" style="margin-bottom:16px">
-          <select id="breakdownType" class="input">
-            <option value="platform">Plataforma</option>
-            <option value="position">Posicionamento</option>
-            <option value="gender">Sexo</option>
-            <option value="age">Idade</option>
-            <option value="region">Região</option>
-            <option value="city">Cidade</option>
-            <option value="device">Dispositivo</option>
-          </select>
-          <button class="btn" id="loadBreakdownBtn">Carregar breakdown</button>
-        </div>
-        <div class="card chart-box"><canvas id="breakdownChart"></canvas></div>
-        <div class="section">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Segmento</th>
-                  <th>Gasto</th>
-                  <th>Impressão</th>
-                  <th>Alcance</th>
-                  <th>CTR</th>
-                  <th>CPC</th>
-                </tr>
-              </thead>
-              <tbody id="breakdownBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-trend" class="hidden">
-        <div class="card chart-box"><canvas id="trendChart"></canvas></div>
-        <div id="trendEmpty" class="empty hidden">Nenhum histórico disponível ainda.</div>
-      </section>
-
-      <section id="tab-daily" class="hidden">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Gasto</th>
-                <th>Impressões</th>
-                <th>Alcance</th>
-                <th>CTR</th>
-                <th>CPC</th>
-                <th>CPM</th>
-                <th>ROAS</th>
-                <th>Score</th>
-              </tr>
-            </thead>
-            <tbody id="dailyBody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="tab-notes" class="hidden">
-        <div class="card">
-          <div class="label">Nova nota</div>
-          <textarea id="noteInput" style="width:100%;min-height:100px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:12px"></textarea>
-          <div class="toolbar" style="margin-top:12px">
-            <select id="noteType" class="input">
-              <option value="geral">Geral</option>
-              <option value="criativo">Criativo</option>
-              <option value="publico">Público</option>
-              <option value="orcamento">Orçamento</option>
-              <option value="resultado">Resultado</option>
-            </select>
-            <button class="btn" id="saveNoteBtn">Salvar nota</button>
-          </div>
-        </div>
-        <div id="notesList" class="section"></div>
-      </section>
-
-      <section id="tab-alerts" class="hidden">
-        <div class="card">
-          <div class="label">Alerta de saldo</div>
-          <div class="toolbar">
-            <input type="email" id="alertEmail" class="input" placeholder="Email">
-            <input type="number" id="alertThreshold" class="input" placeholder="Limite em R$" value="100">
-            <button class="btn" id="saveAlertBtn">Salvar alerta</button>
-          </div>
-          <div id="alertStatus" class="section"></div>
-        </div>
-      </section>
+      <section id="tab-alerts" class="hidden"><div class="card"><div class="label">Alerta de saldo</div><div class="toolbar"><input type="email" id="alertEmail" class="input" placeholder="Email"><input type="number" id="alertThreshold" class="input" placeholder="Limite em R$" value="100"><button class="btn" id="saveAlertBtn">Salvar alerta</button></div><div id="alertStatus" class="section"></div></div></section>
     </main>
   </div>
 
-  <div class="modal-bg" id="modalBg">
-    <div class="modal">
-      <div class="toolbar" style="justify-content:space-between;margin-bottom:14px">
-        <h3 id="modalTitle">Análise IA</h3>
-        <button class="btn secondary" id="closeModalBtn">Fechar</button>
-      </div>
-      <div id="modalContent"></div>
-    </div>
-  </div>
+  <div class="modal-bg" id="modalBg"><div class="modal"><div class="toolbar" style="justify-content:space-between;margin-bottom:14px"><h3 id="modalTitle">Análise IA</h3><button class="btn secondary" id="closeModalBtn">Fechar</button></div><div id="modalContent"></div></div></div>
 
   <script>
     const state = {
-      me: null,
-      accounts: [],
-      selectedAccountId: null,
-      selectedAccount: null,
-      campaigns: [],
-      insights: null,
-      previousInsights: null,
-      analysis: null,
-      metrics: null,
-      comparison: null,
-      creatives: [],
-      breakdownData: [],
-      charts: {}
+      me:null, accounts:[], selectedAccountId:null, selectedAccount:null, campaigns:[], insights:null, previousInsights:null, analysis:null, metrics:null, comparison:null, creatives:[], breakdownData:[], charts:{}, chatHistory:[]
     };
-
     const money = v => `R$ ${Number(v || 0).toLocaleString("pt-BR",{minimumFractionDigits:2})}`;
     const pct = v => `${Number(v || 0).toFixed(2)}%`;
     const num = v => Number(v || 0).toLocaleString("pt-BR");
-
-    function getDateParams() {
-      const dateSel = document.getElementById("dateSel").value;
-      if (dateSel === "custom") {
-        return {
-          since: document.getElementById("sinceDate").value,
-          until: document.getElementById("untilDate").value
-        };
-      }
-      return { date_preset: dateSel };
+    function getDateParams(){ const dateSel=document.getElementById("dateSel").value; if(dateSel==="custom"){ return { since:document.getElementById("sinceDate").value, until:document.getElementById("untilDate").value }; } return { date_preset:dateSel }; }
+    function toQuery(obj){ const params=new URLSearchParams(); Object.entries(obj).forEach(([k,v])=>{ if(v) params.append(k,v); }); return params.toString(); }
+    async function init(){ const me=await fetch("/api/me").then(r=>r.json()); if(!me.authenticated){ location.href="/"; return; } state.me=me.user; document.getElementById("userName").textContent=me.user.name; document.getElementById("dateSel").addEventListener("change",()=>{ const isCustom=document.getElementById("dateSel").value==="custom"; document.getElementById("sinceDate").classList.toggle("hidden",!isCustom); document.getElementById("untilDate").classList.toggle("hidden",!isCustom); }); document.querySelectorAll(".nav-btn").forEach(btn=>btn.addEventListener("click",()=>switchTab(btn.dataset.tab))); document.getElementById("analyzeBtn").addEventListener("click",runAnalysis); document.getElementById("gptCopilotBtn").addEventListener("click",openGptCopilot); document.getElementById("loadBreakdownBtn").addEventListener("click",loadBreakdown); document.getElementById("saveNoteBtn").addEventListener("click",saveNote); document.getElementById("saveAlertBtn").addEventListener("click",saveAlert); document.getElementById("closeModalBtn").addEventListener("click",closeModal); document.getElementById("sendChatBtn").addEventListener("click",sendChatMessage); document.getElementById("chatInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }); bindFilterGroup("decisionFilters",renderDecisionCenter); bindFilterGroup("campaignFilters",renderCampaigns); bindFilterGroup("creativeFilters",renderCreatives); await loadAccounts(); }
+    function bindFilterGroup(id, callback){ const container=document.getElementById(id); container?.querySelectorAll(".filter-btn").forEach(btn=>btn.addEventListener("click",()=>{ container.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); callback(); })); }
+    function getActiveFilter(groupId){ return document.querySelector(`#${groupId} .filter-btn.active`)?.dataset.value || "TODAS"; }
+    function switchTab(tab){ document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab)); document.querySelectorAll("main > section").forEach(sec=>sec.classList.add("hidden")); document.getElementById(`tab-${tab}`).classList.remove("hidden"); if(tab==="trend") loadTrend(); if(tab==="daily") loadDailyMetrics(); if(tab==="notes") loadNotes(); if(tab==="alerts") loadAlerts(); }
+    async function loadAccounts(){ const res=await fetch("/api/adaccounts").then(r=>r.json()); state.accounts=res.data||[]; const sel=document.getElementById("accountSel"); sel.innerHTML=`<option value="">Selecione a conta</option>`+state.accounts.map(a=>`<option value="${a.account_id}">${a.name}</option>`).join(""); sel.addEventListener("change", async()=>{ state.selectedAccountId=sel.value; state.selectedAccount=state.accounts.find(a=>a.account_id===sel.value)||null; if(!state.selectedAccountId) return; const campaignsRes=await fetch(`/api/adaccounts/${state.selectedAccountId}/campaigns`).then(r=>r.json()); state.campaigns=campaignsRes.data||[]; }); }
+    async function runAnalysis(){ if(!state.selectedAccountId){ alert("Selecione uma conta."); return; } const q=getDateParams(); const query=toQuery(q); const [insightsRes,creativesRes]=await Promise.all([ fetch(`/api/adaccounts/${state.selectedAccountId}/insights?${query}`).then(r=>r.json()), fetch(`/api/adaccounts/${state.selectedAccountId}/creatives?${query}`).then(r=>r.json()) ]); state.insights=insightsRes; state.creatives=creativesRes.data||[]; let previousInsights=null; let comparison=null; if(document.getElementById("comparePeriod").checked && q.since && q.until){ comparison=await fetch(`/api/adaccounts/${state.selectedAccountId}/comparison?${query}`).then(r=>r.json()); if(comparison?.previous){ previousInsights={ data:[] }; } } const analyzeRes=await fetch("/api/analyze", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ accountData:state.selectedAccount, campaigns:state.campaigns, insights:state.insights, previousInsights, creatives:state.creatives, dateRange:JSON.stringify(q), niche:document.getElementById("nicheSel").value }) }).then(r=>r.json()); state.analysis=analyzeRes.analysis; state.metrics=analyzeRes.metrics; state.comparison=comparison; state.chatHistory=[]; resetChat(); renderOverview(); renderAnalysis(); renderDecisionCenter(); renderCampaigns(); renderCreatives(); switchTab("overview"); }
+    function renderOverview(){ const a=state.analysis, m=state.metrics; if(!a||!m) return; document.getElementById("healthScore").textContent=a.resumo_geral.score_saude||0; document.getElementById("healthLevel").textContent=a.resumo_geral.nivel_saude||"Sem dados"; document.getElementById("healthSummary").textContent=a.resumo_geral.resumo_historico||""; document.getElementById("mSpend").textContent=money(m.totalSpend); document.getElementById("mRevenue").textContent=money(m.totalRev); document.getElementById("mRoas").textContent=`${Number(m.roas||0).toFixed(2)}x`; document.getElementById("mCostPur").textContent=money(m.costPerPurchase); document.getElementById("mImpr").textContent=num(m.totalImpressions); document.getElementById("mReach").textContent=num(m.totalReach); document.getElementById("mFreq").textContent=Number(m.avgFrequency||0).toFixed(2); document.getElementById("mCpm").textContent=money(m.avgCpm); document.getElementById("mCtr").textContent=pct(m.avgCtr); document.getElementById("mCpc").textContent=money(m.avgCpc); document.getElementById("mConnect").textContent=pct(m.connectRate); document.getElementById("mMsg").textContent=num(m.totalMessages); document.getElementById("mPur").textContent=num(m.totalPurchases); renderComparisonTable(); }
+    function renderComparisonTable(){ const body=document.getElementById("comparisonBody"); if(!state.comparison?.current || !state.comparison?.previous){ body.innerHTML=`<tr><td colspan="4">Ative a opção de comparação e use período personalizado.</td></tr>`; return; } const current=state.comparison.current, previous=state.comparison.previous, comp=state.comparison.comparison; const rows=[["Investimento",money(current.totalSpend),money(previous.totalSpend),pct(comp.spendChange)],["ROAS",`${current.roas.toFixed(2)}x`,`${previous.roas.toFixed(2)}x`,pct(comp.roasChange)],["CTR",pct(current.avgCtr),pct(previous.avgCtr),pct(comp.ctrChange)],["Compras",num(current.totalPurchases),num(previous.totalPurchases),pct(comp.purchasesChange)],["Connect Rate",pct(current.connectRate),pct(previous.connectRate),pct(comp.connectRateChange)]]; body.innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join(""); }
+    function renderAnalysis(){ const list=document.getElementById("analysisList"); const items=state.analysis?.otimizacoes_prioritarias||[]; if(!items.length){ list.innerHTML=`<div class="card">Nenhuma otimização crítica encontrada.</div>`; return; } list.innerHTML=items.map(i=>`<div class="card" style="margin-bottom:12px"><div class="toolbar" style="justify-content:space-between"><div><div class="label">${i.categoria}</div><div style="font-size:18px;font-weight:800">${i.titulo}</div></div><span class="badge ${i.prioridade===1?"danger":i.prioridade===2?"warning":"primary"}">P${i.prioridade}</span></div><div class="sub" style="margin-top:10px">${i.descricao}</div><div style="margin-top:12px;font-weight:700">${i.acao}</div></div>`).join(""); }
+    function filterByLifecycle(list, filterValue){ if(filterValue==="TODAS") return list; return list.filter(c=>c.lifecycleStatus===filterValue); }
+    function renderDecisionCenter(){ const center=state.analysis?.central_decisao; if(!center) return; document.getElementById("dEscalar").textContent=center.summary.ESCALAR||0; document.getElementById("dPausar").textContent=center.summary.PAUSAR||0; document.getElementById("dRenovar").textContent=center.summary.RENOVAR_CRIATIVO||0; document.getElementById("dWaste").textContent=money(center.summary.estimatedWaste); const filter=getActiveFilter("decisionFilters"); const campaigns=filterByLifecycle(center.campaigns,filter); document.getElementById("decisionBody").innerHTML=campaigns.map(c=>`<tr><td>${c.name}</td><td><span class="badge primary">${c.lifecycleStatus||"-"}</span></td><td><span class="badge ${badgeForAction(c.decision?.action)}">${prettyAction(c.decision?.action)}</span></td><td>${c.decision?.score||0}</td><td>${money(c.spend)}</td><td>${Number(c.roas||0).toFixed(2)}x</td><td>${pct(c.ctr)}</td><td>${pct(c.connectRate)}</td><td>${money(c.decision?.estimatedWaste||0)}</td><td>${c.decision?.reason||"-"}</td></tr>`).join("") || `<tr><td colspan="10">Nenhuma campanha encontrada.</td></tr>`; }
+    function prettyAction(a){ return ({ ESCALAR:"Escalar", PAUSAR:"Pausar", MANTER_E_OTIMIZAR:"Manter e otimizar", RENOVAR_CRIATIVO:"Renovar criativo", OTIMIZAR_FUNIL:"Otimizar funil", TESTAR_NOVA_VARIACAO:"Testar nova variação", SEM_DADOS:"Sem dados" })[a] || a || "-"; }
+    function badgeForAction(a){ if(a==="ESCALAR") return "success"; if(a==="PAUSAR") return "danger"; if(a==="RENOVAR_CRIATIVO" || a==="OTIMIZAR_FUNIL") return "warning"; return "primary"; }
+    function renderCampaigns(){ const filter=getActiveFilter("campaignFilters"); const campaigns=filterByLifecycle(state.analysis?.campanhas_analise||[],filter); document.getElementById("campaignBody").innerHTML=campaigns.map(c=>`<tr><td>${c.name}</td><td><span class="badge primary">${c.lifecycleStatus||"-"}</span></td><td>${money(c.spend)}</td><td>${num(c.impressions)}</td><td>${num(c.reach)}</td><td>${pct(c.ctr)}</td><td>${pct(c.connectRate)}</td><td>${Number(c.roas||0).toFixed(2)}x</td><td>${num(c.messages)}</td><td>${num(c.purchases)}</td><td>${money(c.costPerPur)}</td><td><button class="btn" style="height:34px" onclick="analyzeCampaign('${c.id}')">IA</button></td></tr>`).join("") || `<tr><td colspan="12">Nenhuma campanha encontrada.</td></tr>`; }
+    function renderCreatives(){ const grid=document.getElementById("creativesGrid"); let list=[...(state.creatives||[])]; const filter=getActiveFilter("creativeFilters"); const getPurchases=ins=>{ const actions=ins?.actions||[]; const found=actions.find(a=>String(a.action_type||"").includes("purchase")); return Number(found?.value||0); }; const getMessages=ins=>{ const actions=ins?.actions||[]; const found=actions.find(a=>String(a.action_type||"").includes("message")); return Number(found?.value||0); }; const getRoas=ins=>{ const spend=Number(ins?.spend||0); const vals=ins?.action_values||[]; const found=vals.find(a=>String(a.action_type||"").includes("purchase")); const rev=Number(found?.value||0); return spend>0 ? rev/spend : 0; }; if(filter==="CAMPEAO"){ list.sort((a,b)=>getRoas(b.insights?.data?.[0])-getRoas(a.insights?.data?.[0])); } else if(filter==="MENSAGENS"){ list.sort((a,b)=>getMessages(b.insights?.data?.[0])-getMessages(a.insights?.data?.[0])); } else if(filter==="COMPRAS"){ list.sort((a,b)=>getPurchases(b.insights?.data?.[0])-getPurchases(a.insights?.data?.[0])); } grid.innerHTML=list.map((cr,i)=>{ const ins=cr.insights?.data?.[0]||{}; const img=cr.creative?.image_url||cr.creative?.thumbnail_url||""; const purchases=getPurchases(ins); const messages=getMessages(ins); const roas=getRoas(ins); return `<div class="creative-card">${img?`<img src="${img}" alt="">`:`<div style="aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:#0f172a">Sem imagem</div>`}<div class="creative-info"><div style="font-weight:800;margin-bottom:8px">${cr.name}</div><div class="sub">Gasto: ${money(ins.spend)}</div><div class="sub">ROAS: ${roas.toFixed(2)}x</div><div class="sub">CTR: ${pct(ins.ctr)}</div><div class="sub">Mensagens: ${num(messages)}</div><div class="sub">Compras: ${num(purchases)}</div>${i===0 && filter==="CAMPEAO" ? `<div style="margin-top:10px"><span class="badge warning">Criativo campeão</span></div>` : ""}</div></div>`; }).join("") || `<div class="empty">Nenhum criativo encontrado.</div>`; }
+    async function loadBreakdown(){ if(!state.selectedAccountId) return; const type=document.getElementById("breakdownType").value; const q=toQuery(getDateParams()); const res=await fetch(`/api/adaccounts/${state.selectedAccountId}/breakdown/${type}?${q}`).then(r=>r.json()); const data=res.data||[]; state.breakdownData=data; const getLabel=d=>d.city||d.region||d.age||d.gender||d.publisher_platform||d.platform_position||d.device_platform||"N/A"; document.getElementById("breakdownBody").innerHTML=data.map(d=>`<tr><td>${getLabel(d)}</td><td>${money(d.spend)}</td><td>${num(d.impressions)}</td><td>${num(d.reach)}</td><td>${pct(d.ctr)}</td><td>${money(d.cpc)}</td></tr>`).join("") || `<tr><td colspan="6">Sem dados.</td></tr>`; if(state.charts.breakdown) state.charts.breakdown.destroy(); state.charts.breakdown=new Chart(document.getElementById("breakdownChart"),{ type:"bar", data:{ labels:data.map(getLabel), datasets:[{ label:"Gasto", data:data.map(d=>Number(d.spend||0)) }] }, options:{ responsive:true, maintainAspectRatio:false } }); }
+    async function loadTrend(){ if(!state.selectedAccountId) return; const res=await fetch(`/api/trend/${state.selectedAccountId}`).then(r=>r.json()); const trend=res.trend||[]; document.getElementById("trendEmpty").classList.toggle("hidden",trend.length>0); if(state.charts.trend) state.charts.trend.destroy(); if(!trend.length) return; state.charts.trend=new Chart(document.getElementById("trendChart"),{ type:"line", data:{ labels:trend.map(t=>new Date(t.date).toLocaleDateString("pt-BR")), datasets:[{ label:"Saúde", data:trend.map(t=>Number(t.avg_health||0)) },{ label:"Gasto", data:trend.map(t=>Number(t.total_spend||0)) },{ label:"ROAS", data:trend.map(t=>Number(t.avg_roas||0)) }] }, options:{ responsive:true, maintainAspectRatio:false } }); }
+    async function loadDailyMetrics(){ if(!state.selectedAccountId) return; const rows=await fetch(`/api/daily-metrics/${state.selectedAccountId}`).then(r=>r.json()); document.getElementById("dailyBody").innerHTML=rows.map(r=>`<tr><td>${new Date(r.date).toLocaleDateString("pt-BR")}</td><td>${money(r.spend)}</td><td>${num(r.impressions)}</td><td>${num(r.reach)}</td><td>${pct(r.ctr)}</td><td>${money(r.cpc)}</td><td>${money(r.cpm)}</td><td>${Number(r.roas||0).toFixed(2)}x</td><td>${num(r.healthScore)}</td></tr>`).join("") || `<tr><td colspan="9">Sem histórico salvo ainda.</td></tr>`; }
+    async function analyzeCampaign(id){ const campaign=(state.analysis?.campanhas_analise||[]).find(c=>c.id===id); if(!campaign) return; openModal("Análise IA da campanha","Carregando..."); const q=toQuery(getDateParams()); const funnel=await fetch(`/api/campaigns/${id}/funnel?${q}`).then(r=>r.json()); const response=await fetch("/api/gpt-campaign",{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ campaign, adsets:funnel.adsets||[], metrics:state.metrics }) }).then(r=>r.json()); document.getElementById("modalContent").innerHTML=`<pre style="white-space:pre-wrap;font-family:Inter,sans-serif">${response.analysis||"Sem análise."}</pre>`; }
+    async function openGptCopilot(){ openModal("Plano de Guerra IA","Carregando..."); const response=await fetch("/api/gpt-copilot",{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ data:{ metrics:state.metrics, analysis:state.analysis, campaigns:state.analysis?.campanhas_analise||[], niche:document.getElementById("nicheSel").value } }) }).then(r=>r.json()); document.getElementById("modalContent").innerHTML=`<pre style="white-space:pre-wrap;font-family:Inter,sans-serif">${response.strategy||"Sem análise."}</pre>`; }
+    function openModal(title,content){ document.getElementById("modalTitle").textContent=title; document.getElementById("modalContent").textContent=content||""; document.getElementById("modalBg").style.display="flex"; }
+    function closeModal(){ document.getElementById("modalBg").style.display="none"; }
+    async function loadNotes(){ if(!state.selectedAccountId) return; const notes=await fetch(`/api/notes/${state.selectedAccountId}`).then(r=>r.json()); document.getElementById("notesList").innerHTML=notes.map(n=>`<div class="card" style="margin-bottom:10px"><div class="toolbar" style="justify-content:space-between"><span class="badge primary">${n.type}</span><span class="sub">${new Date(n.created_at).toLocaleDateString("pt-BR")}</span></div><div style="margin-top:10px">${n.note}</div></div>`).join("") || `<div class="empty">Nenhuma nota.</div>`; }
+    async function saveNote(){ if(!state.selectedAccountId) return; const note=document.getElementById("noteInput").value.trim(); if(!note) return; await fetch("/api/notes",{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ fbAccountId:state.selectedAccountId, note, type:document.getElementById("noteType").value }) }); document.getElementById("noteInput").value=""; loadNotes(); }
+    async function loadAlerts(){ if(!state.selectedAccountId) return; const alert=await fetch(`/api/alerts/${state.selectedAccountId}`).then(r=>r.json()); document.getElementById("alertStatus").innerHTML=alert ? `<div class="card"><div class="label">Alerta ativo</div><div>${alert.alert_email} | Limite ${money(alert.threshold_amount)}</div></div>` : `<div class="empty">Nenhum alerta configurado.</div>`; }
+    async function saveAlert(){ if(!state.selectedAccountId) return; await fetch("/api/alerts",{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ fbAccountId:state.selectedAccountId, accountName:state.selectedAccount?.name||"", email:document.getElementById("alertEmail").value, threshold:document.getElementById("alertThreshold").value, currency:state.selectedAccount?.currency||"BRL" }) }); loadAlerts(); }
+    function appendChatMessage(role, text){ const box=document.getElementById("chatMessages"); const el=document.createElement("div"); el.className=`chat-msg ${role}`; el.textContent=text; box.appendChild(el); box.scrollTop=box.scrollHeight; }
+    function resetChat(){ const box=document.getElementById("chatMessages"); box.innerHTML=''; appendChatMessage('assistant','Posso te ajudar a interpretar a conta, comparar campanhas, encontrar gargalos de funil e sugerir próximos passos. Rode uma análise e me pergunte, por exemplo: “qual campanha devo pausar hoje?”'); }
+    function buildLocalChatAnswer(question){ if(!state.analysis || !state.metrics){ return 'Rode uma análise primeiro para eu responder com contexto da conta.'; } const campaigns=state.analysis?.campanhas_analise||[]; const center=state.analysis?.central_decisao?.campaigns||[]; const lower=String(question||'').toLowerCase(); const topScale=center.filter(c=>c.decision?.action==='ESCALAR').sort((a,b)=>(b.roas||0)-(a.roas||0)).slice(0,3); const topPause=center.filter(c=>c.decision?.action==='PAUSAR').sort((a,b)=>(b.decision?.estimatedWaste||0)-(a.decision?.estimatedWaste||0)).slice(0,3); const topCreative=center.filter(c=>c.decision?.action==='RENOVAR_CRIATIVO').slice(0,3); if(lower.includes('pausar')){ if(!topPause.length) return 'No momento a análise não marcou campanhas prioritárias para pausar.'; return 'Campanhas mais candidatas a pausar agora:\n\n' + topPause.map((c,i)=>`${i+1}. ${c.name} — desperdício estimado ${money(c.decision?.estimatedWaste||0)}, ROAS ${Number(c.roas||0).toFixed(2)}x, motivo: ${c.decision?.reason||'sem motivo informado'}`).join('\n'); }
+      if(lower.includes('escalar')){ if(!topScale.length) return 'No momento a análise não marcou campanhas prontas para escalar.'; return 'Campanhas com maior potencial de escala:\n\n' + topScale.map((c,i)=>`${i+1}. ${c.name} — score ${c.decision?.score||0}, ROAS ${Number(c.roas||0).toFixed(2)}x, CTR ${pct(c.ctr)}, connect rate ${pct(c.connectRate)}.`).join('\n'); }
+      if(lower.includes('criativo') || lower.includes('creative')){ if(!topCreative.length) return 'A análise não apontou necessidade urgente de renovação criativa.'; return 'Campanhas com sinal de fadiga ou necessidade de renovar criativo:\n\n' + topCreative.map((c,i)=>`${i+1}. ${c.name} — motivo: ${c.decision?.reason||'sem detalhe'}, frequência/entrega e performance sugerem nova variação.`).join('\n'); }
+      if(lower.includes('resumo') || lower.includes('conta') || lower.includes('geral')){ return `Resumo da conta:\n\nSaúde: ${state.analysis?.resumo_geral?.nivel_saude||'-'} (${state.analysis?.resumo_geral?.score_saude||0}/100)\nInvestimento: ${money(state.metrics?.totalSpend)}\nReceita: ${money(state.metrics?.totalRev)}\nROAS: ${Number(state.metrics?.roas||0).toFixed(2)}x\nCTR: ${pct(state.metrics?.avgCtr)}\nConnect rate: ${pct(state.metrics?.connectRate)}\nMensagens: ${num(state.metrics?.totalMessages)}\nCompras: ${num(state.metrics?.totalPurchases)}`; }
+      const best = [...campaigns].sort((a,b)=>(b.roas||0)-(a.roas||0))[0];
+      const worst = [...campaigns].sort((a,b)=>(a.roas||0)-(b.roas||0))[0];
+      return `Leitura rápida:\n\n- Melhor ROAS atual: ${best?.name||'-'} com ${Number(best?.roas||0).toFixed(2)}x.\n- Pior ROAS atual: ${worst?.name||'-'} com ${Number(worst?.roas||0).toFixed(2)}x.\n- Ações para escalar: ${state.analysis?.central_decisao?.summary?.ESCALAR||0}.\n- Ações para pausar: ${state.analysis?.central_decisao?.summary?.PAUSAR||0}.\n- Desperdício estimado: ${money(state.analysis?.central_decisao?.summary?.estimatedWaste||0)}.\n\nSe quiser, me pergunte especificamente sobre pausar, escalar, criativos, funil ou comparação entre campanhas.`;
     }
-
-    function toQuery(obj) {
-      const params = new URLSearchParams();
-      Object.entries(obj).forEach(([k,v]) => { if (v) params.append(k,v); });
-      return params.toString();
-    }
-
-    async function init() {
-      const me = await fetch("/api/me").then(r => r.json());
-      if (!me.authenticated) {
-        location.href = "/";
-        return;
-      }
-      state.me = me.user;
-      document.getElementById("userName").textContent = me.user.name;
-
-      document.getElementById("dateSel").addEventListener("change", () => {
-        const isCustom = document.getElementById("dateSel").value === "custom";
-        document.getElementById("sinceDate").classList.toggle("hidden", !isCustom);
-        document.getElementById("untilDate").classList.toggle("hidden", !isCustom);
-      });
-
-      document.querySelectorAll(".nav-btn").forEach(btn => {
-        btn.addEventListener("click", () => switchTab(btn.dataset.tab));
-      });
-
-      document.getElementById("analyzeBtn").addEventListener("click", runAnalysis);
-      document.getElementById("gptCopilotBtn").addEventListener("click", openGptCopilot);
-      document.getElementById("loadBreakdownBtn").addEventListener("click", loadBreakdown);
-      document.getElementById("saveNoteBtn").addEventListener("click", saveNote);
-      document.getElementById("saveAlertBtn").addEventListener("click", saveAlert);
-      document.getElementById("closeModalBtn").addEventListener("click", closeModal);
-
-      bindFilterGroup("decisionFilters", renderDecisionCenter);
-      bindFilterGroup("campaignFilters", renderCampaigns);
-      bindFilterGroup("creativeFilters", renderCreatives);
-
-      await loadAccounts();
-    }
-
-    function bindFilterGroup(id, callback) {
-      const container = document.getElementById(id);
-      container?.querySelectorAll(".filter-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          container.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-          callback();
-        });
-      });
-    }
-
-    function getActiveFilter(groupId) {
-      return document.querySelector(`#${groupId} .filter-btn.active`)?.dataset.value || "TODAS";
-    }
-
-    function switchTab(tab) {
-      document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-      document.querySelectorAll("main > section").forEach(sec => sec.classList.add("hidden"));
-      document.getElementById(`tab-${tab}`).classList.remove("hidden");
-
-      if (tab === "trend") loadTrend();
-      if (tab === "daily") loadDailyMetrics();
-      if (tab === "notes") loadNotes();
-      if (tab === "alerts") loadAlerts();
-    }
-
-    async function loadAccounts() {
-      const res = await fetch("/api/adaccounts").then(r => r.json());
-      state.accounts = res.data || [];
-      const sel = document.getElementById("accountSel");
-      sel.innerHTML = `<option value="">Selecione a conta</option>` + state.accounts.map(a => `<option value="${a.account_id}">${a.name}</option>`).join("");
-      sel.addEventListener("change", async () => {
-        state.selectedAccountId = sel.value;
-        state.selectedAccount = state.accounts.find(a => a.account_id === sel.value) || null;
-        if (!state.selectedAccountId) return;
-        const campaignsRes = await fetch(`/api/adaccounts/${state.selectedAccountId}/campaigns`).then(r => r.json());
-        state.campaigns = campaignsRes.data || [];
-      });
-    }
-
-    async function runAnalysis() {
-      if (!state.selectedAccountId) {
-        alert("Selecione uma conta.");
-        return;
-      }
-
-      const q = getDateParams();
-      const query = toQuery(q);
-
-      const [insightsRes, creativesRes] = await Promise.all([
-        fetch(`/api/adaccounts/${state.selectedAccountId}/insights?${query}`).then(r => r.json()),
-        fetch(`/api/adaccounts/${state.selectedAccountId}/creatives?${query}`).then(r => r.json())
-      ]);
-
-      state.insights = insightsRes;
-      state.creatives = creativesRes.data || [];
-
-      let previousInsights = null;
-      let comparison = null;
-
-      if (document.getElementById("comparePeriod").checked && q.since && q.until) {
-        comparison = await fetch(`/api/adaccounts/${state.selectedAccountId}/comparison?${query}`).then(r => r.json());
-        if (comparison?.previous) {
-          previousInsights = { data: [] };
-        }
-      }
-
-      const analyzeRes = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accountData: state.selectedAccount,
-          campaigns: state.campaigns,
-          insights: state.insights,
-          previousInsights,
-          creatives: state.creatives,
-          dateRange: JSON.stringify(q),
-          niche: document.getElementById("nicheSel").value
-        })
-      }).then(r => r.json());
-
-      state.analysis = analyzeRes.analysis;
-      state.metrics = analyzeRes.metrics;
-      state.comparison = comparison;
-
-      renderOverview();
-      renderAnalysis();
-      renderDecisionCenter();
-      renderCampaigns();
-      renderCreatives();
-      switchTab("overview");
-    }
-
-    function renderOverview() {
-      const a = state.analysis;
-      const m = state.metrics;
-      if (!a || !m) return;
-
-      document.getElementById("healthScore").textContent = a.resumo_geral.score_saude || 0;
-      document.getElementById("healthLevel").textContent = a.resumo_geral.nivel_saude || "Sem dados";
-      document.getElementById("healthSummary").textContent = a.resumo_geral.resumo_historico || "";
-
-      document.getElementById("mSpend").textContent = money(m.totalSpend);
-      document.getElementById("mRevenue").textContent = money(m.totalRev);
-      document.getElementById("mRoas").textContent = `${Number(m.roas || 0).toFixed(2)}x`;
-      document.getElementById("mCostPur").textContent = money(m.costPerPurchase);
-
-      document.getElementById("mImpr").textContent = num(m.totalImpressions);
-      document.getElementById("mReach").textContent = num(m.totalReach);
-      document.getElementById("mFreq").textContent = Number(m.avgFrequency || 0).toFixed(2);
-      document.getElementById("mCpm").textContent = money(m.avgCpm);
-
-      document.getElementById("mCtr").textContent = pct(m.avgCtr);
-      document.getElementById("mCpc").textContent = money(m.avgCpc);
-      document.getElementById("mConnect").textContent = pct(m.connectRate);
-      document.getElementById("mMsg").textContent = num(m.totalMessages);
-      document.getElementById("mPur").textContent = num(m.totalPurchases);
-
-      renderComparisonTable();
-    }
-
-    function renderComparisonTable() {
-      const body = document.getElementById("comparisonBody");
-      if (!state.comparison?.current || !state.comparison?.previous) {
-        body.innerHTML = `<tr><td colspan="4">Ative a opção de comparação e use período personalizado.</td></tr>`;
-        return;
-      }
-
-      const current = state.comparison.current;
-      const previous = state.comparison.previous;
-      const comp = state.comparison.comparison;
-
-      const rows = [
-        ["Investimento", money(current.totalSpend), money(previous.totalSpend), pct(comp.spendChange)],
-        ["ROAS", `${current.roas.toFixed(2)}x`, `${previous.roas.toFixed(2)}x`, pct(comp.roasChange)],
-        ["CTR", pct(current.avgCtr), pct(previous.avgCtr), pct(comp.ctrChange)],
-        ["Compras", num(current.totalPurchases), num(previous.totalPurchases), pct(comp.purchasesChange)],
-        ["Connect Rate", pct(current.connectRate), pct(previous.connectRate), pct(comp.connectRateChange)]
-      ];
-
-      body.innerHTML = rows.map(r => `
-        <tr>
-          <td>${r[0]}</td>
-          <td>${r[1]}</td>
-          <td>${r[2]}</td>
-          <td>${r[3]}</td>
-        </tr>
-      `).join("");
-    }
-
-    function renderAnalysis() {
-      const list = document.getElementById("analysisList");
-      const items = state.analysis?.otimizacoes_prioritarias || [];
-      if (!items.length) {
-        list.innerHTML = `<div class="card">Nenhuma otimização crítica encontrada.</div>`;
-        return;
-      }
-
-      list.innerHTML = items.map(i => `
-        <div class="card" style="margin-bottom:12px">
-          <div class="toolbar" style="justify-content:space-between">
-            <div>
-              <div class="label">${i.categoria}</div>
-              <div style="font-size:18px;font-weight:800">${i.titulo}</div>
-            </div>
-            <span class="badge ${i.prioridade === 1 ? "danger" : i.prioridade === 2 ? "warning" : "primary"}">P${i.prioridade}</span>
-          </div>
-          <div class="sub" style="margin-top:10px">${i.descricao}</div>
-          <div style="margin-top:12px;font-weight:700">${i.acao}</div>
-        </div>
-      `).join("");
-    }
-
-    function filterByLifecycle(list, filterValue) {
-      if (filterValue === "TODAS") return list;
-      return list.filter(c => c.lifecycleStatus === filterValue);
-    }
-
-    function renderDecisionCenter() {
-      const center = state.analysis?.central_decisao;
-      if (!center) return;
-
-      document.getElementById("dEscalar").textContent = center.summary.ESCALAR || 0;
-      document.getElementById("dPausar").textContent = center.summary.PAUSAR || 0;
-      document.getElementById("dRenovar").textContent = center.summary.RENOVAR_CRIATIVO || 0;
-      document.getElementById("dWaste").textContent = money(center.summary.estimatedWaste);
-
-      const filter = getActiveFilter("decisionFilters");
-      const campaigns = filterByLifecycle(center.campaigns, filter);
-
-      document.getElementById("decisionBody").innerHTML = campaigns.map(c => `
-        <tr>
-          <td>${c.name}</td>
-          <td><span class="badge primary">${c.lifecycleStatus || "-"}</span></td>
-          <td><span class="badge ${badgeForAction(c.decision?.action)}">${prettyAction(c.decision?.action)}</span></td>
-          <td>${c.decision?.score || 0}</td>
-          <td>${money(c.spend)}</td>
-          <td>${Number(c.roas || 0).toFixed(2)}x</td>
-          <td>${pct(c.ctr)}</td>
-          <td>${pct(c.connectRate)}</td>
-          <td>${money(c.decision?.estimatedWaste || 0)}</td>
-          <td>${c.decision?.reason || "-"}</td>
-        </tr>
-      `).join("") || `<tr><td colspan="10">Nenhuma campanha encontrada.</td></tr>`;
-    }
-
-    function prettyAction(a) {
-      return ({
-        ESCALAR:"Escalar",
-        PAUSAR:"Pausar",
-        MANTER_E_OTIMIZAR:"Manter e otimizar",
-        RENOVAR_CRIATIVO:"Renovar criativo",
-        OTIMIZAR_FUNIL:"Otimizar funil",
-        TESTAR_NOVA_VARIACAO:"Testar nova variação",
-        SEM_DADOS:"Sem dados"
-      })[a] || a || "-";
-    }
-
-    function badgeForAction(a) {
-      if (a === "ESCALAR") return "success";
-      if (a === "PAUSAR") return "danger";
-      if (a === "RENOVAR_CRIATIVO" || a === "OTIMIZAR_FUNIL") return "warning";
-      return "primary";
-    }
-
-    function renderCampaigns() {
-      const filter = getActiveFilter("campaignFilters");
-      const campaigns = filterByLifecycle(state.analysis?.campanhas_analise || [], filter);
-
-      document.getElementById("campaignBody").innerHTML = campaigns.map(c => `
-        <tr>
-          <td>${c.name}</td>
-          <td><span class="badge primary">${c.lifecycleStatus || "-"}</span></td>
-          <td>${money(c.spend)}</td>
-          <td>${num(c.impressions)}</td>
-          <td>${num(c.reach)}</td>
-          <td>${pct(c.ctr)}</td>
-          <td>${pct(c.connectRate)}</td>
-          <td>${Number(c.roas || 0).toFixed(2)}x</td>
-          <td>${num(c.messages)}</td>
-          <td>${num(c.purchases)}</td>
-          <td>${money(c.costPerPur)}</td>
-          <td><button class="btn" style="height:34px" onclick="analyzeCampaign('${c.id}')">IA</button></td>
-        </tr>
-      `).join("") || `<tr><td colspan="12">Nenhuma campanha encontrada.</td></tr>`;
-    }
-
-    function renderCreatives() {
-      const grid = document.getElementById("creativesGrid");
-      let list = [...(state.creatives || [])];
-      const filter = getActiveFilter("creativeFilters");
-
-      const getPurchases = ins => {
-        const actions = ins?.actions || [];
-        const found = actions.find(a => String(a.action_type || "").includes("purchase"));
-        return Number(found?.value || 0);
-      };
-
-      const getMessages = ins => {
-        const actions = ins?.actions || [];
-        const found = actions.find(a => String(a.action_type || "").includes("message"));
-        return Number(found?.value || 0);
-      };
-
-      const getRoas = ins => {
-        const spend = Number(ins?.spend || 0);
-        const vals = ins?.action_values || [];
-        const found = vals.find(a => String(a.action_type || "").includes("purchase"));
-        const rev = Number(found?.value || 0);
-        return spend > 0 ? rev / spend : 0;
-      };
-
-      if (filter === "CAMPEAO") {
-        list.sort((a,b) => getRoas(b.insights?.data?.[0]) - getRoas(a.insights?.data?.[0]));
-      } else if (filter === "MENSAGENS") {
-        list.sort((a,b) => getMessages(b.insights?.data?.[0]) - getMessages(a.insights?.data?.[0]));
-      } else if (filter === "COMPRAS") {
-        list.sort((a,b) => getPurchases(b.insights?.data?.[0]) - getPurchases(a.insights?.data?.[0]));
-      }
-
-      grid.innerHTML = list.map((cr, i) => {
-        const ins = cr.insights?.data?.[0] || {};
-        const img = cr.creative?.image_url || cr.creative?.thumbnail_url || "";
-        const purchases = getPurchases(ins);
-        const messages = getMessages(ins);
-        const roas = getRoas(ins);
-
-        return `
-          <div class="creative-card">
-            ${img ? `<img src="${img}" alt="">` : `<div style="aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:#0f172a">Sem imagem</div>`}
-            <div class="creative-info">
-              <div style="font-weight:800;margin-bottom:8px">${cr.name}</div>
-              <div class="sub">Gasto: ${money(ins.spend)}</div>
-              <div class="sub">ROAS: ${roas.toFixed(2)}x</div>
-              <div class="sub">CTR: ${pct(ins.ctr)}</div>
-              <div class="sub">Mensagens: ${num(messages)}</div>
-              <div class="sub">Compras: ${num(purchases)}</div>
-              ${i === 0 && filter === "CAMPEAO" ? `<div style="margin-top:10px"><span class="badge warning">Criativo campeão</span></div>` : ""}
-            </div>
-          </div>
-        `;
-      }).join("") || `<div class="empty">Nenhum criativo encontrado.</div>`;
-    }
-
-    async function loadBreakdown() {
-      if (!state.selectedAccountId) return;
-      const type = document.getElementById("breakdownType").value;
-      const q = toQuery(getDateParams());
-      const res = await fetch(`/api/adaccounts/${state.selectedAccountId}/breakdown/${type}?${q}`).then(r => r.json());
-      const data = res.data || [];
-      state.breakdownData = data;
-
-      const getLabel = d =>
-        d.city || d.region || d.age || d.gender || d.publisher_platform || d.platform_position || d.device_platform || "N/A";
-
-      document.getElementById("breakdownBody").innerHTML = data.map(d => `
-        <tr>
-          <td>${getLabel(d)}</td>
-          <td>${money(d.spend)}</td>
-          <td>${num(d.impressions)}</td>
-          <td>${num(d.reach)}</td>
-          <td>${pct(d.ctr)}</td>
-          <td>${money(d.cpc)}</td>
-        </tr>
-      `).join("") || `<tr><td colspan="6">Sem dados.</td></tr>`;
-
-      if (state.charts.breakdown) state.charts.breakdown.destroy();
-      const ctx = document.getElementById("breakdownChart");
-      state.charts.breakdown = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: data.map(getLabel),
-          datasets: [{
-            label: "Gasto",
-            data: data.map(d => Number(d.spend || 0))
-          }]
-        },
-        options: { responsive:true, maintainAspectRatio:false }
-      });
-    }
-
-    async function loadTrend() {
-      if (!state.selectedAccountId) return;
-      const res = await fetch(`/api/trend/${state.selectedAccountId}`).then(r => r.json());
-      const trend = res.trend || [];
-      document.getElementById("trendEmpty").classList.toggle("hidden", trend.length > 0);
-
-      if (state.charts.trend) state.charts.trend.destroy();
-      if (!trend.length) return;
-
-      state.charts.trend = new Chart(document.getElementById("trendChart"), {
-        type: "line",
-        data: {
-          labels: trend.map(t => new Date(t.date).toLocaleDateString("pt-BR")),
-          datasets: [
-            { label: "Saúde", data: trend.map(t => Number(t.avg_health || 0)) },
-            { label: "Gasto", data: trend.map(t => Number(t.total_spend || 0)) },
-            { label: "ROAS", data: trend.map(t => Number(t.avg_roas || 0)) }
-          ]
-        },
-        options: { responsive:true, maintainAspectRatio:false }
-      });
-    }
-
-    async function loadDailyMetrics() {
-      if (!state.selectedAccountId) return;
-      const rows = await fetch(`/api/daily-metrics/${state.selectedAccountId}`).then(r => r.json());
-      document.getElementById("dailyBody").innerHTML = rows.map(r => `
-        <tr>
-          <td>${new Date(r.date).toLocaleDateString("pt-BR")}</td>
-          <td>${money(r.spend)}</td>
-          <td>${num(r.impressions)}</td>
-          <td>${num(r.reach)}</td>
-          <td>${pct(r.ctr)}</td>
-          <td>${money(r.cpc)}</td>
-          <td>${money(r.cpm)}</td>
-          <td>${Number(r.roas || 0).toFixed(2)}x</td>
-          <td>${num(r.healthScore)}</td>
-        </tr>
-      `).join("") || `<tr><td colspan="9">Sem histórico salvo ainda.</td></tr>`;
-    }
-
-    async function analyzeCampaign(id) {
-      const campaign = (state.analysis?.campanhas_analise || []).find(c => c.id === id);
-      if (!campaign) return;
-
-      openModal("Análise IA da campanha", "Carregando...");
-      const q = toQuery(getDateParams());
-      const funnel = await fetch(`/api/campaigns/${id}/funnel?${q}`).then(r => r.json());
-      const response = await fetch("/api/gpt-campaign", {
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({
-          campaign,
-          adsets: funnel.adsets || [],
-          metrics: state.metrics
-        })
-      }).then(r => r.json());
-
-      document.getElementById("modalContent").innerHTML = `<pre style="white-space:pre-wrap;font-family:Inter,sans-serif">${response.analysis || "Sem análise."}</pre>`;
-    }
-
-    async function openGptCopilot() {
-      openModal("Plano de Guerra IA", "Carregando...");
-      const response = await fetch("/api/gpt-copilot", {
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({
-          data: {
-            metrics: state.metrics,
-            analysis: state.analysis,
-            campaigns: state.analysis?.campanhas_analise || [],
-            niche: document.getElementById("nicheSel").value
-          }
-        })
-      }).then(r => r.json());
-
-      document.getElementById("modalContent").innerHTML = `<pre style="white-space:pre-wrap;font-family:Inter,sans-serif">${response.strategy || "Sem análise."}</pre>`;
-    }
-
-    function openModal(title, content) {
-      document.getElementById("modalTitle").textContent = title;
-      document.getElementById("modalContent").textContent = content || "";
-      document.getElementById("modalBg").style.display = "flex";
-    }
-
-    function closeModal() {
-      document.getElementById("modalBg").style.display = "none";
-    }
-
-    async function loadNotes() {
-      if (!state.selectedAccountId) return;
-      const notes = await fetch(`/api/notes/${state.selectedAccountId}`).then(r => r.json());
-      document.getElementById("notesList").innerHTML = notes.map(n => `
-        <div class="card" style="margin-bottom:10px">
-          <div class="toolbar" style="justify-content:space-between">
-            <span class="badge primary">${n.type}</span>
-            <span class="sub">${new Date(n.created_at).toLocaleDateString("pt-BR")}</span>
-          </div>
-          <div style="margin-top:10px">${n.note}</div>
-        </div>
-      `).join("") || `<div class="empty">Nenhuma nota.</div>`;
-    }
-
-    async function saveNote() {
-      if (!state.selectedAccountId) return;
-      const note = document.getElementById("noteInput").value.trim();
-      if (!note) return;
-      await fetch("/api/notes", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({
-          fbAccountId: state.selectedAccountId,
-          note,
-          type: document.getElementById("noteType").value
-        })
-      });
-      document.getElementById("noteInput").value = "";
-      loadNotes();
-    }
-
-    async function loadAlerts() {
-      if (!state.selectedAccountId) return;
-      const alert = await fetch(`/api/alerts/${state.selectedAccountId}`).then(r => r.json());
-      document.getElementById("alertStatus").innerHTML = alert
-        ? `<div class="card"><div class="label">Alerta ativo</div><div>${alert.alert_email} | Limite ${money(alert.threshold_amount)}</div></div>`
-        : `<div class="empty">Nenhum alerta configurado.</div>`;
-    }
-
-    async function saveAlert() {
-      if (!state.selectedAccountId) return;
-      await fetch("/api/alerts", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({
-          fbAccountId: state.selectedAccountId,
-          accountName: state.selectedAccount?.name || "",
-          email: document.getElementById("alertEmail").value,
-          threshold: document.getElementById("alertThreshold").value,
-          currency: state.selectedAccount?.currency || "BRL"
-        })
-      });
-      loadAlerts();
-    }
-
-    window.analyzeCampaign = analyzeCampaign;
-    init();
+    async function sendChatMessage(){ const input=document.getElementById('chatInput'); const text=input.value.trim(); if(!text) return; appendChatMessage('user', text); input.value=''; state.chatHistory.push({ role:'user', content:text }); appendChatMessage('assistant', buildLocalChatAnswer(text)); }
+    window.analyzeCampaign=analyzeCampaign; init();
   </script>
 </body>
 </html>
