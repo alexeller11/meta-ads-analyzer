@@ -30,7 +30,6 @@ const SCHEMA = `
     UNIQUE(fb_account_id, fb_user_id)
   );
 
-  -- Tabela V2 para Auditoria e Centralização
   CREATE TABLE IF NOT EXISTS campaigns (
     id VARCHAR(64) PRIMARY KEY,
     account_id VARCHAR(64) NOT NULL,
@@ -140,16 +139,57 @@ const SCHEMA = `
   );
 `;
 
+const allowedTables = new Set(['analysis_runs']);
+const allowedColumns = new Map([
+  ['analysis_runs', new Map([
+    ['date_range', 'VARCHAR(64)'],
+    ['total_spend', 'NUMERIC(14,2)'],
+    ['total_impressions', 'BIGINT'],
+    ['total_clicks', 'BIGINT'],
+    ['total_reach', 'BIGINT'],
+    ['total_purchases', 'NUMERIC(14,2)'],
+    ['total_messages', 'NUMERIC(14,2)'],
+    ['total_leads', 'NUMERIC(14,2)'],
+    ['total_revenue', 'NUMERIC(14,2)'],
+    ['avg_ctr', 'NUMERIC(8,4)'],
+    ['avg_cpc', 'NUMERIC(10,4)'],
+    ['avg_cpm', 'NUMERIC(10,4)'],
+    ['avg_frequency', 'NUMERIC(8,4)'],
+    ['roas', 'NUMERIC(10,4)'],
+    ['connect_rate', 'NUMERIC(8,4)'],
+    ['cost_per_purchase', 'NUMERIC(10,4)'],
+    ['active_campaigns', 'INT'],
+    ['total_campaigns', 'INT'],
+    ['health_score', 'INT'],
+    ['health_level', 'VARCHAR(32)'],
+    ['ai_analysis', 'JSONB']
+  ])]
+]);
+
 async function ensureColumn(table, column, definition) {
   try {
+    if (!allowedTables.has(table)) {
+      throw new Error(`Tabela não permitida para migração: ${table}`);
+    }
+
+    const tableColumns = allowedColumns.get(table);
+    const expectedDefinition = tableColumns?.get(column);
+    if (!expectedDefinition || expectedDefinition !== definition) {
+      throw new Error(`Coluna/definição não permitida: ${table}.${column}`);
+    }
+
     const check = await pool.query(
       `SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
       [table, column]
     );
     if (check.rows.length === 0) {
       await pool.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+      console.log(`✅ Migração aplicada: ${table}.${column}`);
     }
-  } catch (err) {}
+  } catch (err) {
+    console.error(`❌ Erro em ensureColumn(${table}, ${column}):`, err.message);
+    throw err;
+  }
 }
 
 async function runMigrations() {
@@ -164,6 +204,7 @@ async function initDB() {
     console.log('✅ Database schema ready');
   } catch (err) {
     console.error('❌ DB init error:', err.message);
+    throw err;
   }
 }
 
@@ -205,7 +246,9 @@ async function saveRun({ fbAccountId, fbUserId, accountName, dateRange, metrics,
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
           ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, status=EXCLUDED.status, spend=EXCLUDED.spend, impressions=EXCLUDED.impressions, clicks=EXCLUDED.clicks, reach=EXCLUDED.reach, frequency=EXCLUDED.frequency, roas=EXCLUDED.roas, purchases=EXCLUDED.purchases, messages=EXCLUDED.messages, leads=EXCLUDED.leads, ctr=EXCLUDED.ctr, cvr=EXCLUDED.cvr, cpc=EXCLUDED.cpc, last_updated=NOW()
         `, [c.id, fbAccountId, c.name, c.status, c.spend || 0, c.impressions || 0, c.clicks || 0, c.reach || 0, c.frequency || 0, c.roas || 0, c.purchases || 0, c.messages || 0, c.leads || 0, c.ctr || 0, cvr, c.cpc || 0]);
-      } catch (e) {}
+      } catch (e) {
+        console.error(`❌ Erro ao salvar snapshot da campanha ${c?.id || 'sem-id'}:`, e.message);
+      }
     }
   }
   return runId;

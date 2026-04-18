@@ -1,10 +1,10 @@
-// const helmet = require("helmet");
-// const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 const express = require("express");
 const session = require("express-session");
 const axios = require("axios");
 const path = require("path");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const db = require("./db");
 const benchmarks = require("./benchmarks");
 const nodemailer = require("nodemailer");
@@ -22,24 +22,34 @@ app.use(
         "script-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
         "style-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
         "img-src": ["'self'", "data:", "https:", "http:"],
-        "connect-src": ["'self'", "https:", "http:"],
+        "connect-src": ["'self'", "https://graph.facebook.com", "https://api.openai.com"],
       },
     },
   })
 );
-// const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
-// app.use("/api", limiter);
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use("/api", limiter);
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || (() => { if (process.env.NODE_ENV === "production") throw new Error("SESSION_SECRET não configurado em produção"); return "dev-only-insecure-secret"; })(),
+    secret:
+      process.env.SESSION_SECRET ||
+      (() => {
+        throw new Error("SESSION_SECRET não configurado.");
+      })(),
     resave: false,
     saveUninitialized: false,
     cookie: {
       secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
       sameSite: "lax"
     }
@@ -61,6 +71,34 @@ const transporter = nodemailer.createTransport({
     pass: process.env.ALERT_EMAIL_PASS
   }
 });
+
+function isValidDateString(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function validateAnalyzePayload(body) {
+  const { accountData, campaigns, insights, dateRange, niche, previousInsights } = body || {};
+
+  if (!accountData || typeof accountData !== "object") {
+    return "accountData é obrigatório e deve ser um objeto.";
+  }
+  if (!Array.isArray(campaigns)) {
+    return "campaigns é obrigatório e deve ser um array.";
+  }
+  if (!insights || !Array.isArray(insights.data)) {
+    return "insights.data é obrigatório e deve ser um array.";
+  }
+  if (dateRange && typeof dateRange !== "string") {
+    return "dateRange deve ser string.";
+  }
+  if (niche && typeof niche !== "string") {
+    return "niche deve ser string.";
+  }
+  if (previousInsights && !Array.isArray(previousInsights.data)) {
+    return "previousInsights.data deve ser um array quando informado.";
+  }
+  return null;
+}
 
 async function sendLowBalanceAlert(accountName, balance) {
   if (!process.env.ALERT_EMAIL_USER || !process.env.ALERT_EMAIL_TO) return;
@@ -242,9 +280,12 @@ function getMetrics(dataRows) {
   };
 }
 
-function buildComparisonFromMetrics(currentMetrics, prevMetrics) {
-  const variation = (current, previous) => ((current - previous) / (previous || 1)) * 100;
+function variation(current, previous) {
+  if (!Number.isFinite(previous) || previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+}
 
+function buildComparisonFromMetrics(currentMetrics, prevMetrics) {
   return {
     current: currentMetrics,
     previous: prevMetrics,
@@ -349,6 +390,21 @@ async function saveAutomaticDaily8amSnapshotIfNeeded({
   });
 }
 
+async function fetchAllPages(url, baseParams) {
+  let nextUrl = url;
+  let params = { ...baseParams };
+  const data = [];
+
+  while (nextUrl) {
+    const response = await axios.get(nextUrl, { params });
+    if (Array.isArray(response.data?.data)) data.push(...response.data.data);
+    nextUrl = response.data?.paging?.next || null;
+    params = undefined;
+  }
+
+  return data;
+}
+
 /* AUTH */
 app.get("/auth/facebook", (req, res) => {
   const scopes = ["ads_read", "ads_management", "business_management", "public_profile"].join(",");
@@ -405,26 +461,30 @@ app.get("/auth/logout", (req, res) => {
   req.session.destroy(() => res.redirect("/"));
 });
 
-app.get("/api/debug/env", (req, res) => {
+app.get("/api/debug/env", auth, (req, res) => {
   res.json({
     FB_APP_ID: process.env.FB_APP_ID || null,
     hasFB_APP_SECRET: !!process.env.FB_APP_SECRET,
     BASE_URL: process.env.BASE_URL || null,
-    NODE_ENV: process.env.NODE_ENV || null
+    NODE_ENV: process.env.NODE_ENV || null,
+    hasSessionSecret: !!process.env.SESSION_SECRET,
+    hasDatabaseUrl: !!process.env.DATABASE_URL
   });
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({ ok: true, service: "meta-ads-analyzer" });
 });
 
 /* CORE */
 app.get("/api/adaccounts", auth, async (req, res) => {
   try {
-    const r = await axios.get("https://graph.facebook.com/v19.0/me/adaccounts", {
-      params: {
-        fields: "name,account_id,currency,account_status,funding_source_details,balance",
-        access_token: req.session.accessToken,
-        limit: 100
-      }
+    const data = await fetchAllPages("https://graph.facebook.com/v19.0/me/adaccounts", {
+      fields: "name,account_id,currency,account_status,funding_source_details,balance",
+      access_token: req.session.accessToken,
+      limit: 100
     });
-    res.json(r.data);
+    res.json({ data });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -432,14 +492,12 @@ app.get("/api/adaccounts", auth, async (req, res) => {
 
 app.get("/api/adaccounts/:id/campaigns", auth, async (req, res) => {
   try {
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/campaigns`, {
-      params: {
-        fields: "id,name,status,objective,daily_budget,lifetime_budget,budget_remaining,start_time,stop_time",
-        access_token: req.session.accessToken,
-        limit: 300
-      }
+    const data = await fetchAllPages(`https://graph.facebook.com/v19.0/act_${req.params.id}/campaigns`, {
+      fields: "id,name,status,objective,daily_budget,lifetime_budget,budget_remaining,start_time,stop_time",
+      access_token: req.session.accessToken,
+      limit: 100
     });
-    res.json(r.data);
+    res.json({ data });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -448,6 +506,13 @@ app.get("/api/adaccounts/:id/campaigns", auth, async (req, res) => {
 app.get("/api/adaccounts/:id/insights", auth, async (req, res) => {
   try {
     const { since, until, date_preset } = req.query;
+
+    if ((since && !until) || (!since && until)) {
+      return res.status(400).json({ error: "since e until devem ser informados juntos." });
+    }
+    if (since && (!isValidDateString(since) || !isValidDateString(until))) {
+      return res.status(400).json({ error: "Datas inválidas. Use YYYY-MM-DD." });
+    }
 
     const params = {
       fields: [
@@ -479,7 +544,7 @@ app.get("/api/adaccounts/:id/insights", auth, async (req, res) => {
       ].join(","),
       level: "ad",
       access_token: req.session.accessToken,
-      limit: 500
+      limit: 100
     };
 
     if (since && until) {
@@ -488,8 +553,8 @@ app.get("/api/adaccounts/:id/insights", auth, async (req, res) => {
       params.date_preset = date_preset || "last_30d";
     }
 
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
-    res.json(r.data);
+    const data = await fetchAllPages(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, params);
+    res.json({ data });
   } catch (e) {
     console.error("Erro insights:", e.response?.data || e.message);
     res.status(500).json({ error: e.message });
@@ -500,16 +565,25 @@ app.get("/api/adaccounts/:id/comparison", auth, async (req, res) => {
   try {
     const { date_preset, since, until } = req.query;
 
+    if ((since && !until) || (!since && until)) {
+      return res.status(400).json({ error: "since e until devem ser informados juntos." });
+    }
+    if (since && (!isValidDateString(since) || !isValidDateString(until))) {
+      return res.status(400).json({ error: "Datas inválidas. Use YYYY-MM-DD." });
+    }
+
     const currentParams = {
       fields: "impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values",
       level: "account",
-      access_token: req.session.accessToken
+      access_token: req.session.accessToken,
+      limit: 100
     };
 
     const previousParams = {
       fields: "impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values",
       level: "account",
-      access_token: req.session.accessToken
+      access_token: req.session.accessToken,
+      limit: 100
     };
 
     if (since && until) {
@@ -521,13 +595,13 @@ app.get("/api/adaccounts/:id/comparison", auth, async (req, res) => {
       previousParams.date_preset = getComparisonPreset(date_preset || "last_30d") || "last_30d_excluding_today";
     }
 
-    const [currentRes, previousRes] = await Promise.all([
-      axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params: currentParams }),
-      axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params: previousParams })
+    const [currentData, previousData] = await Promise.all([
+      fetchAllPages(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, currentParams),
+      fetchAllPages(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, previousParams)
     ]);
 
-    const currentMetrics = getMetrics(currentRes.data?.data);
-    const previousMetrics = getMetrics(previousRes.data?.data);
+    const currentMetrics = getMetrics(currentData);
+    const previousMetrics = getMetrics(previousData);
 
     res.json(buildComparisonFromMetrics(currentMetrics, previousMetrics));
   } catch (e) {
@@ -541,20 +615,25 @@ app.get("/api/adaccounts/:id/creatives", auth, async (req, res) => {
     const { date_preset, since, until } = req.query;
     let insightsField;
 
+    if ((since && !until) || (!since && until)) {
+      return res.status(400).json({ error: "since e until devem ser informados juntos." });
+    }
+    if (since && (!isValidDateString(since) || !isValidDateString(until))) {
+      return res.status(400).json({ error: "Datas inválidas. Use YYYY-MM-DD." });
+    }
+
     if (since && until) {
       insightsField = `insights.time_range({"since":"${since}","until":"${until}"}){impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values}`;
     } else {
       insightsField = `insights.date_preset(${date_preset || "last_30d"}){impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values}`;
     }
 
-    const params = {
+    const data = await fetchAllPages(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, {
       fields: `id,name,status,creative{thumbnail_url,image_url,video_id,body,title,call_to_action_type},${insightsField}`,
       access_token: req.session.accessToken,
-      limit: 200
-    };
-
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/ads`, { params });
-    res.json(r.data);
+      limit: 100
+    });
+    res.json({ data });
   } catch (e) {
     console.error("Erro creatives:", e.response?.data || e.message);
     res.status(500).json({ error: e.message });
@@ -566,10 +645,18 @@ app.get("/api/adaccounts/:id/breakdown/:type", auth, async (req, res) => {
     const { type } = req.params;
     const { date_preset, since, until } = req.query;
 
+    if ((since && !until) || (!since && until)) {
+      return res.status(400).json({ error: "since e until devem ser informados juntos." });
+    }
+    if (since && (!isValidDateString(since) || !isValidDateString(until))) {
+      return res.status(400).json({ error: "Datas inválidas. Use YYYY-MM-DD." });
+    }
+
     const params = {
       fields: "impressions,clicks,spend,cpc,cpm,ctr,reach,frequency,actions,action_values",
       level: "account",
-      access_token: req.session.accessToken
+      access_token: req.session.accessToken,
+      limit: 100
     };
 
     if (since && until) {
@@ -585,10 +672,10 @@ app.get("/api/adaccounts/:id/breakdown/:type", auth, async (req, res) => {
     else if (type === "age") params.breakdowns = "age";
     else if (type === "region") params.breakdowns = "region";
     else if (type === "city") params.breakdowns = "city";
-    else params.breakdowns = "publisher_platform";
+    else return res.status(400).json({ error: "Breakdown inválido." });
 
-    const r = await axios.get(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, { params });
-    res.json(r.data);
+    const data = await fetchAllPages(`https://graph.facebook.com/v19.0/act_${req.params.id}/insights`, params);
+    res.json({ data });
   } catch (e) {
     console.error("Erro breakdown:", e.response?.data || e.message);
     res.status(500).json({ error: e.message });
@@ -608,11 +695,12 @@ app.get("/api/history/:accountId", auth, async (req, res) => {
 /* ANALYZE */
 app.post("/api/analyze", auth, async (req, res) => {
   try {
-    const { accountData, campaigns, insights, dateRange, niche = "Geral", previousInsights } = req.body;
-
-    if (!accountData || !campaigns || !insights) {
-      return res.status(400).json({ error: "accountData, campaigns e insights são obrigatórios." });
+    const validationError = validateAnalyzePayload(req.body);
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
     }
+
+    const { accountData, campaigns, insights, dateRange, niche = "Geral", previousInsights } = req.body;
 
     const metrics = getMetrics(insights?.data);
     const prevMetrics = previousInsights ? getMetrics(previousInsights?.data) : null;
@@ -641,6 +729,8 @@ app.post("/api/analyze", auth, async (req, res) => {
       const costPerLead = m.lds > 0 ? m.sp / m.lds : 0;
       const frequency = m.reach > 0 ? m.impr / m.reach : 0;
       const connectRate = m.cl > 0 ? (m.sess / m.cl) * 100 : 0;
+      const cpc = m.cl > 0 ? m.sp / m.cl : 0;
+      const cpm = m.impr > 0 ? (m.sp / m.impr) * 1000 : 0;
 
       let diagnostico = "Aguardando dados.";
       let statusPerformance = "Sem dados";
@@ -682,6 +772,8 @@ app.post("/api/analyze", auth, async (req, res) => {
         ...c,
         spend: m.sp,
         ctr,
+        cpc,
+        cpm,
         impressions: m.impr,
         reach: m.reach,
         frequency,
@@ -745,7 +837,8 @@ app.post("/api/analyze", auth, async (req, res) => {
         campanhas_analise: decision.campaigns
       },
       metrics,
-      decision
+      decision,
+      aiAvailable: !!openai
     });
   } catch (err) {
     console.error("Erro /api/analyze:", err.message);
@@ -823,7 +916,7 @@ function runAnalysisEngine(accountData, campaigns, metrics, prevMetrics, niche =
   }
 
   if (prevMetrics) {
-    if (metrics.roas < prevMetrics.roas * 0.8) {
+    if (prevMetrics.roas > 0 && metrics.roas < prevMetrics.roas * 0.8) {
       otimizacoes.push({
         prioridade: 1,
         titulo: "Queda de ROAS vs período anterior",
@@ -832,7 +925,7 @@ function runAnalysisEngine(accountData, campaigns, metrics, prevMetrics, niche =
         acao: "Verifique fadiga, aumento de CPM e queda de CTR."
       });
     }
-    if (metrics.connectRate < prevMetrics.connectRate * 0.9) {
+    if (prevMetrics.connectRate > 0 && metrics.connectRate < prevMetrics.connectRate * 0.9) {
       otimizacoes.push({
         prioridade: 2,
         titulo: "Piora de Connect Rate",
