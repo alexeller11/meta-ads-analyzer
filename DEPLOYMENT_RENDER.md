@@ -9,8 +9,8 @@ Para hospedar o **Meta Ads Analyzer** no Render e usar a API da NVIDIA como moto
 4. Configure os campos básicos:
    - **Name**: `meta-ads-analyzer`
    - **Runtime**: `Node`
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
+   - **Build Command**: `pnpm install && pnpm run build`
+   - **Start Command**: `pnpm start`
 
 ## 2. Configurar Variáveis de Ambiente
 No menu **Environment** do seu serviço no Render, adicione as seguintes chaves:
