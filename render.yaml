@@ -3,8 +3,12 @@ services:
     name: meta-ads-analyzer-nvidia
     env: node
     plan: free
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: corepack enable && pnpm install && pnpm run build
+    startCommand: pnpm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
+      - key: PNPM_VERSION
+        value: "10.4.1"
