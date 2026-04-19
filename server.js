@@ -57,9 +57,23 @@ const FB_APP_ID = process.env.FB_APP_ID;
 const FB_APP_SECRET = process.env.FB_APP_SECRET;
 const REDIRECT_URI = `${process.env.BASE_URL}/auth/facebook/callback`;
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  : null;
+// Configuração do Motor de IA (NVIDIA ou OpenAI)
+const AI_MODEL = process.env.AI_MODEL || "gpt-4o";
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+let openai = null;
+
+if (NVIDIA_API_KEY) {
+  console.log("🚀 Usando NVIDIA como motor principal de IA");
+  openai = new OpenAI({
+    apiKey: NVIDIA_API_KEY,
+    baseURL: 'https://integrate.api.nvidia.com/v1'
+  });
+} else if (OPENAI_API_KEY) {
+  console.log("🤖 Usando OpenAI como motor de IA");
+  openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+}
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -1040,7 +1054,7 @@ Forneça:
 Seja direto e prático. Sem enrolação.`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: AI_MODEL,
       messages: [{ role: "user", content: prompt }],
       max_tokens: 800,
       temperature: 0.3
@@ -1084,7 +1098,7 @@ Forneça:
 Seja específico e acionável.`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: AI_MODEL,
       messages: [{ role: "user", content: prompt }],
       max_tokens: 1000,
       temperature: 0.3

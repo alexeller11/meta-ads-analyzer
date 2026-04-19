@@ -24,7 +24,7 @@ Ferramenta profissional de análise de campanhas do Meta (Facebook/Instagram) co
 - Score de saúde da conta (0-100)
 - Recomendações priorizadas com ações específicas
 - Análise de tendências vs. período anterior
-- **Plano de Guerra GPT-4o** com estratégia completa
+- **Plano de Guerra IA** com estratégia completa (NVIDIA ou OpenAI)
 
 ### 📋 Campanhas
 - Tabela completa com todas as métricas de funil
@@ -74,7 +74,12 @@ NODE_ENV=production
 # Banco de Dados PostgreSQL (opcional — para tendências e histórico)
 DATABASE_URL=postgresql://usuario:senha@host/banco?sslmode=require
 
-# OpenAI (opcional — para análises GPT-4o avançadas)
+# IA: Motor Principal (NVIDIA ou OpenAI)
+# Se NVIDIA_API_KEY estiver presente, ela será usada como motor principal.
+NVIDIA_API_KEY=nvapi-xxxx
+AI_MODEL=meta/llama-3.1-405b-instruct
+
+# OpenAI (Opcional se usar NVIDIA)
 OPENAI_API_KEY=sk-...
 
 # Alertas de E-mail (opcional)
@@ -119,7 +124,7 @@ npm start
 - **Backend**: Node.js + Express.js
 - **Frontend**: HTML5 + CSS3 + JavaScript (Vanilla)
 - **Banco de Dados**: PostgreSQL (Neon.tech)
-- **IA**: OpenAI GPT-4o
+- **IA**: NVIDIA NIM (Llama 3.1) ou OpenAI GPT-4o
 - **Gráficos**: Chart.js
 - **Deploy**: Railway + Hugging Face Spaces
 - **CI/CD**: GitHub Actions

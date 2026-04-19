@@ -21,12 +21,14 @@ function cacheSet(key, data) {
 }
 
 class AiAnalysisAgent {
-  constructor({ apiKey, model = 'gpt-4o-mini' } = {}) {
+  constructor({ apiKey, model = 'gpt-4o-mini', baseURL = null } = {}) {
     if (!apiKey) {
-      console.warn('⚠️ AiAnalysisAgent: OPENAI_API_KEY não configurada. Respostas serão mock.');
+      console.warn('⚠️ AiAnalysisAgent: API Key não configurada. Respostas serão mock.');
       this.mock = true;
     } else {
-      this.client = new OpenAI({ apiKey });
+      const config = { apiKey };
+      if (baseURL) config.baseURL = baseURL;
+      this.client = new OpenAI(config);
       this.mock = false;
     }
     this.model = model;
@@ -276,7 +278,15 @@ Gere uma análise focada em DECISÕES IMEDIATAS. Retorne JSON:
 let _instance = null;
 function getAgent() {
   if (!_instance) {
-    _instance = new AiAnalysisAgent({ apiKey: process.env.OPENAI_API_KEY });
+    const apiKey = process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY;
+    const baseURL = process.env.NVIDIA_API_KEY ? 'https://integrate.api.nvidia.com/v1' : null;
+    const model = process.env.AI_MODEL || (process.env.NVIDIA_API_KEY ? 'meta/llama-3.1-405b-instruct' : 'gpt-4o-mini');
+    
+    _instance = new AiAnalysisAgent({ 
+      apiKey, 
+      model,
+      baseURL
+    });
   }
   return _instance;
 }
