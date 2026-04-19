@@ -106,6 +106,12 @@
             <h2 id="healthTitle">Aguardando análise...</h2>
             <p id="healthDesc">Selecione uma conta e clique em "Rodar análise" para obter o diagnóstico da conta.</p>
           </div>
+          <div style="margin-left: auto;">
+            <button class="btn-ia" id="overviewAiBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+              Insights IA
+            </button>
+          </div>
         </div>
 
         <div class="metrics-row cols-4">
@@ -174,6 +180,12 @@
       <section id="tab-decision">
         <div class="sec-header">
           <h2 class="sec-title">Central de Decisão <span>Ações recomendadas por IA</span></h2>
+          <div class="pill-group" id="decisionFilters">
+            <button class="pill active" data-value="TODAS">Todas</button>
+            <button class="pill" data-value="ESCALAR">Escalar</button>
+            <button class="pill" data-value="PAUSAR">Pausar</button>
+            <button class="pill" data-value="REVISAR">Revisar</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -186,10 +198,11 @@
                 <th>Gasto</th>
                 <th>ROAS</th>
                 <th>Connect</th>
+                <th class="td-ia">IA</th>
               </tr>
             </thead>
             <tbody id="decisionBody">
-              <tr><td colspan="7" class="empty-state">Rode uma análise para visualizar as recomendações.</td></tr>
+              <tr><td colspan="8" class="empty-state">Rode uma análise para visualizar as recomendações.</td></tr>
             </tbody>
           </table>
         </div>
@@ -199,6 +212,11 @@
       <section id="tab-campaigns">
         <div class="sec-header">
           <h2 class="sec-title">Performance de Campanhas</h2>
+          <div class="pill-group" id="campaignFilters">
+            <button class="pill active" data-value="TODAS">Todas</button>
+            <button class="pill" data-value="ACTIVE">Ativas</button>
+            <button class="pill" data-value="PAUSED">Pausadas</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -213,10 +231,11 @@
                 <th>ROAS</th>
                 <th>CTR</th>
                 <th>Connect</th>
+                <th class="td-ia">IA</th>
               </tr>
             </thead>
             <tbody id="campaignBody">
-              <tr><td colspan="9" class="empty-state">Aguardando dados da análise.</td></tr>
+              <tr><td colspan="10" class="empty-state">Aguardando dados da análise.</td></tr>
             </tbody>
           </table>
         </div>
@@ -253,6 +272,10 @@
               <option value="region">Região</option>
             </select>
             <button id="breakdownBtn" class="btn-sm">Carregar Breakdown</button>
+            <button class="btn-ia" id="breakdownAiBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+              Análise IA
+            </button>
           </div>
         </div>
         <div class="table-wrap">
@@ -280,9 +303,13 @@
       <section id="tab-trend">
         <div class="sec-header">
           <h2 class="sec-title">Tendência de Performance</h2>
+          <button class="btn-ia" id="trendAiBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+            Análise de Tendência
+          </button>
         </div>
         <div class="card">
-          <div class="chart-box">
+          <div class="chart-box" style="height: 400px; position: relative;">
             <canvas id="trendChart"></canvas>
           </div>
         </div>
@@ -292,6 +319,10 @@
       <section id="tab-history">
         <div class="sec-header">
           <h2 class="sec-title">Métricas Diárias <span>Histórico de performance</span></h2>
+          <button class="btn-ia" id="historyAiBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+            Auditoria IA
+          </button>
         </div>
         <div class="table-wrap">
           <table>
@@ -317,6 +348,19 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- MODAL PARA IA -->
+  <div class="modal-bg" id="aiModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="aiModalTitle">Análise IA</span>
+        <button class="modal-close" id="closeAiModal">✕</button>
+      </div>
+      <div class="modal-content" id="aiModalContent">
+        <div class="empty-state">Carregando análise...</div>
+      </div>
+    </div>
   </div>
 
   <script src="/scripts/dashboard.js"></script>
